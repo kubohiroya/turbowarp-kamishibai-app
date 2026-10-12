@@ -111,7 +111,7 @@
     "@kubohiroya/turbowarp-bubble": "0.13.0",
     "@kubohiroya/turbowarp-camera-source": "0.15.0",
     "@kubohiroya/turbowarp-extension-manifest": "0.2.0",
-    "@kubohiroya/turbowarp-kvs": "0.1.0",
+    "@kubohiroya/turbowarp-kvs": "0.2.0",
     "@kubohiroya/turbowarp-live-reload-controller": "0.2.0",
     "@kubohiroya/turbowarp-local-preview": "0.1.0",
     "@kubohiroya/turbowarp-runtime-adapter": "0.2.0",

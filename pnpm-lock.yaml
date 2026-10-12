@@ -32,8 +32,8 @@ importers:
         specifier: 0.2.0
         version: 0.2.0
       '@kubohiroya/turbowarp-kvs':
-        specifier: 0.1.0
-        version: 0.1.0
+        specifier: 0.2.0
+        version: 0.2.0
       '@kubohiroya/turbowarp-live-reload-controller':
         specifier: 0.2.0
         version: 0.2.0
@@ -466,8 +466,8 @@ packages:
     resolution: {integrity: sha512-ippcotEdYZcTXtjpB3+r2Bqhb/Gov22mN3sQCVDhl2CaNzBCZkfZTSU4h0ZOzB3YfECb2s4eo8i7+kH1phohtQ==}
     engines: {node: '>=22.18.0'}
 
-  '@kubohiroya/turbowarp-kvs@0.1.0':
-    resolution: {integrity: sha512-kydJ1ma8xm76H/ID2HWmQKMM4G6WCfr4Zm39eJGZTSJ9P2z2EHh42joPv6JVz18NNjVg27XwmW+ZEq1BgOQEAg==}
+  '@kubohiroya/turbowarp-kvs@0.2.0':
+    resolution: {integrity: sha512-TVI0E6mkL7ptIFuiDFQ2S1LUsM9tbsXtQ3V3FG2ofzj7GWr1PzxV0UkVSlsMFXIy2JtHg5BqLOojb22z+DmnFg==}
     engines: {node: '>=22.18.0'}
 
   '@kubohiroya/turbowarp-live-reload-controller@0.2.0':
@@ -3584,7 +3584,7 @@ snapshots:
 
   '@kubohiroya/turbowarp-kamishibai-site-navigation@0.2.0': {}
 
-  '@kubohiroya/turbowarp-kvs@0.1.0': {}
+  '@kubohiroya/turbowarp-kvs@0.2.0': {}
 
   '@kubohiroya/turbowarp-live-reload-controller@0.2.0': {}
 
