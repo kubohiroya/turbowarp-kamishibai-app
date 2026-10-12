@@ -87,10 +87,10 @@ importers:
         version: https://codeload.github.com/TurboWarp/scratch-vm/tar.gz/c4823421cb7c17d8d8a89878851ce1668c26a21f(@turbowarp/scratch-svg-renderer@1.1.0(scratch-render-fonts@https://codeload.github.com/TurboWarp/scratch-render-fonts/tar.gz/7b6768fc6dfef6b343a06f992587b74807043961))
       vite:
         specifier: ^8.3.3
-        version: 8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.0)
+        version: 8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.1)
       yaml:
-        specifier: 2.9.0
-        version: 2.9.0
+        specifier: 2.9.1
+        version: 2.9.1
     devDependencies:
       '@kubohiroya/sb3-toolchain':
         specifier: 0.15.0
@@ -100,7 +100,7 @@ importers:
         version: 0.2.0
       '@kubohiroya/vite-plugin-turbowarp-extension':
         specifier: 0.5.0
-        version: 0.5.0(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.0))
+        version: 0.5.0(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.1))
       '@turbowarp/packager':
         specifier: 3.13.0
         version: 3.13.0
@@ -148,7 +148,7 @@ importers:
         version: typescript@7.0.2
       vitest:
         specifier: ^5.0.3
-        version: 5.0.3(@types/node@26.6.4)(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.0))
+        version: 5.0.3(@types/node@26.6.4)(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.1))
 
 packages:
 
@@ -3363,6 +3363,11 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
+  yaml@2.9.1:
+    resolution: {integrity: sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
@@ -3600,10 +3605,10 @@ snapshots:
 
   '@kubohiroya/turbowarp-teachable-machine@3.5.1': {}
 
-  '@kubohiroya/vite-plugin-turbowarp-extension@0.5.0(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.0))':
+  '@kubohiroya/vite-plugin-turbowarp-extension@0.5.0(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.1))':
     dependencies:
       acorn: 8.19.0
-      vite: 8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.0)
+      vite: 8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.1)
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -3983,14 +3988,14 @@ snapshots:
 
   '@vernier/godirect@1.5.0': {}
 
-  '@vitest/mocker@5.0.3(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.0))':
+  '@vitest/mocker@5.0.3(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.0.3
       estree-walker: 3.0.3
       magic-string: 1.4.3
     optionalDependencies:
-      vite: 8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.0)
+      vite: 8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.1)
 
   '@vitest/spy@5.0.3': {}
 
@@ -6693,7 +6698,7 @@ snapshots:
       spdx-correct: 3.2.0
       spdx-expression-parse: 3.0.1
 
-  vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.0):
+  vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.1):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -6705,12 +6710,12 @@ snapshots:
       esbuild: 0.28.2
       fsevents: 2.3.3
       terser: 5.51.2
-      yaml: 2.9.0
+      yaml: 2.9.1
 
-  vitest@5.0.3(@types/node@26.6.4)(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.0)):
+  vitest@5.0.3(@types/node@26.6.4)(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.1)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.0.3(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.0))
+      '@vitest/mocker': 5.0.3(vite@8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.1))
       chai: 6.3.0
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
@@ -6721,7 +6726,7 @@ snapshots:
       tinybench: 6.2.1
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
-      vite: 8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.0)
+      vite: 8.3.3(@types/node@26.6.4)(esbuild@0.28.2)(terser@5.51.2)(yaml@2.9.1)
       why-is-node-running: 3.2.1
     optionalDependencies:
       '@types/node': 26.6.4
@@ -6828,5 +6833,7 @@ snapshots:
   yallist@3.1.1: {}
 
   yaml@2.9.0: {}
+
+  yaml@2.9.1: {}
 
   yocto-queue@0.1.0: {}

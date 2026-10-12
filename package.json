@@ -130,7 +130,7 @@
     "scratch-render": "github:TurboWarp/scratch-render#a67f7c9c07d459582c227d4fd3fae8f59d8fc9ce",
     "scratch-vm": "github:TurboWarp/scratch-vm#c4823421cb7c17d8d8a89878851ce1668c26a21f",
     "vite": "^8.3.3",
-    "yaml": "2.9.0"
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@kubohiroya/sb3-toolchain": "0.15.0",
