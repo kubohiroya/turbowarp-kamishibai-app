@@ -14,8 +14,8 @@ importers:
   .:
     dependencies:
       '@kubohiroya/turbowarp-app-shell':
-        specifier: 0.2.0
-        version: 0.2.0
+        specifier: 0.2.1
+        version: 0.2.1
       '@kubohiroya/turbowarp-asset-cache':
         specifier: 0.1.0
         version: 0.1.0(@kubohiroya/turbowarp-named-data@0.1.0)
@@ -417,8 +417,8 @@ packages:
     engines: {node: '>=22.12.0'}
     hasBin: true
 
-  '@kubohiroya/turbowarp-app-shell@0.2.0':
-    resolution: {integrity: sha512-sYt1KBEEm00biA0kjhO+1OkpSO9qb6UI++bXZvtYDQ+2sLMKM1c7vGFD8cEQsLy51cx0vSM8PUufiqb2dIwnQw==}
+  '@kubohiroya/turbowarp-app-shell@0.2.1':
+    resolution: {integrity: sha512-xq6y3Cx7b0VGR0xTOJII8nekh6XRP0kSVPeZ+7qgODaCoIDVHy3w8/mtYIBFZxJYcHsfDnWvjqqEtpqJsM6R1g==}
     engines: {node: '>=22'}
 
   '@kubohiroya/turbowarp-asset-cache@0.1.0':
@@ -3561,7 +3561,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@kubohiroya/turbowarp-app-shell@0.2.0': {}
+  '@kubohiroya/turbowarp-app-shell@0.2.1': {}
 
   '@kubohiroya/turbowarp-asset-cache@0.1.0(@kubohiroya/turbowarp-named-data@0.1.0)':
     dependencies:
