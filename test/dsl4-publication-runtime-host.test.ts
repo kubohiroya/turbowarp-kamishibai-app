@@ -209,7 +209,11 @@ test('only scenario actions switch chapters; failed/cancelled candidates keep ow
     controls.children
       .filter((child) => child.tagName === 'BUTTON')
       .map((child) => child.textContent),
-    ['Save SB3 / SB3を保存', 'Save SB3 without YAML / YAMLなしでSB3を保存'],
+    [
+      'Save SB3 / SB3を保存',
+      'Save SB3 without YAML / YAMLなしでSB3を保存',
+      'Save SB3 with password / パスワード付きでSB3を保存',
+    ],
   );
   f.project.baseMarker = 'edited';
   f.owner.attach(f.document);

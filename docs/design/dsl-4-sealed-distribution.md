@@ -37,7 +37,7 @@ DSLは4.0のまま。feature flagは追加しない（compiledと同じ方針）
 
 ## 読込
 
-`loadDsl4RuntimeArtifact` / `loadDsl4RuntimeComponent`は、`unlockSealedStory({sourceIntegrity, attempt, previousAttemptFailed})`で
+`loadDsl4RuntimeArtifact` / `loadDsl4RuntimeComponent`は、`unlockSealedStory({sourceIntegrity, keyId, attempt, previousAttemptFailed})`で
 パスワードを受け取る。runtime startupとTurboWarp runtime hostも同じ名前のoptionをそのまま渡す。
 
 1. `sealed`の隣に`source`・`compiled`・`assets`・`assetDistribution`があれば拒否（`K4-SEALED-STORY-001`）。
@@ -58,8 +58,25 @@ Standardアプリ（Editor・Player・Packagerで作ったHTML）は、sealedの
 - `role="dialog"`・`aria-modal`、パスワード欄、「開く」「キャンセル」。文言は日本語／英語（アプリの言語に従う）。
 - Enterで開く、Escape・キャンセルで入力しない（`K4-SEALED-KEY-REQUIRED`で止まる）。パスワードが違うと理由を表示して聞き直す。
 - 入力中のキーはダイアログで止め、Scratchのキーイベントや紙芝居のキー操作に届かない（`data-kamishibai-keymap-ignore`も付ける）。
-- 開けたパスワードは、そのページを開いている間だけ、その紙芝居（`sourceIntegrity`）に限ってメモリに保持し、再実行で聞き直さない。
+- 開けたパスワードは、そのページを開いている間だけ、同じ鍵（`keyId`＝iterationsとsalt）の紙芝居に限ってメモリに保持し、
+  再実行や同じpublicationの別の章で聞き直さない。
   保持したパスワードで開けなかった場合は捨てて聞き直す。ブラウザのストレージには保存しない。
+
+## 複数章のpublication
+
+`createDsl4PublicationDistributionSb3({distributionProfile: 'sealed', sealedPassword})`、またはStandardアプリの
+「Save SB3 with password / パスワード付きでSB3を保存」（新しいパスワードを2回入力、8文字以上）で保存する。
+source・compiledのどちらからでもsealedにでき、開いているprojectは変わらない。profileは source → compiled → sealed の順にしか進めない。
+
+- 各章のcomponentを、その章のcompiled storyと**その章の素材**ごとにsealedにする。章間で素材を共有する`assetFiles`は平文になるため、
+  sealedでは使わない（空にする）。同じ素材を使う章は、それぞれの暗号文に同じ素材を持つ。
+- 全章と、publicationの隣にある入口componentを**同じsaltとiterations**でsealedにする（IVは章ごとに別）。1つのパスワードから鍵を1回だけ導出し、
+  publication hostは鍵を章の間で共有する（`createDsl4SealedKeyCache`）。
+- manifestはcompiledと同じく章ごとのStory IR（`story/<章ID>.json`）のsizeとSHA-256を持つ。章を読むときに復号し、その値と照合する。
+- 開くとき（`validateDsl4ProjectPublication`）は暗号文を開かずに構造だけ確かめる: `sources`や読める`assetFiles`がない、各componentに
+  `source`・`compiled`・`assets`がない、全章が同じsaltとiterations。章の`gotoSegment`が`next`にあるかは、章を復号したときに確かめる。
+- 章へ移るとき、その章だけを復号する。パスワードは最初の1回だけ聞く（`keyId`が同じため）。
+- sealedのpublicationを保存し直すには、開いたときのパスワードで全章を検証する。
 
 ## ビルド
 
@@ -101,9 +118,15 @@ root binary entry（`--enable-root-binary-entries`）は素材のbytesがproject
   キーがダイアログで止まること。
 - 実ブラウザ（Chrome 152）: sealedのPlayer HTMLで、緑旗でパスワード入力が出て、違うパスワードは聞き直し、正しいパスワードで
   1枚目の背景、Spaceで2枚目になり、runtimeは`running`・エラーなし。[観測値](../testing/evidence/compiled-player-20261024/sealed-player.json)。
+- `test/dsl4-sealed-publication.test.ts`: 2章のpublicationをsealedで保存すると、章の目印・素材の目印・素材ファイル名・章のパスがSB3のどこにもなく、
+  `assetFiles`が空。各章が素材ごと開ける。再保存はパスワードが必要で、compiledへは戻せない。sources・読める素材・別のsalt・平文の
+  `compiled`を拒否する。publication hostが章を復号し、全章で1つの鍵cacheを共有し、`gotoSegment`で次の章へ移る。保存ボタンの表示。
+- 実ブラウザ（Chrome 152）: sealedのpublicationのPlayerで、パスワード入力は1回だけ、入力後はエラーなく「Ready」、保存はSB3を保存だけを表示。
+  この検証環境ではpublicationの舞台が白く、章の表示と章移動は確認できていない（単体テストで確認）。
+  [観測値](../testing/evidence/compiled-player-20261024/sealed-publication.json)。
 - `test/dsl4-format-contracts.test.ts`・`test/dsl4-architecture.test.ts`に形式とcore moduleを登録した。
 
 ## 残り（#781）
 
 - authenticated key serviceの実装、publisher signature。
-- 複数章のpublicationのsealed、segment／asset group単位の暗号化と、必要な章だけの復号。
+- asset group単位の暗号化（現在は章単位）。

@@ -7,6 +7,7 @@ import {createFakeDocument, requireByAttribute} from './helpers/fake-dom.ts';
 const request = (attempt = 1) =>
   Object.freeze({
     sourceIntegrity: `sha256-${'A'.repeat(43)}=`,
+    keyId: `pbkdf2-sha256:100000:${'A'.repeat(22)}==`,
     attempt,
     previousAttemptFailed: attempt > 1,
   });
@@ -68,4 +69,32 @@ test('keeps typed keys away from Scratch and the story keymap', async () => {
   }
   prompt.dispose();
   assert.equal(await answer, null);
+});
+
+test('chooses a new password only when it is long enough and typed twice the same', async () => {
+  const {document, prompt} = open();
+  const chosen = prompt.choose();
+  const dialog = requireByAttribute(document.body, 'data-dsl4-sealed-password', 'true');
+  const input = requireByAttribute(dialog, 'data-dsl4-sealed-password-input', 'true');
+  const confirm = requireByAttribute(dialog, 'data-dsl4-sealed-password-confirm', 'true');
+  const error = requireByAttribute(dialog, 'data-dsl4-sealed-password-error', 'true');
+  const form = dialog.children[0]!;
+  assert.equal((input as unknown as {autocomplete?: string}).autocomplete, 'new-password');
+
+  input.value = 'short';
+  confirm.value = 'short';
+  form.dispatch('submit');
+  assert.equal(error.hidden, false);
+  assert.match(String(error.textContent), /at least 8/);
+
+  input.value = 'long enough one';
+  confirm.value = 'long enough two';
+  form.dispatch('submit');
+  assert.match(String(error.textContent), /do not match/);
+  assert.equal(document.body.children.length, 1, 'the dialog stays open until both agree');
+
+  confirm.value = 'long enough one';
+  form.dispatch('submit');
+  assert.equal(await chosen, 'long enough one');
+  assert.equal(document.body.children.length, 0);
 });

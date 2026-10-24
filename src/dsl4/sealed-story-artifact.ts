@@ -38,6 +38,11 @@ export interface Dsl4SealCrypto {
 /** What a host is asked when a sealed story needs its password. */
 export type Dsl4SealedUnlockRequest = Readonly<{
   sourceIntegrity: string;
+  /**
+   * Names the key derivation (iterations and salt). Stories sealed under one password share it,
+   * like the chapters of a publication, so a host can remember the password by it.
+   */
+  keyId: string;
   /** 1 for the first ask; each wrong password asks again with the next number. */
   attempt: number;
   /** Set when the previous password failed to open the story. */
@@ -117,15 +122,41 @@ function additionalData(header: SealedHeader) {
   );
 }
 
+/**
+ * Remembers derived keys for one password context, so stories sealed under the same salt (the
+ * chapters of a publication) derive their key once. It holds keys and the password they came
+ * from in memory only; drop the cache to forget them.
+ */
+export interface Dsl4SealedKeyCache {
+  readonly entries: Map<string, {password: string; key: Promise<CryptoKey>}>;
+}
+
+export function createDsl4SealedKeyCache(): Dsl4SealedKeyCache {
+  return {entries: new Map()};
+}
+
 async function deriveKey(
   password: string,
   salt: Uint8Array,
   iterations: number,
   usage: 'encrypt' | 'decrypt',
   crypto: Dsl4SealCrypto,
-) {
+  cache?: Dsl4SealedKeyCache,
+): Promise<CryptoKey> {
   if (typeof password !== 'string' || password.length === 0)
     fail('K4-SEALED-KEY-001', 'A sealed story needs a non-empty password');
+  if (cache) {
+    const id = `${usage}|${iterations}|${fromByteArray(salt)}`;
+    const cached = cache.entries.get(id);
+    if (cached && cached.password === password) return cached.key;
+    const key: Promise<CryptoKey> = deriveKey(password, salt, iterations, usage, crypto);
+    // A failed derivation must not stay cached for the next attempt.
+    key.catch(() => {
+      if (cache.entries.get(id)?.key === key) cache.entries.delete(id);
+    });
+    cache.entries.set(id, {password, key});
+    return key;
+  }
   const material = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(password),
@@ -154,13 +185,24 @@ export async function createDsl4SealedStoryArtifact(
   {
     iterations = dsl4SealedDefaultIterations,
     crypto = defaultCrypto(),
-  }: {iterations?: number; crypto?: Dsl4SealCrypto} = {},
+    salt: sharedSalt,
+    keyCache,
+  }: {
+    iterations?: number;
+    crypto?: Dsl4SealCrypto;
+    /** Seal under a salt shared with other stories (a publication's chapters); 16 bytes. */
+    salt?: Uint8Array;
+    keyCache?: Dsl4SealedKeyCache;
+  } = {},
 ) {
   if (!Number.isSafeInteger(iterations) || iterations < minIterations || iterations > maxIterations)
     fail('K4-SEALED-STORY-001', `iterations must be between ${minIterations} and ${maxIterations}`);
   if (compiled.profile !== 'compiled' || typeof compiled.sourceIntegrity !== 'string')
     fail('K4-SEALED-STORY-001', 'Only a compiled story artifact can be sealed');
-  const salt = crypto.getRandomValues(new Uint8Array(16));
+  if (sharedSalt !== undefined && sharedSalt.byteLength !== 16)
+    fail('K4-SEALED-STORY-001', 'A shared salt must be 16 bytes');
+  // The IV is always fresh; only the salt may be shared, which keeps one key per publication.
+  const salt = sharedSalt ? new Uint8Array(sharedSalt) : crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const header: SealedHeader = {
     formatVersion: 1,
@@ -175,7 +217,7 @@ export async function createDsl4SealedStoryArtifact(
   const plaintext = new TextEncoder().encode(JSON.stringify({compiled, assets}));
   if (plaintext.byteLength > maxPayloadBytes)
     fail('K4-SEALED-STORY-SIZE-001', `Sealed payload exceeds ${maxPayloadBytes} bytes`);
-  const key = await deriveKey(password, salt, iterations, 'encrypt', crypto);
+  const key = await deriveKey(password, salt, iterations, 'encrypt', crypto, keyCache);
   const ciphertext = new Uint8Array(
     await crypto.subtle.encrypt(
       {name: 'AES-GCM', iv, additionalData: additionalData(header), tagLength: 128},
@@ -258,12 +300,22 @@ export function readDsl4SealedStoryHeader(input: unknown) {
 export async function openDsl4SealedStoryArtifact(
   input: unknown,
   password: string,
-  {crypto = defaultCrypto()}: {crypto?: Dsl4SealCrypto} = {},
+  {
+    crypto = defaultCrypto(),
+    keyCache,
+  }: {crypto?: Dsl4SealCrypto; keyCache?: Dsl4SealedKeyCache} = {},
 ) {
   const {header, salt, iv, ciphertext} = readDsl4SealedStoryHeader(input);
   if (ciphertext.byteLength > maxPayloadBytes + 16)
     fail('K4-SEALED-STORY-SIZE-001', `Sealed payload exceeds ${maxPayloadBytes} bytes`);
-  const key = await deriveKey(password, salt, header.keyDerivation.iterations, 'decrypt', crypto);
+  const key = await deriveKey(
+    password,
+    salt,
+    header.keyDerivation.iterations,
+    'decrypt',
+    crypto,
+    keyCache,
+  );
   let plaintext: Uint8Array;
   try {
     plaintext = new Uint8Array(
@@ -293,6 +345,38 @@ export async function openDsl4SealedStoryArtifact(
   if (compiled.sourceIntegrity !== header.sourceIntegrity)
     fail('K4-SEALED-STORY-001', 'Sealed story does not match the source its header names');
   return {compiled, assets: payload.assets, cacheIdentity: header.cacheIdentity};
+}
+
+/**
+ * Open a sealed story with passwords from `unlock`, asking again after a wrong one.
+ *
+ * Returns `null` when the viewer declines (an empty or `null` answer). A wrong password asks again
+ * up to `dsl4SealedMaxUnlockAttempts` times, then throws `K4-SEALED-AUTH-001`; any other failure
+ * throws at once.
+ */
+export async function openDsl4SealedStoryWithUnlock(
+  input: unknown,
+  unlock: Dsl4SealedUnlock,
+  options: {crypto?: Dsl4SealCrypto; keyCache?: Dsl4SealedKeyCache} = {},
+) {
+  const {header} = readDsl4SealedStoryHeader(input);
+  for (let attempt = 1; ; attempt += 1) {
+    const password = await unlock(
+      Object.freeze({
+        sourceIntegrity: header.sourceIntegrity,
+        keyId: `pbkdf2-sha256:${header.keyDerivation.iterations}:${header.keyDerivation.salt}`,
+        attempt,
+        previousAttemptFailed: attempt > 1,
+      }),
+    );
+    if (password === null || password === '') return null;
+    try {
+      return await openDsl4SealedStoryArtifact(input, password, options);
+    } catch (error) {
+      const wrong = error instanceof Dsl4SealedStoryError && error.code === 'K4-SEALED-AUTH-001';
+      if (!wrong || attempt >= dsl4SealedMaxUnlockAttempts) throw error;
+    }
+  }
 }
 
 /** Find the one sealed story a project stores, by the same bundled/unbundled channels as source. */

@@ -1,5 +1,6 @@
 import {createDsl4RetryableCleanup} from '../retryable-cleanup.js';
 import {validateDsl4StoryIr} from '../compiled-story-artifact.js';
+import {createDsl4SealedKeyCache, type Dsl4SealedUnlock} from '../sealed-story-artifact.js';
 import {
   createDsl4PublicationLoader,
   createDsl4PublicationSourceProvider,
@@ -13,6 +14,7 @@ import {createDsl4ObjectUrlOwner} from './object-url-owner.js';
 import {
   publicationSegmentProject,
   readDsl4PublicationChapterText,
+  readDsl4SealedPublicationChapter,
   validateDsl4PublicationProject,
 } from './publication-project.js';
 import {createDsl4TurboWarpRuntimeHost} from './turbowarp-runtime-host.js';
@@ -69,12 +71,12 @@ export async function createDsl4PublicationRuntimeHost(
   const video = options.videoAssetAdapter ?? createDsl4VideoAssetAdapter({objectUrlOwner});
   const status = document.createElement('output');
   status.setAttribute('aria-live', 'polite');
-  type DownloadPublication = (options?: {distributionProfile?: 'compiled'}) => unknown;
+  type DownloadPublication = (options?: {distributionProfile?: 'compiled' | 'sealed'}) => unknown;
   const downloadPublication =
     typeof options.downloadPublication === 'function'
       ? (options.downloadPublication as DownloadPublication)
       : null;
-  function saveButton(label: string, saveOptions?: {distributionProfile: 'compiled'}) {
+  function saveButton(label: string, saveOptions?: {distributionProfile: 'compiled' | 'sealed'}) {
     const button = document.createElement('button');
     button.textContent = label;
     button.type = 'button';
@@ -93,13 +95,18 @@ export async function createDsl4PublicationRuntimeHost(
     });
     return button;
   }
-  // The plain save keeps the publication's profile; the second one drops every chapter's YAML.
+  // The plain save keeps the publication's profile. The others move it forward: without YAML
+  // (compiled), or encrypted under a new password (sealed). A profile never moves back.
   const download = saveButton('Save SB3 / SB3を保存');
   const downloadCompiled = saveButton('Save SB3 without YAML / YAMLなしでSB3を保存', {
     distributionProfile: 'compiled',
   });
-  if (publication.profile === 'compiled') downloadCompiled.hidden = true;
-  controls.append(download, downloadCompiled, status);
+  const downloadSealed = saveButton('Save SB3 with password / パスワード付きでSB3を保存', {
+    distributionProfile: 'sealed',
+  });
+  if (publication.profile !== 'source') downloadCompiled.hidden = true;
+  if (publication.profile === 'sealed') downloadSealed.hidden = true;
+  controls.append(download, downloadCompiled, downloadSealed, status);
   let target: unknown = null;
   let disposed = false;
   let pending: Transfer | null = null;
@@ -215,10 +222,24 @@ export async function createDsl4PublicationRuntimeHost(
     void transitionWork.catch(() => {});
     return promise;
   }
+  // One key cache per publication: the viewer's password derives the chapters' key once.
+  const sealedKeyCache = publication.profile === 'sealed' ? createDsl4SealedKeyCache() : null;
+  const unlockSealedStory = options.unlockSealedStory as Dsl4SealedUnlock | undefined;
   const provider = createDsl4PublicationSourceProvider({
     mode: 'offline',
     readEntry: async (entry) => {
-      const text = readDsl4PublicationChapterText(publication, entry);
+      let text;
+      if (publication.profile === 'sealed') {
+        if (typeof unlockSealedStory !== 'function')
+          throw new TypeError('This publication is sealed and needs a password to open');
+        text = await readDsl4SealedPublicationChapter(publication, entry, unlockSealedStory, {
+          keyCache: sealedKeyCache!,
+        });
+        if (text === null)
+          throw new TypeError('This publication is sealed and no password was given');
+      } else {
+        text = readDsl4PublicationChapterText(publication, entry);
+      }
       return text === undefined ? null : new TextEncoder().encode(text);
     },
   });
@@ -226,9 +247,9 @@ export async function createDsl4PublicationRuntimeHost(
     manifest: publication.manifest,
     provider,
     // A compiled chapter is already a Story IR whose bytes the manifest digest just verified.
-    ...(publication.profile === 'compiled'
-      ? {decode: (text: string) => validateDsl4StoryIr(JSON.parse(text))}
-      : {frontend}),
+    ...(publication.profile === 'source'
+      ? {frontend}
+      : {decode: (text: string) => validateDsl4StoryIr(JSON.parse(text))}),
     async prepare(segment, _storyDocument, signal, position) {
       const project = publicationSegmentProject(
         sourceProject,
@@ -261,6 +282,7 @@ export async function createDsl4PublicationRuntimeHost(
           project,
           runtime: stage.runtime,
           publicationSegmentId: segment.id,
+          ...(sealedKeyCache === null ? {} : {sealedKeyCache}),
           videoAssetAdapter: video,
           objectUrlOwner,
           async createHostPort(context) {

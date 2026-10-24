@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-25",
+  "browser": "Chrome 152.0.7977.167 (Claude desktop in-app browser, macOS)",
+  "procedure": "The 2-chapter publication from packaged-publication.json (chapter a: stage First, wait, gotoSegment b; chapter b: stage Second) saved with createDsl4PublicationDistributionSb3 as sealed (test password generated for this local run, 100000 PBKDF2 iterations), packaged with scripts/build-release-player.ts, served from 127.0.0.1",
+  "artifact": {
+    "sb3": {
+      "size": 1828797,
+      "sha256": "152a9bb10636a9da194c35266fa11a4450dffacd6a9073ed14fca6dc6a200b89"
+    },
+    "player": {
+      "size": 4124813,
+      "sha256": "8597a507fbebd25f2c1af2ba77e28a4f667ada2d65d3ab3de6e72d02a5efc73e"
+    },
+    "projectJsonContainsChapterCommentsPathsOrAssetNames": false
+  },
+  "observations": {
+    "afterGreenFlag": "password dialog over the stage, once",
+    "afterPassword": "dialog closed; publication host status 'Ready'; no runtime error dialog; no console errors",
+    "saveButtons": [
+      "Save SB3 / SB3を保存",
+      "Save SB3 without YAML / YAMLなしでSB3を保存 (hidden)",
+      "Save SB3 with password / パスワード付きでSB3を保存 (hidden)"
+    ],
+    "afterSpace": "no second password dialog, no error"
+  },
+  "notVerified": [
+    "Chapter rendering and the switch to chapter b: this packaged-Player harness shows a white stage for every publication profile alike, so neither the backdrop nor the transition is visible. The transition and the shared key cache are covered by test/dsl4-sealed-publication.test.ts.",
+    "Saving with a new password, and re-saving the sealed publication, in a browser"
+  ]
+}

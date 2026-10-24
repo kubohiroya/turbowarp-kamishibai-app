@@ -28,6 +28,13 @@ const labels = Object.freeze({
     open: 'Open',
     cancel: 'Cancel',
     wrong: 'That password did not open the story. Try again.',
+    chooseTitle: 'Save with a password',
+    chooseMessage:
+      'Viewers will need this password to open the saved SB3. It cannot be recovered if lost.',
+    confirm: 'Password again',
+    save: 'Save',
+    tooShort: 'Use at least 8 characters.',
+    mismatch: 'The two passwords do not match.',
   }),
   ja: Object.freeze({
     title: 'この紙芝居はパスワードで保護されています',
@@ -36,6 +43,13 @@ const labels = Object.freeze({
     open: '開く',
     cancel: 'キャンセル',
     wrong: 'パスワードが違います。もう一度入力してください。',
+    chooseTitle: 'パスワード付きで保存',
+    chooseMessage:
+      '保存したSB3を開くには、このパスワードが必要になります。忘れると元に戻せません。',
+    confirm: 'パスワード（確認）',
+    save: '保存',
+    tooShort: '8文字以上にしてください。',
+    mismatch: '2つのパスワードが一致しません。',
   }),
 });
 
@@ -44,6 +58,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 let promptCount = 0;
+
+/** The fewest characters `choose` accepts for a new password. */
+export const dsl4SealedMinPasswordLength = 8;
 
 /**
  * Ask the viewer for a sealed story's password in a dialog over the stage.
@@ -79,7 +96,9 @@ export function createDsl4SealedPasswordPrompt(options: {
     settle?.(password);
   }
 
-  function render(request: Dsl4SealedUnlockRequest) {
+  function render(request: Dsl4SealedUnlockRequest | null) {
+    // `null` chooses a new password (saving with one); a request opens a sealed story.
+    const choosing = request === null;
     const text = labels[options.getLocale?.() === 'ja' ? 'ja' : 'en'];
     const dialog = document.createElement('div');
     dialog.setAttribute('data-dsl4-sealed-password', 'true');
@@ -95,11 +114,11 @@ export function createDsl4SealedPasswordPrompt(options: {
       'max-width:420px;width:100%;padding:20px;border-radius:12px;background:#fff;color:#1b1b1b;box-shadow:0 8px 24px rgba(0,0,0,.35);';
     const title = document.createElement('h2');
     title.id = `${id}-title`;
-    title.textContent = text.title;
+    title.textContent = choosing ? text.chooseTitle : text.title;
     title.style.cssText = 'margin:0 0 10px;font-size:20px;line-height:1.3;';
     const message = document.createElement('p');
     message.id = `${id}-message`;
-    message.textContent = text.message;
+    message.textContent = choosing ? text.chooseMessage : text.message;
     message.style.cssText = 'margin:0 0 12px;font-size:14px;';
     const label = document.createElement('label');
     label.textContent = text.password;
@@ -108,15 +127,26 @@ export function createDsl4SealedPasswordPrompt(options: {
     const input = document.createElement('input');
     input.id = `${id}-input`;
     input.type = 'password';
-    input.autocomplete = 'current-password';
+    input.autocomplete = choosing ? 'new-password' : 'current-password';
     input.setAttribute('data-dsl4-sealed-password-input', 'true');
     input.style.cssText =
       'width:100%;box-sizing:border-box;padding:8px;font-size:16px;border:1px solid #888;border-radius:6px;';
+    const confirmLabel = document.createElement('label');
+    confirmLabel.textContent = text.confirm;
+    confirmLabel.setAttribute('for', `${id}-confirm`);
+    confirmLabel.style.cssText = 'display:block;margin:10px 0 4px;font-size:13px;';
+    const confirm = document.createElement('input');
+    confirm.id = `${id}-confirm`;
+    confirm.type = 'password';
+    confirm.autocomplete = 'new-password';
+    confirm.setAttribute('data-dsl4-sealed-password-confirm', 'true');
+    confirm.style.cssText = input.style.cssText;
     const error = document.createElement('p');
     error.setAttribute('role', 'alert');
     error.setAttribute('data-dsl4-sealed-password-error', 'true');
-    error.textContent = request.previousAttemptFailed ? text.wrong : '';
-    error.hidden = !request.previousAttemptFailed;
+    const failed = request?.previousAttemptFailed === true;
+    error.textContent = failed ? text.wrong : '';
+    error.hidden = !failed;
     error.style.cssText = 'margin:8px 0 0;font-size:13px;color:#b00020;';
     const actions = document.createElement('div');
     actions.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:16px;';
@@ -126,7 +156,7 @@ export function createDsl4SealedPasswordPrompt(options: {
     cancel.setAttribute('data-dsl4-sealed-password-action', 'cancel');
     const open = document.createElement('button');
     open.type = 'submit';
-    open.textContent = text.open;
+    open.textContent = choosing ? text.save : text.open;
     open.setAttribute('data-dsl4-sealed-password-action', 'open');
     for (const button of [cancel, open])
       button.style.cssText = 'padding:8px 16px;font-size:15px;border-radius:6px;cursor:pointer;';
@@ -136,13 +166,32 @@ export function createDsl4SealedPasswordPrompt(options: {
     form.appendChild(message);
     form.appendChild(label);
     form.appendChild(input);
+    if (choosing) {
+      form.appendChild(confirmLabel);
+      form.appendChild(confirm);
+    }
     form.appendChild(error);
     form.appendChild(actions);
     dialog.appendChild(form);
 
     form.addEventListener('submit', ((event: {preventDefault(): void}) => {
       event.preventDefault();
-      close(input.value ?? '');
+      const value = input.value ?? '';
+      if (choosing) {
+        // A new password is checked here, so a typo cannot seal a story nobody can open.
+        const problem =
+          [...value].length < dsl4SealedMinPasswordLength
+            ? text.tooShort
+            : value !== (confirm.value ?? '')
+              ? text.mismatch
+              : null;
+        if (problem !== null) {
+          error.textContent = problem;
+          error.hidden = false;
+          return;
+        }
+      }
+      close(value);
     }) as never);
     cancel.addEventListener('click', (() => close(null)) as never);
     for (const type of ['keydown', 'keyup', 'keypress']) {
@@ -158,7 +207,7 @@ export function createDsl4SealedPasswordPrompt(options: {
     return {dialog, input};
   }
 
-  const unlock: Dsl4SealedUnlock = (request) => {
+  function ask(request: Dsl4SealedUnlockRequest | null) {
     // A new ask replaces one still open; the older caller is treated as having declined.
     close(null);
     const {dialog, input} = render(request);
@@ -168,10 +217,14 @@ export function createDsl4SealedPasswordPrompt(options: {
     return new Promise<string | null>((resolve) => {
       pending = resolve;
     });
-  };
+  }
+
+  const unlock: Dsl4SealedUnlock = (request) => ask(request);
 
   return Object.freeze({
     unlock,
+    /** Ask for a new password, twice, to seal a story; `null` when the author cancels. */
+    choose: () => ask(null),
     /** Close any open ask as declined. */
     dispose() {
       close(null);

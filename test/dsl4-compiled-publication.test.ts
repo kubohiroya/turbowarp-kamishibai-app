@@ -190,7 +190,7 @@ test('re-saves a compiled publication as compiled and refuses to restore its sou
       distributionProfile: 'source',
       ...limits,
     }),
-    /cannot be saved with its sources again/,
+    /compiled publication cannot be saved as source/,
   );
 });
 

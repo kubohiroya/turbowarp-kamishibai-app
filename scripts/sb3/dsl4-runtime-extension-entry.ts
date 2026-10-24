@@ -533,7 +533,7 @@ class KamishibaiDsl4RuntimeExtension {
   cameraPermissionGate: ReturnType<typeof createDsl4UserMediaGate> | null;
   cameraPermissionContainer: {remove(): void} | null;
   cameraControls: Dsl4CameraControlsController | null;
-  /** Passwords that opened a sealed story, by its source integrity, for this page only. */
+  /** Passwords that opened a sealed story, by its key id, for this page only. */
   sealedPasswords: Map<string, string>;
   sealedPasswordPrompt: ReturnType<typeof createDsl4SealedPasswordPrompt> | null;
 
@@ -1637,6 +1637,23 @@ class KamishibaiDsl4RuntimeExtension {
         if (this.status !== 'error') this.reportFailure(error, 'story-runtime');
       }
     };
+    const sealedPasswordPrompt = () =>
+      (this.sealedPasswordPrompt ??= createDsl4SealedPasswordPrompt({
+        document: globalThis.document,
+        mount: resolveRuntimeMount(Scratch),
+        getLocale: () => this.titleLocale,
+      }));
+    // A sealed story asks once per page: a password that opened it is reused on restart and, by
+    // its key id, for every chapter of a sealed publication. A reused one that fails is dropped
+    // before asking again.
+    const unlockSealedStory = async (request: Dsl4SealedUnlockRequest) => {
+      const cached = this.sealedPasswords.get(request.keyId);
+      if (cached !== undefined && !request.previousAttemptFailed) return cached;
+      this.sealedPasswords.delete(request.keyId);
+      const password = await sealedPasswordPrompt().unlock(request);
+      if (password) this.sealedPasswords.set(request.keyId, password);
+      return password;
+    };
     try {
       const shellCandidate = await createDsl4StandardAppShell({
         featureFlags: binaryRuntime
@@ -1650,25 +1667,19 @@ class KamishibaiDsl4RuntimeExtension {
         mount: resolveRuntimeMount(Scratch),
         runtimeHostOptions: {
           runtimeVersion: extensionVersion,
-          // A sealed story asks once per page: a password that opened it is reused on restart,
-          // and a reused one that fails is dropped before asking again.
-          unlockSealedStory: async (request: Dsl4SealedUnlockRequest) => {
-            const cached = this.sealedPasswords.get(request.sourceIntegrity);
-            if (cached !== undefined && !request.previousAttemptFailed) return cached;
-            this.sealedPasswords.delete(request.sourceIntegrity);
-            this.sealedPasswordPrompt ??= createDsl4SealedPasswordPrompt({
-              document: globalThis.document,
-              mount: resolveRuntimeMount(Scratch),
-              getLocale: () => this.titleLocale,
-            });
-            const password = await this.sealedPasswordPrompt.unlock(request);
-            if (password) this.sealedPasswords.set(request.sourceIntegrity, password);
-            return password;
-          },
+          unlockSealedStory,
           ...(publicationStageFactory
             ? {
                 createPublicationStage: publicationStageFactory,
-                async downloadPublication(saveOptions?: {distributionProfile?: 'compiled'}) {
+                async downloadPublication(saveOptions?: {
+                  distributionProfile?: 'compiled' | 'sealed';
+                }) {
+                  // Sealing asks the author for a new password; a cancelled ask saves nothing.
+                  const sealedPassword =
+                    saveOptions?.distributionProfile === 'sealed'
+                      ? await sealedPasswordPrompt().choose()
+                      : undefined;
+                  if (sealedPassword === null) return undefined;
                   const built = await createDsl4PublicationDistributionSb3({
                     project,
                     projectFiles: publicationFiles,
@@ -1677,6 +1688,9 @@ class KamishibaiDsl4RuntimeExtension {
                     ...(saveOptions?.distributionProfile
                       ? {distributionProfile: saveOptions.distributionProfile}
                       : {}),
+                    ...(sealedPassword === undefined ? {} : {sealedPassword}),
+                    // Re-saving a sealed publication verifies it with the password that opened it.
+                    unlockSealedStory,
                   });
                   return downloadDsl4BrowserDistributionSb3({...built, globalObject: globalThis});
                 },

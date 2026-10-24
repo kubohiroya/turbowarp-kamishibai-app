@@ -3,6 +3,15 @@ import {canonicalizeDsl4Source} from '../source-canonicalizer.js';
 import {createDsl4PublicationSourceProvider} from '../publication-loader.js';
 import {dsl4CompiledPublicationEntry} from '../compiled-project.js';
 import {readDsl4CompiledStoryArtifact} from '../compiled-story-artifact.js';
+import {
+  createDsl4SealedKeyCache,
+  createDsl4SealedStoryArtifact,
+  type Dsl4SealCrypto,
+  type Dsl4SealedKeyCache,
+  type Dsl4SealedUnlock,
+  openDsl4SealedStoryWithUnlock,
+  readDsl4SealedStoryHeader,
+} from '../sealed-story-artifact.js';
 import {validateDsl4PublicationManifest} from '../publication-manifest.js';
 import type {Dsl4SourceFrontend} from '../source-frontend.js';
 import {buildDsl4BrowserSelectedStoryProject} from './browser-story-file-loader.js';
@@ -197,7 +206,7 @@ export async function buildDsl4BrowserSelectedPublicationProject(
 }
 
 /** The scenario chapter links a chapter's actions request; each must be one of its manifest `next`. */
-function assertDsl4ChapterLinks(
+export function assertDsl4ChapterLinks(
   segment: {id: string; next: readonly string[]},
   storyDocument: Readonly<Record<string, unknown>>,
 ) {
@@ -237,9 +246,14 @@ export function validateDsl4ProjectPublication(
   // Version 1 (rc.49 and earlier) embeds asset data in every component; version 2 shares it.
   if (publication.formatVersion !== 1 && publication.formatVersion !== 2)
     throw new TypeError('Unsupported publication project version');
-  if (publication.profile !== undefined && publication.profile !== 'compiled')
+  if (
+    publication.profile !== undefined &&
+    publication.profile !== 'compiled' &&
+    publication.profile !== 'sealed'
+  )
     throw new TypeError('Unsupported publication distribution profile');
   const compiled = publication.profile === 'compiled';
+  const sealed = publication.profile === 'sealed';
   // Version 1 keeps its entry component outside the budget, as rc.49 did.
   const residentEntryComponents = publication.formatVersion === 2 ? entryComponents : [];
   // Bound everything the project keeps resident before parsing any chapter.
@@ -275,6 +289,40 @@ export function validateDsl4ProjectPublication(
           throw new TypeError('Publication entry component asset file must reference assetFiles');
       }
     }
+  }
+  if (sealed) {
+    // Every chapter, and the entry component beside the publication, is sealed under one salt
+    // and iteration count, so one password opens them all. Nothing readable is shared.
+    if (publication.sources !== undefined)
+      throw new TypeError('A sealed publication must not keep chapter sources');
+    if (Object.keys(assetFiles).length > 0)
+      throw new TypeError('A sealed publication must not share readable asset files');
+    let derivation: string | null = null;
+    const sealedComponent = (component: Record<string, unknown>, name: string) => {
+      for (const key of ['source', 'compiled', 'assets', 'assetDistribution'])
+        if (component[key] !== undefined)
+          throw new TypeError(`A sealed ${name} must not keep ${key}`);
+      const {keyDerivation} = readDsl4SealedStoryHeader(component.sealed).header;
+      const id = `${keyDerivation.iterations}|${keyDerivation.salt}`;
+      if (derivation !== null && derivation !== id)
+        throw new TypeError('A sealed publication must use one password for every chapter');
+      derivation = id;
+    };
+    for (const segment of manifest.segments) {
+      if (segment.source.entry !== dsl4CompiledPublicationEntry(segment.id) || segment.source.url)
+        throw new TypeError('Sealed publication chapter must name its own Story IR');
+      // Chapter links are checked when the chapter is decrypted (`readDsl4SealedPublicationChapter`).
+      sealedComponent(record(components[segment.id]), `chapter ${segment.id}`);
+    }
+    for (const component of entryComponents) sealedComponent(record(component), 'entry component');
+    return deepFreeze({
+      manifest,
+      profile: 'sealed' as const,
+      sources: {} as Record<string, string>,
+      components: structuredClone(components),
+      assetFiles,
+      resident,
+    });
   }
   if (compiled) {
     // No YAML anywhere: each chapter is its component's Story IR, named by segment id.
@@ -336,4 +384,82 @@ export function readDsl4PublicationChapterText(
   if (!segment) return undefined;
   const component = publication.components[segment.id] as Record<string, unknown>;
   return JSON.stringify(readDsl4CompiledStoryArtifact(component.compiled).story);
+}
+
+/**
+ * Decrypt one chapter of a sealed publication and check it the way a compiled chapter is checked
+ * when opened: its Story IR, and that each `gotoSegment` is one of its manifest `next` links.
+ * Returns the Story IR's JSON, which the manifest digest then verifies, or `null` when the viewer
+ * declined to give the password.
+ */
+export async function readDsl4SealedPublicationChapter(
+  publication: ReturnType<typeof validateDsl4ProjectPublication>,
+  entry: string,
+  unlock: Dsl4SealedUnlock,
+  options: {keyCache?: Dsl4SealedKeyCache; crypto?: Dsl4SealCrypto} = {},
+) {
+  const segment = publication.manifest.segments.find((item) => item.source.entry === entry);
+  if (!segment) return undefined;
+  const component = publication.components[segment.id] as Record<string, unknown>;
+  const opened = await openDsl4SealedStoryWithUnlock(component.sealed, unlock, options);
+  if (opened === null) return null;
+  assertDsl4ChapterLinks(segment, opened.compiled.story);
+  return JSON.stringify(opened.compiled.story);
+}
+
+/**
+ * Turn a project carrying a `compiled` publication into the `sealed` profile, in place.
+ *
+ * Every chapter seals its compiled story together with its own assets (restored from the shared
+ * `assetFiles`, which a sealed publication cannot keep readable), all under one fresh salt so the
+ * viewer's password derives one key. The entry component beside the publication is sealed the same
+ * way. The manifest is unchanged: it names each chapter's Story IR digest, checked after decryption.
+ */
+export async function convertDsl4PublicationToSealedProfile(
+  project: Record<string, unknown>,
+  password: string,
+  options: {iterations?: number; crypto?: Dsl4SealCrypto} = {},
+) {
+  const publication = record(readDsl4ProjectPublication(project));
+  if (publication.profile !== 'compiled')
+    throw new TypeError('Only a compiled publication can be sealed');
+  const manifest = validateDsl4PublicationManifest(publication.manifest);
+  const assetFiles = (
+    publication.formatVersion === 2 ? record(publication.assetFiles) : {}
+  ) as Record<string, string>;
+  const crypto = options.crypto ?? (globalThis.crypto as unknown as Dsl4SealCrypto);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const keyCache = createDsl4SealedKeyCache();
+  const seal = async (input: unknown) => {
+    const component = restorePublicationComponent(input, assetFiles);
+    const sealedArtifact = await createDsl4SealedStoryArtifact(
+      {compiled: record(component.compiled), assets: component.assets},
+      password,
+      {...options, crypto, salt, keyCache},
+    );
+    delete component.compiled;
+    delete component.assets;
+    component.sealed = structuredClone(sealedArtifact);
+    return component;
+  };
+  const components = record(publication.components);
+  for (const segment of manifest.segments)
+    components[segment.id] = await seal(components[segment.id]);
+  const storage = record(project.extensionStorage);
+  const bundle = record(storage.kubohiroyakamishibai4);
+  if (
+    isPlainRecord(bundle.components) &&
+    bundle.components.kubohiroyakamishibairuntime4 !== undefined
+  )
+    bundle.components.kubohiroyakamishibairuntime4 = await seal(
+      bundle.components.kubohiroyakamishibairuntime4,
+    );
+  if (storage.kubohiroyakamishibairuntime4 !== undefined)
+    storage.kubohiroyakamishibairuntime4 = await seal(storage.kubohiroyakamishibairuntime4);
+  if (publication.formatVersion === 2) publication.assetFiles = {};
+  publication.profile = 'sealed';
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

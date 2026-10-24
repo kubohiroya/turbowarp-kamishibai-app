@@ -17,12 +17,11 @@ import {
 } from './compiled-story-artifact.js';
 import {
   type Dsl4SealCrypto,
+  type Dsl4SealedKeyCache,
   type Dsl4SealedUnlock,
   Dsl4SealedStoryError,
-  dsl4SealedMaxUnlockAttempts,
   findDsl4SealedStory,
-  openDsl4SealedStoryArtifact,
-  readDsl4SealedStoryHeader,
+  openDsl4SealedStoryWithUnlock,
 } from './sealed-story-artifact.js';
 import {
   Dsl4SourceDescriptorError,
@@ -197,6 +196,8 @@ async function loadUnsealedDsl4RuntimeArtifact(
     /** Supplies the password for a sealed story. Without it a sealed story is refused. */
     unlockSealedStory?: Dsl4SealedUnlock;
     sealCrypto?: Dsl4SealCrypto;
+    /** Shares derived keys across loads, e.g. the chapters of one sealed publication. */
+    sealedKeyCache?: Dsl4SealedKeyCache;
   },
 ) {
   if (!sourceFrontend || typeof sourceFrontend.parse !== 'function') {
@@ -471,6 +472,7 @@ export async function loadDsl4RuntimeArtifact(
     subtleCrypto = globalThis.crypto?.subtle,
     unlockSealedStory,
     sealCrypto,
+    sealedKeyCache,
   } = options;
   let sealed;
   try {
@@ -511,39 +513,23 @@ export async function loadDsl4RuntimeArtifact(
       );
     let opened;
     try {
-      const header = readDsl4SealedStoryHeader(sealed.artifact).header;
-      // A wrong password asks again, up to a fixed number of times; declining stops at once.
-      for (let attempt = 1; opened === undefined; attempt += 1) {
-        const password = await unlockSealedStory(
-          Object.freeze({
-            sourceIntegrity: header.sourceIntegrity,
-            attempt,
-            previousAttemptFailed: attempt > 1,
-          }),
-        );
-        if (password === null || password === '')
-          return failure(
-            null,
-            dsl4CompiledStorySourceId,
-            'K4-SEALED-KEY-REQUIRED',
-            'This story is sealed and no password was given',
-            '$.sealed',
-          );
-        try {
-          opened = await openDsl4SealedStoryArtifact(sealed.artifact, password, {
-            ...(sealCrypto === undefined ? {} : {crypto: sealCrypto}),
-          });
-        } catch (error) {
-          const wrong =
-            error instanceof Dsl4SealedStoryError && error.code === 'K4-SEALED-AUTH-001';
-          if (!wrong || attempt >= dsl4SealedMaxUnlockAttempts) throw error;
-        }
-      }
+      opened = await openDsl4SealedStoryWithUnlock(sealed.artifact, unlockSealedStory, {
+        ...(sealCrypto === undefined ? {} : {crypto: sealCrypto}),
+        ...(sealedKeyCache === undefined ? {} : {keyCache: sealedKeyCache}),
+      });
     } catch (error) {
       if (error instanceof Dsl4SealedStoryError || error instanceof Dsl4CompiledStoryError)
         return failure(null, dsl4CompiledStorySourceId, error.code, error.message, '$.sealed');
       throw error;
     }
+    if (opened === null)
+      return failure(
+        null,
+        dsl4CompiledStorySourceId,
+        'K4-SEALED-KEY-REQUIRED',
+        'This story is sealed and no password was given',
+        '$.sealed',
+      );
     // The decrypted story and assets exist only in this in-memory copy of the project.
     const plain = structuredClone(project) as Record<string, unknown>;
     const owner = findDsl4SealedStory(plain)!.owner;
@@ -578,6 +564,8 @@ export function loadDsl4RuntimeComponent(
     subtleCrypto?: Dsl4SubtleCrypto | undefined;
     unlockSealedStory?: Dsl4SealedUnlock;
     sealCrypto?: Dsl4SealCrypto;
+    /** Shares derived keys across loads, e.g. the chapters of one sealed publication. */
+    sealedKeyCache?: Dsl4SealedKeyCache;
   },
 ) {
   return loadDsl4RuntimeArtifact(project, sourceFrontend, {
