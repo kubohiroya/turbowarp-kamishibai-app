@@ -35,10 +35,7 @@ export type Sb3SavePayload = 'extensions' | 'source' | 'assets';
  * cross-layer defect this family has had came from a translation.
  */
 export type Sb3SaveFormat =
-  | 'remote-non-cacheable'
-  | 'remote-cacheable'
-  | 'embedded-file'
-  | 'embedded-data';
+  'remote-non-cacheable' | 'remote-cacheable' | 'embedded-file' | 'embedded-data';
 
 export const sb3SavePayloads: readonly Sb3SavePayload[] = Object.freeze([
   'extensions',

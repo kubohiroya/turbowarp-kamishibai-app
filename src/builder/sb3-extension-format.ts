@@ -128,7 +128,10 @@ export function readSb3ExtensionPayloads(
     // where a standard host looks for it. The Manifest records that it is there, not the bytes.
     const carrier = isRecord(project.extensionURLs) ? project.extensionURLs[spec.id] : undefined;
     if (typeof carrier !== 'string' || !carrier.startsWith(legacyDataUrlPrefix))
-      fail(`The project document is missing the data: carrier for ${spec.id}.`, 'K4-EXT-FORMAT-002');
+      fail(
+        `The project document is missing the data: carrier for ${spec.id}.`,
+        'K4-EXT-FORMAT-002',
+      );
     result.push(
       Object.freeze({
         id: spec.id,
@@ -232,8 +235,14 @@ export async function writeSb3ExtensionFormat(
   archive: Record<string, Uint8Array>,
   project: Record<string, unknown>,
   format: Sb3SaveFormat,
-  {urls = {}, version, unsandboxed = [], keepEmbeddedData = false, fetch: fetchBytes = fetch,
-    timeoutMs = 30_000}: Sb3ExtensionFormatOptions = {},
+  {
+    urls = {},
+    version,
+    unsandboxed = [],
+    keepEmbeddedData = false,
+    fetch: fetchBytes = fetch,
+    timeoutMs = 30_000,
+  }: Sb3ExtensionFormatOptions = {},
 ): Promise<Sb3ExtensionFormatResult> {
   const support = sb3SaveFormatSupport('extensions', format);
   if (!support.supported)
@@ -254,7 +263,8 @@ export async function writeSb3ExtensionFormat(
   // Release only what these extensions own now, then write back only the chosen form.
   for (const payload of payloads) {
     const held = nextURLs[payload.id];
-    if (typeof held === 'string' && held.startsWith(legacyDataUrlPrefix)) carriers.set(payload.id, held);
+    if (typeof held === 'string' && held.startsWith(legacyDataUrlPrefix))
+      carriers.set(payload.id, held);
     delete nextURLs[payload.id];
     if (payload.path !== undefined) delete archive[payload.path];
   }
@@ -285,7 +295,10 @@ export async function writeSb3ExtensionFormat(
       if (beside !== undefined) {
         content = decode(id, beside.slice(legacyDataUrlPrefix.length));
         if (payload.sha256 !== undefined && sha256(content) !== payload.sha256)
-          fail(`The data: carrier beside extension ${id} is not the bytes it pins.`, 'K4-EXT-FORMAT-008');
+          fail(
+            `The data: carrier beside extension ${id} is not the bytes it pins.`,
+            'K4-EXT-FORMAT-008',
+          );
       } else {
         if (typeof url !== 'string' || !url)
           fail(
@@ -313,7 +326,12 @@ export async function writeSb3ExtensionFormat(
     const origin = typeof url === 'string' && url ? {url} : {};
     if (format === 'embedded-data') {
       nextURLs[id] = dataUrl(content!);
-      specs.push({id, source: {type: 'embedded-data', ...origin}, sha256: sha256(content!), ...metadata});
+      specs.push({
+        id,
+        source: {type: 'embedded-data', ...origin},
+        sha256: sha256(content!),
+        ...metadata,
+      });
       converted.push(id);
       continue;
     }

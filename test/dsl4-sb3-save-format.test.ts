@@ -121,7 +121,10 @@ test('an option left unset keeps that payload, and a named one is never ignored'
     () => normalizeSb3SaveSelection({assets: 'embedded-data'}),
     /does not rewrite assets\. Omit --assets/u,
   );
-  assert.throws(() => normalizeSb3SaveSelection({assets: 'remote-non-cacheable'}), /resolved at build time/u);
+  assert.throws(
+    () => normalizeSb3SaveSelection({assets: 'remote-non-cacheable'}),
+    /resolved at build time/u,
+  );
   assert.throws(
     () => normalizeSb3SaveSelection({assets: 'remote-cacheable'}),
     /no command produces one yet/u,
@@ -130,7 +133,10 @@ test('an option left unset keeps that payload, and a named one is never ignored'
     () => normalizeSb3SaveSelection({assets: 'embedded-file'}),
     /saveProjectSb3DontZip/u,
   );
-  assert.throws(() => normalizeSb3SaveSelection({source: 'remote-non-cacheable'}), /turbowarp-document-source/u);
+  assert.throws(
+    () => normalizeSb3SaveSelection({source: 'remote-non-cacheable'}),
+    /turbowarp-document-source/u,
+  );
   assert.throws(
     () => normalizeSb3SaveSelection({assetsAsProjectAssets: true}),
     /Cannot store assets as project assets: .*convert-dsl4-assets --to project/u,
@@ -145,7 +151,10 @@ test('an option left unset keeps that payload, and a named one is never ignored'
 });
 
 test('a selection must name known options and known formats', async () => {
-  assert.throws(() => normalizeSb3SaveSelection({nope: 'remote-non-cacheable'}), /Unknown save option nope/u);
+  assert.throws(
+    () => normalizeSb3SaveSelection({nope: 'remote-non-cacheable'}),
+    /Unknown save option nope/u,
+  );
   assert.throws(() => normalizeSb3SaveSelection({extensions: 'nope'}), /must be one of/u);
   assert.throws(() => normalizeSb3SaveSelection(null), /selection object is required/u);
   assert.throws(
@@ -218,8 +227,11 @@ test('a reference reuses the URL a project already names, and back again by fetc
   const url = `https://example.test/${id}.js`;
   await writeSb3ExtensionFormat(archive, project, 'embedded-file', {urls: {[id]: url}});
   // Either carrier records the address, which is what keeps the way back open.
-  assert.deepEqual(discoverManifest(project)!.extensions[0]!.source,
-    {type: 'embedded-file', url, path: sb3PlusExtensionPath(id)});
+  assert.deepEqual(discoverManifest(project)!.extensions[0]!.source, {
+    type: 'embedded-file',
+    url,
+    path: sb3PlusExtensionPath(id),
+  });
 
   for (const format of ['remote-cacheable', 'remote-non-cacheable'] as const) {
     await writeSb3ExtensionFormat(archive, project, format);
@@ -295,7 +307,10 @@ test('the data carrier keeps dependencies, because the Manifest records them', a
   // cannot say that one extension needs another. The Manifest stays now, so it can.
   const manifest = discoverManifest(project)!;
   assert.deepEqual(manifest.extensions.find((spec) => spec.id === 'alpha')!.dependencies, ['beta']);
-  assert.deepEqual(manifest.extensions.map((spec) => spec.id), ['beta', 'alpha']);
+  assert.deepEqual(
+    manifest.extensions.map((spec) => spec.id),
+    ['beta', 'alpha'],
+  );
   // A standard host still finds both, in `extensions` order, knowing nothing of the dependency.
   assert.ok(String(project.extensionURLs.alpha).startsWith('data:text/javascript;base64,'));
 });
@@ -328,7 +343,10 @@ test('unrelated content at the chosen archive path is refused rather than overwr
 test('a project with no extension is left alone', async () => {
   const project: Record<string, unknown> = {targets: []};
   const archive: Record<string, Uint8Array> = {};
-  assert.deepEqual((await writeSb3ExtensionFormat(archive, project, 'embedded-file')).converted, []);
+  assert.deepEqual(
+    (await writeSb3ExtensionFormat(archive, project, 'embedded-file')).converted,
+    [],
+  );
   assert.deepEqual(project, {targets: []});
   assert.deepEqual(archive, {});
   assert.deepEqual(readSb3ExtensionPayloads(archive, project), []);
