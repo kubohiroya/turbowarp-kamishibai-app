@@ -3,7 +3,8 @@
  *
  * The vocabulary itself — the three payloads, the four forms, and the shape of a selection — now
  * lives in `@kubohiroya/turbowarp-sb3-save-format`, so the save dialog in the GUI and the
- * per-payload converters name the same forms as this CLI.
+ * per-payload converters name the same forms as this CLI and the Loader's Manifest. One
+ * vocabulary, no translation between layers.
  *
  * What stays here is what only this converter knows: which pairs it can actually write, and what
  * is missing when it cannot. Those reasons point at this CLI's own flags and commands, so sharing
@@ -12,13 +13,17 @@
  */
 
 import {
+  describeSb3SaveFormats as describeFormats,
   normalizeSb3SaveSelection as normalizeSelection,
   sb3SaveCapabilities,
   sb3SaveFormatSupport as formatSupport,
   sb3SupportedSaveFormats as supportedFormats,
-  describeSb3SaveFormats as describeFormats,
   type Sb3SaveCapabilities,
+  type Sb3SaveFormat,
   type Sb3SaveFormatKey,
+  type Sb3SaveFormatSupport,
+  type Sb3SavePayload,
+  type Sb3SaveSelection,
 } from '@kubohiroya/turbowarp-sb3-save-format';
 
 export {
@@ -30,30 +35,23 @@ export {
   type Sb3SaveSelection,
 } from '@kubohiroya/turbowarp-sb3-save-format';
 
-import type {
-  Sb3SaveFormat,
-  Sb3SaveFormatSupport,
-  Sb3SavePayload,
-  Sb3SaveSelection,
-} from '@kubohiroya/turbowarp-sb3-save-format';
-
 // This converter rewrites extensions only. Naming any form for source data or assets would be
 // accepted and then ignored, so every such choice is refused and leaving it unset keeps it.
 const keepSource = 'Omit --source to keep the source data exactly as built.';
 const keepAssets = 'Omit --assets to keep the assets exactly as built.';
 
 const unsupported: Readonly<Partial<Record<Sb3SaveFormatKey, string>>> = Object.freeze({
-  'source:remote': `A remote source document is owned by turbowarp-document-source, which this package does not depend on yet. ${keepSource}`,
-  'source:cached': `A cached source document is owned by turbowarp-document-source, which this package does not depend on yet. ${keepSource}`,
+  'source:remote-non-cacheable': `A remote source document is owned by turbowarp-document-source, which this package does not depend on yet. ${keepSource}`,
+  'source:remote-cacheable': `A remote source document is owned by turbowarp-document-source, which this package does not depend on yet. ${keepSource}`,
   'source:embedded-file': `The owner component stores its document as text, so a ZIP file form needs the document-source contract. ${keepSource}`,
   'source:embedded-data': `This command does not rewrite source data. ${keepSource}`,
   // Asset delivery is resolved at build time from the asset config, lock and profile, and
   // resolveDsl4AssetDistributionProfile binds exactly one provider per asset. Rewriting a built
   // SB3 would have to rewrite that resolved distribution and its integrity.
-  'assets:remote': `Asset delivery is resolved at build time; use build-dsl4 with --asset-config, --asset-lock and --asset-profile remote instead of converting a built SB3. ${keepAssets}`,
+  'assets:remote-non-cacheable': `Asset delivery is resolved at build time; use build-dsl4 with --asset-config, --asset-lock and --asset-profile remote instead of converting a built SB3. ${keepAssets}`,
   // The bundle and the runtime can carry and use a retained copy of a remote asset, but no build
   // command produces one yet, so naming the build here would send people to something missing.
-  'assets:cached': `The asset bundle and the runtime can carry and use a retained copy of a remote asset, but no command produces one yet. ${keepAssets}`,
+  'assets:remote-cacheable': `The asset bundle and the runtime can carry and use a retained copy of a remote asset, but no command produces one yet. ${keepAssets}`,
   'assets:embedded-file': `The runtime reads its assets from the bundle in extensionStorage. It reaches project files only through saveProjectSb3DontZip, which the VM rebuilds from its own asset table, so an arbitrary ZIP entry does not survive to be read. ${keepAssets}`,
   'assets:embedded-data': `This command does not rewrite assets. ${keepAssets}`,
 });
