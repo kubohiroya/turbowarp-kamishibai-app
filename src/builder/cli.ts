@@ -150,6 +150,10 @@ export function usage() {
     TurboWarp host; every form keeps the Manifest, so a Plus host always has the digest.
     The two remote forms differ in whether the opener's browser may keep a copy, which the
     author decides: non-cacheable forbids one, cacheable permits one the opener may decline.
+    Neither remote form keeps a copy here. A copy lives in a viewer's browser cache, which no
+    command can reach, so a remote-cacheable output is not grounds for offline use: the copy
+    appears only once someone opens the work and does not decline it. Only the embedded forms
+    put the bytes in the SB3 itself.
     Going from a remote form to a carried one fetches the URL and refuses anything but the
     pinned bytes. --skip-url-check skips the confirmation that a recorded URL still serves
     them, for a URL that is not published yet; it cannot skip a fetch that is the only way to
@@ -1881,7 +1885,14 @@ export async function runCli(
           ? 'extensions kept as they were'
           : `extensions as ${selection.extensions} (${converted.length} converted)`) +
         (urlsChecked.length ? `, ${urlsChecked.length} URL(s) checked` : '') +
-        '; source and assets kept as built.\n',
+        '; source and assets kept as built.' +
+        // Saying which form was written is not the same as saying the work runs offline. The copy
+        // a cacheable reference permits is made by a viewer's browser, not here.
+        (selection.extensions === 'remote-cacheable'
+          ? " No copy is kept here; a viewer's browser makes one when it opens the work and does" +
+            ' not decline.'
+          : '') +
+        '\n',
     );
     if (
       parsed.options.skipUrlCheck &&

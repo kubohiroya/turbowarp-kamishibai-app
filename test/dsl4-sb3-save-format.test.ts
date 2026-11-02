@@ -498,6 +498,10 @@ test('the command refuses a remote SB3 its URL cannot serve, unless told to skip
 
     await runCli(args, io, {fetch: fakeFetch({[url]: code})});
     assert.match(writes.join(''), /1 URL\(s\) checked/u);
+    // Writing the reference is not the same as the work running offline. The copy a cacheable
+    // reference permits is made by a viewer's browser, which no command can reach, so the
+    // command says so rather than letting the chosen form imply it.
+    assert.match(writes.join(''), /No copy is kept here/u);
 
     await rm(output);
     await runCli([...args, '--skip-url-check'], io, {fetch: fakeFetch({})});
