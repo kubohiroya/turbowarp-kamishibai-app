@@ -59,8 +59,8 @@ importers:
         specifier: ^0.9.0
         version: 0.9.0
       '@kubohiroya/turbowarp-sb3-save-format':
-        specifier: 0.2.0-rc.0
-        version: 0.2.0-rc.0
+        specifier: 0.4.0-rc.0
+        version: 0.4.0-rc.0
       '@kubohiroya/turbowarp-svg-text':
         specifier: ^0.13.0
         version: 0.13.0
@@ -496,6 +496,10 @@ packages:
     resolution: {integrity: sha512-vL3J638OXN/TtqJmXG3tuFYv5ximJICZAtue0bBpJLcuejSNLJUrqQFX2YT4MITKk0TG3qZQ3z7ym6cvCdJPXQ==}
     engines: {node: '>=26'}
 
+  '@kubohiroya/turbowarp-extension-loader@0.6.0':
+    resolution: {integrity: sha512-c9Hh7Kt4UnPeEvtEbxVHcaHo5Y8T/RnbpC+UM7mi9sCu1d9DL/Pbo6Ji1Glwp1MD0TUJNgKWnYhgHHI/9ocYkg==}
+    engines: {node: '>=26'}
+
   '@kubohiroya/turbowarp-extension-manifest@0.5.0':
     resolution: {integrity: sha512-YD8fwGTwTC6oMinmVLRp5+x/6piKLTYNraKnsc+oEi/w6NFdePm1ocV8eHnBBMcqEO2usr2mI/0qnV66Ex35YA==}
     engines: {node: '>=24'}
@@ -524,9 +528,14 @@ packages:
     resolution: {integrity: sha512-vktyu7/OdrCkfniozrfNYOqa/7BaNekrtkJP+eZM49+XwzC9sZwM3H1Pl25MmENu4XKjMf4FaHVxPCIfZ7h3MQ==}
     engines: {node: '>=24'}
 
-  '@kubohiroya/turbowarp-sb3-save-format@0.2.0-rc.0':
-    resolution: {integrity: sha512-Fy15DezkrhyPvP6bgPZ5ntiV3lVpnsgBcbyuJi6YZY1oNuys2l+8ju8uOKKXsrB54Ht+B8a9JABwP5A4jjs9bg==}
+  '@kubohiroya/turbowarp-sb3-save-format@0.4.0-rc.0':
+    resolution: {integrity: sha512-VErDNweHhbUGh2oc7gT4r+842LaXXHHtrpvWX9d9J1m9O5PpjzSLnJz8hib71MiiLzU+rrhm6nPZv9BW9i+hXQ==}
     engines: {node: '>=24'}
+    peerDependencies:
+      react: ^16.14.0 || ^17 || ^18 || ^19
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   '@kubohiroya/turbowarp-svg-text@0.13.0':
     resolution: {integrity: sha512-8Al+Cdvo2Nfz3kd2mQ/f/8ymgW0KNDv9wwS5nP8ZkFgiiGrVDLX0edCA2M/n5Ah99MQFJ65rRKvJKeOIn02beQ==}
@@ -3974,6 +3983,8 @@ snapshots:
 
   '@kubohiroya/turbowarp-extension-loader@0.5.0': {}
 
+  '@kubohiroya/turbowarp-extension-loader@0.6.0': {}
+
   '@kubohiroya/turbowarp-extension-manifest@0.5.0': {}
 
   '@kubohiroya/turbowarp-kamishibai-site-navigation@0.4.0': {}
@@ -3988,7 +3999,9 @@ snapshots:
 
   '@kubohiroya/turbowarp-runtime-expression@0.9.0': {}
 
-  '@kubohiroya/turbowarp-sb3-save-format@0.2.0-rc.0': {}
+  '@kubohiroya/turbowarp-sb3-save-format@0.4.0-rc.0':
+    dependencies:
+      '@kubohiroya/turbowarp-extension-loader': 0.6.0
 
   '@kubohiroya/turbowarp-svg-text@0.13.0': {}
 
