@@ -140,14 +140,24 @@ export function usage() {
     [--entry-file story.k4.yml] [--report REPORT.json] [--document-map PATHS.json]
 
   turbowarp-kamishibai save-sb3-format --input IN.sb3 --output OUT.sb3 \\
-    [--extensions remote|cached|embedded-file|embedded-data] [--keep-embedded-data] \\
+    [--extensions remote-non-cacheable|remote-cacheable|embedded-file|embedded-data] \\
+    [--keep-embedded-data] \\
     [--extension-urls URLS.json] [--skip-url-check] [--unsandboxed-extensions ID,ID] \\
     [--source FORMAT] [--assets FORMAT] [--assets-as-project-assets] \\
     [--max-input-bytes N]
     Writable today: ${describeSb3SaveFormats()}. An option left unset keeps that payload as it is.
-    Only embedded-data, or --keep-embedded-data beside a Plus form, loads in a standard TurboWarp host.
-    remote and cached fetch each URL and refuse one that does not serve the pinned bytes;
-    --skip-url-check saves without fetching, for a URL that is not published yet.
+    Only embedded-data, or --keep-embedded-data beside another form, loads in a standard
+    TurboWarp host; every form keeps the Manifest, so a Plus host always has the digest.
+    The two remote forms differ in whether the opener's browser may keep a copy, which the
+    author decides: non-cacheable forbids one, cacheable permits one the opener may decline.
+    Neither remote form keeps a copy here. A copy lives in a viewer's browser cache, which no
+    command can reach, so a remote-cacheable output is not grounds for offline use: the copy
+    appears only once someone opens the work and does not decline it. Only the embedded forms
+    put the bytes in the SB3 itself.
+    Going from a remote form to a carried one fetches the URL and refuses anything but the
+    pinned bytes. --skip-url-check skips the confirmation that a recorded URL still serves
+    them, for a URL that is not published yet; it cannot skip a fetch that is the only way to
+    obtain the bytes at all.
 
   turbowarp-kamishibai convert-dsl4 --input SOURCE.txt \\
     --output STORY.k4.yml [--pose-models REPLACEMENTS.json]
@@ -1854,11 +1864,14 @@ export async function runCli(
     const converted =
       selection.extensions === undefined
         ? []
-        : writeSb3ExtensionFormat(archive, project, selection.extensions, {
-            urls: extensionURLs,
-            unsandboxed: parsed.options.unsandboxed,
-            keepEmbeddedData: parsed.options.keepEmbeddedData,
-          }).converted;
+        : (
+            await writeSb3ExtensionFormat(archive, project, selection.extensions, {
+              urls: extensionURLs,
+              unsandboxed: parsed.options.unsandboxed,
+              keepEmbeddedData: parsed.options.keepEmbeddedData,
+              fetch: dependencies.fetch,
+            })
+          ).converted;
     // Check what a host will load before writing an SB3 that only looks finished.
     const urlsChecked =
       selection.extensions === undefined || parsed.options.skipUrlCheck
@@ -1872,10 +1885,20 @@ export async function runCli(
           ? 'extensions kept as they were'
           : `extensions as ${selection.extensions} (${converted.length} converted)`) +
         (urlsChecked.length ? `, ${urlsChecked.length} URL(s) checked` : '') +
-        '; source and assets kept as built.\n',
+        '; source and assets kept as built.' +
+        // Saying which form was written is not the same as saying the work runs offline. The copy
+        // a cacheable reference permits is made by a viewer's browser, not here.
+        (selection.extensions === 'remote-cacheable'
+          ? " No copy is kept here; a viewer's browser makes one when it opens the work and does" +
+            ' not decline.'
+          : '') +
+        '\n',
     );
-    if (parsed.options.skipUrlCheck && ['remote', 'cached'].includes(selection.extensions ?? ''))
-      stderr.write('Warning: --skip-url-check: no remote or cached URL was fetched.\n');
+    if (
+      parsed.options.skipUrlCheck &&
+      ['remote-non-cacheable', 'remote-cacheable'].includes(selection.extensions ?? '')
+    )
+      stderr.write('Warning: --skip-url-check: no recorded URL was confirmed.\n');
     return {outputPath: parsed.options.output, selection, converted};
   }
   if (parsed.action === 'convert-dsl4-assets') {
