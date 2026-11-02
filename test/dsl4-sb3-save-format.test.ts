@@ -37,6 +37,10 @@ const code = '// Name: Kamishibai DSL 4.0 Runtime\n// ID: kubohiroyakamishibai4\
 const dataUrl = (source: string) =>
   `data:text/javascript;base64,${Buffer.from(source, 'utf8').toString('base64')}`;
 const hex = (source: string) => createHash('sha256').update(source, 'utf8').digest('hex');
+/** Serves one body, so a conversion from a reference has something pinned to fetch. */
+const serving = (source: string) =>
+  (async () =>
+    new Response(new TextEncoder().encode(source), {status: 200})) as unknown as typeof fetch;
 
 interface TestProject extends Record<string, unknown> {
   extensionURLs: Record<string, unknown>;
@@ -65,7 +69,7 @@ function plusProject() {
       extensions: [
         {
           id: 'beta',
-          source: {type: 'embedded', path: `extensions/beta-${hex(b)}.js`},
+          source: {type: 'embedded-file', path: `extensions/beta-${hex(b)}.js`},
           execution: 'sandboxed',
           sha256: hex(b),
           version: '1.2.3',
@@ -75,7 +79,7 @@ function plusProject() {
         },
         {
           id: 'alpha',
-          source: {type: 'embedded', path: `extensions/alpha-${hex(a)}.js`},
+          source: {type: 'embedded-file', path: `extensions/alpha-${hex(a)}.js`},
           execution: 'sandboxed',
           sha256: hex(a),
           capabilities: [],
@@ -87,16 +91,22 @@ function plusProject() {
   return {archive, project};
 }
 
-test('the vocabulary names four formats for three payloads', () => {
-  assert.deepEqual(sb3SaveFormats, ['remote', 'cached', 'embedded-file', 'embedded-data']);
+test('the vocabulary names four formats for three payloads', async () => {
+  assert.deepEqual(sb3SaveFormats, [
+    'remote-non-cacheable',
+    'remote-cacheable',
+    'embedded-file',
+    'embedded-data',
+  ]);
   assert.deepEqual(sb3SavePayloads, ['extensions', 'source', 'assets']);
   assert.equal(
     describeSb3SaveFormats(),
-    'extensions: remote|cached|embedded-file|embedded-data; source: kept as built; assets: kept as built',
+    'extensions: remote-non-cacheable|remote-cacheable|embedded-file|embedded-data; ' +
+      'source: kept as built; assets: kept as built',
   );
 });
 
-test('an option left unset keeps that payload, and a named one is never ignored', () => {
+test('an option left unset keeps that payload, and a named one is never ignored', async () => {
   // Leaving everything unset is a request to change nothing.
   assert.deepEqual(normalizeSb3SaveSelection({}), {
     extensions: undefined,
@@ -111,31 +121,31 @@ test('an option left unset keeps that payload, and a named one is never ignored'
     () => normalizeSb3SaveSelection({assets: 'embedded-data'}),
     /does not rewrite assets\. Omit --assets/u,
   );
-  assert.throws(() => normalizeSb3SaveSelection({assets: 'remote'}), /resolved at build time/u);
+  assert.throws(() => normalizeSb3SaveSelection({assets: 'remote-non-cacheable'}), /resolved at build time/u);
   assert.throws(
-    () => normalizeSb3SaveSelection({assets: 'cached'}),
+    () => normalizeSb3SaveSelection({assets: 'remote-cacheable'}),
     /no command produces one yet/u,
   );
   assert.throws(
     () => normalizeSb3SaveSelection({assets: 'embedded-file'}),
     /saveProjectSb3DontZip/u,
   );
-  assert.throws(() => normalizeSb3SaveSelection({source: 'remote'}), /turbowarp-document-source/u);
+  assert.throws(() => normalizeSb3SaveSelection({source: 'remote-non-cacheable'}), /turbowarp-document-source/u);
   assert.throws(
     () => normalizeSb3SaveSelection({assetsAsProjectAssets: true}),
     /Cannot store assets as project assets: .*convert-dsl4-assets --to project/u,
   );
   assert.deepEqual(sb3SupportedSaveFormats('extensions'), [
-    'remote',
-    'cached',
+    'remote-non-cacheable',
+    'remote-cacheable',
     'embedded-file',
     'embedded-data',
   ]);
-  assert.equal(sb3SaveFormatSupport('extensions', 'cached').supported, true);
+  assert.equal(sb3SaveFormatSupport('extensions', 'remote-cacheable').supported, true);
 });
 
-test('a selection must name known options and known formats', () => {
-  assert.throws(() => normalizeSb3SaveSelection({nope: 'remote'}), /Unknown save option nope/u);
+test('a selection must name known options and known formats', async () => {
+  assert.throws(() => normalizeSb3SaveSelection({nope: 'remote-non-cacheable'}), /Unknown save option nope/u);
   assert.throws(() => normalizeSb3SaveSelection({extensions: 'nope'}), /must be one of/u);
   assert.throws(() => normalizeSb3SaveSelection(null), /selection object is required/u);
   assert.throws(
@@ -144,21 +154,25 @@ test('a selection must name known options and known formats', () => {
   );
 });
 
-test('embedded-data and embedded-file round-trip the exact extension bytes', () => {
+test('embedded-data and embedded-file round-trip the exact extension bytes', async () => {
   const archive: Record<string, Uint8Array> = {};
   const project = embeddedDataProject();
-  writeSb3ExtensionFormat(archive, project, 'embedded-file');
+  await writeSb3ExtensionFormat(archive, project, 'embedded-file');
   assert.equal(Buffer.from(archive[sb3PlusExtensionPath(id)]!).toString('utf8'), code);
   assert.equal(project.extensionURLs[id], undefined, 'a single Plus form drops the data carrier');
-  writeSb3ExtensionFormat(archive, project, 'embedded-data');
+  await writeSb3ExtensionFormat(archive, project, 'embedded-data');
   assert.equal(project.extensionURLs[id], dataUrl(code));
   assert.equal(archive[sb3PlusExtensionPath(id)], undefined);
-  assert.equal(project.turboWarpPlus, undefined, 'no empty Manifest is left behind');
+  // A standard host ignores the Manifest and reads the carrier, so keeping it costs that host
+  // nothing and keeps the digest, the execution mode and the dependencies for a Plus host.
+  const carried = discoverManifest(project)!.extensions[0]!;
+  assert.deepEqual(carried.source, {type: 'embedded-data'});
+  assert.equal(carried.sha256, hex(code));
 });
 
-test('a rewrite keeps the execution mode, dependencies and metadata it found', () => {
+test('a rewrite keeps the execution mode, dependencies and metadata it found', async () => {
   const {archive, project} = plusProject();
-  writeSb3ExtensionFormat(archive, project, 'embedded-file');
+  await writeSb3ExtensionFormat(archive, project, 'embedded-file');
   const manifest = discoverManifest(project)!;
   const beta = manifest.extensions.find((spec) => spec.id === 'beta')!;
   const alpha = manifest.extensions.find((spec) => spec.id === 'alpha')!;
@@ -175,91 +189,123 @@ test('a rewrite keeps the execution mode, dependencies and metadata it found', (
   assert.deepEqual(beta.capabilities, ['network']);
 });
 
-test('only the App’s own DSL 4.0 extensions are requested unsandboxed by default', () => {
+test('only the App’s own DSL 4.0 extensions are requested unsandboxed by default', async () => {
   assert.ok(dsl4UnsandboxedExtensionIds.includes(id));
   const runtime = embeddedDataProject();
-  writeSb3ExtensionFormat({}, runtime, 'embedded-file');
+  await writeSb3ExtensionFormat({}, runtime, 'embedded-file');
   assert.equal(discoverManifest(runtime)!.extensions[0]!.execution, 'unsandboxed');
 
   const thirdParty = embeddedDataProject('thirdparty', '// a sandboxed extension\n');
-  writeSb3ExtensionFormat({}, thirdParty, 'embedded-file');
+  await writeSb3ExtensionFormat({}, thirdParty, 'embedded-file');
   assert.equal(discoverManifest(thirdParty)!.extensions[0]!.execution, 'sandboxed');
 
   const named = embeddedDataProject('thirdparty', '// trusted by the caller\n');
-  writeSb3ExtensionFormat({}, named, 'embedded-file', {unsandboxed: ['thirdparty']});
+  await writeSb3ExtensionFormat({}, named, 'embedded-file', {unsandboxed: ['thirdparty']});
   assert.equal(discoverManifest(named)!.extensions[0]!.execution, 'unsandboxed');
 });
 
-test('a rewrite releases the archive entry an extension occupied, wherever it was', () => {
+test('a rewrite releases the archive entry an extension occupied, wherever it was', async () => {
   const {archive, project} = plusProject();
   const original = Object.keys(archive).sort();
-  writeSb3ExtensionFormat(archive, project, 'embedded-file');
+  await writeSb3ExtensionFormat(archive, project, 'embedded-file');
   for (const entry of original) assert.equal(archive[entry], undefined, `${entry} is released`);
   assert.deepEqual(Object.keys(archive).sort(), ['extensions/alpha.js', 'extensions/beta.js']);
 });
 
-test('remote and cached reuse the URL a project already names', () => {
+test('a reference reuses the URL a project already names, and back again by fetching it', async () => {
   const archive: Record<string, Uint8Array> = {};
   const project = embeddedDataProject();
   const url = `https://example.test/${id}.js`;
-  writeSb3ExtensionFormat(archive, project, 'cached', {urls: {[id]: url}});
+  await writeSb3ExtensionFormat(archive, project, 'embedded-file', {urls: {[id]: url}});
+  // Either carrier records the address, which is what keeps the way back open.
+  assert.deepEqual(discoverManifest(project)!.extensions[0]!.source,
+    {type: 'embedded-file', url, path: sb3PlusExtensionPath(id)});
 
-  // cached → remote and remote → remote need no URL again.
-  writeSb3ExtensionFormat(archive, project, 'remote');
-  assert.deepEqual(discoverManifest(project)!.extensions[0]!.source, {type: 'remote', url});
-  writeSb3ExtensionFormat(archive, project, 'remote');
-  assert.deepEqual(discoverManifest(project)!.extensions[0]!.source, {type: 'remote', url});
-  assert.equal(archive[sb3PlusExtensionPath(id)], undefined, 'a remote form keeps no copy');
+  for (const format of ['remote-cacheable', 'remote-non-cacheable'] as const) {
+    await writeSb3ExtensionFormat(archive, project, format);
+    assert.deepEqual(discoverManifest(project)!.extensions[0]!.source, {type: format, url});
+    assert.equal(archive[sb3PlusExtensionPath(id)], undefined, 'a reference keeps no copy');
+  }
 
-  // A remote-only project has no bytes, so an embedded form must fetch them first.
-  assert.throws(
-    () => writeSb3ExtensionFormat(archive, project, 'embedded-file'),
-    /must be fetched/u,
+  // The project is now a reference with no bytes. It names the URL and pins the digest, so the
+  // bytes are obtainable: the conversion fetches them rather than refusing.
+  await writeSb3ExtensionFormat(archive, project, 'embedded-file', {fetch: serving(code)});
+  assert.equal(Buffer.from(archive[sb3PlusExtensionPath(id)]!).toString('utf8'), code);
+});
+
+test('a conversion from a reference refuses anything but the bytes the project pins', async () => {
+  const archive: Record<string, Uint8Array> = {};
+  const project = embeddedDataProject();
+  await writeSb3ExtensionFormat(archive, project, 'remote-cacheable', {
+    urls: {[id]: `https://example.test/${id}.js`},
+  });
+  // Embedding unverified bytes would make a conversion a way to replace an extension.
+  await assert.rejects(
+    writeSb3ExtensionFormat(archive, project, 'embedded-file', {fetch: serving('// not it\n')}),
+    /does not serve the bytes/u,
+  );
+  // With nothing to fetch from, there is nothing to obtain and nothing to skip.
+  const noURL: TestProject = {targets: [{isStage: true}], extensions: [], extensionURLs: {}};
+  noURL.turboWarpPlus = structuredClone(discoverManifest(project));
+  (noURL.turboWarpPlus as {extensions: {source: unknown}[]}).extensions[0]!.source = {
+    type: 'embedded-data',
+  };
+  await assert.rejects(
+    writeSb3ExtensionFormat({}, noURL, 'embedded-file'),
+    /missing the data: carrier/u,
   );
 });
 
-test('rewriting its own output is a no-op, so a converted SB3 can be rebuilt or rewritten', () => {
-  for (const format of ['embedded-file', 'cached', 'embedded-data'] as const) {
+test('rewriting its own output is a no-op, so a converted SB3 can be rebuilt or rewritten', async () => {
+  for (const format of ['embedded-file', 'remote-cacheable', 'embedded-data'] as const) {
     const archive: Record<string, Uint8Array> = {};
     const project = embeddedDataProject();
     const options = {urls: {[id]: `https://example.test/${id}.js`}, keepEmbeddedData: true};
-    writeSb3ExtensionFormat(archive, project, format, options);
+    await writeSb3ExtensionFormat(archive, project, format, options);
     const once = serializeSb3({...archive}, structuredClone(project));
-    writeSb3ExtensionFormat(archive, project, format, options);
+    await writeSb3ExtensionFormat(archive, project, format, options);
     assert.deepEqual(serializeSb3({...archive}, project), once, `${format} is idempotent`);
   }
 });
 
-test('keepEmbeddedData puts the data carrier beside a Plus form for standard hosts', () => {
+test('keepEmbeddedData puts the data carrier beside a Plus form for standard hosts', async () => {
   const archive: Record<string, Uint8Array> = {};
   const project = embeddedDataProject();
-  writeSb3ExtensionFormat(archive, project, 'embedded-file', {keepEmbeddedData: true});
+  await writeSb3ExtensionFormat(archive, project, 'embedded-file', {keepEmbeddedData: true});
   assert.equal(project.extensionURLs[id], dataUrl(code), 'a standard host still finds it');
   assert.ok(discoverManifest(project), 'a Plus host verifies it through the Manifest');
   assert.ok(archive[sb3PlusExtensionPath(id)]);
 
-  const remoteOnly = embeddedDataProject();
-  writeSb3ExtensionFormat({}, remoteOnly, 'remote', {urls: {[id]: 'https://example.test/x.js'}});
-  assert.throws(
-    () => writeSb3ExtensionFormat({}, remoteOnly, 'remote', {keepEmbeddedData: true}),
-    /no bytes to keep as a data: URL/u,
-  );
+  // A reference has no bytes in hand, but it names where they are, so the carrier can be added.
+  const reference = embeddedDataProject();
+  await writeSb3ExtensionFormat({}, reference, 'remote-cacheable', {
+    urls: {[id]: 'https://example.test/x.js'},
+  });
+  await writeSb3ExtensionFormat({}, reference, 'remote-cacheable', {
+    keepEmbeddedData: true,
+    fetch: serving(code),
+  });
+  assert.equal(reference.extensionURLs[id], dataUrl(code));
 });
 
-test('a data: URL that cannot keep dependencies is refused instead of dropping them', () => {
+test('the data carrier keeps dependencies, because the Manifest records them', async () => {
   const {archive, project} = plusProject();
-  assert.throws(
-    () => writeSb3ExtensionFormat(archive, project, 'embedded-data'),
-    /cannot record dependencies/u,
-  );
+  await writeSb3ExtensionFormat(archive, project, 'embedded-data');
+  // This used to be refused, because the writer deleted the Manifest and a `data:` URL alone
+  // cannot say that one extension needs another. The Manifest stays now, so it can.
+  const manifest = discoverManifest(project)!;
+  assert.deepEqual(manifest.extensions.find((spec) => spec.id === 'alpha')!.dependencies, ['beta']);
+  assert.deepEqual(manifest.extensions.map((spec) => spec.id), ['beta', 'alpha']);
+  // A standard host still finds both, in `extensions` order, knowing nothing of the dependency.
+  assert.ok(String(project.extensionURLs.alpha).startsWith('data:text/javascript;base64,'));
 });
 
-test('an undeclared leftover data: URL is left alone rather than brought back', () => {
+test('an undeclared leftover data: URL is left alone rather than brought back', async () => {
   const project: TestProject = {
     ...embeddedDataProject(),
     extensionURLs: {[id]: dataUrl(code), leftover: dataUrl('// not declared\n')},
   };
-  writeSb3ExtensionFormat({}, project, 'embedded-file');
+  await writeSb3ExtensionFormat({}, project, 'embedded-file');
   assert.deepEqual(project.extensions, [id]);
   assert.equal(project.extensionURLs.leftover, dataUrl('// not declared\n'));
   assert.deepEqual(
@@ -268,22 +314,21 @@ test('an undeclared leftover data: URL is left alone rather than brought back', 
   );
 });
 
-test('unrelated content at the chosen archive path is refused rather than overwritten', () => {
-  assert.throws(
-    () =>
-      writeSb3ExtensionFormat(
-        {[sb3PlusExtensionPath(id)]: new Uint8Array([1])},
-        embeddedDataProject(),
-        'embedded-file',
-      ),
+test('unrelated content at the chosen archive path is refused rather than overwritten', async () => {
+  await assert.rejects(
+    writeSb3ExtensionFormat(
+      {[sb3PlusExtensionPath(id)]: new Uint8Array([1])},
+      embeddedDataProject(),
+      'embedded-file',
+    ),
     /already contains unrelated content/u,
   );
 });
 
-test('a project with no extension is left alone', () => {
+test('a project with no extension is left alone', async () => {
   const project: Record<string, unknown> = {targets: []};
   const archive: Record<string, Uint8Array> = {};
-  assert.deepEqual(writeSb3ExtensionFormat(archive, project, 'embedded-file').converted, []);
+  assert.deepEqual((await writeSb3ExtensionFormat(archive, project, 'embedded-file')).converted, []);
   assert.deepEqual(project, {targets: []});
   assert.deepEqual(archive, {});
   assert.deepEqual(readSb3ExtensionPayloads(archive, project), []);
@@ -322,12 +367,12 @@ test('a release SB3 converts to the Plus form and back to its exact bytes', asyn
   const {archive, project} = readSb3(bytes);
   const originalURL = (project.extensionURLs as Record<string, string>)[id];
   assert.ok(originalURL?.startsWith('data:text/javascript;base64,'));
-  writeSb3ExtensionFormat(archive, project, 'embedded-file');
+  await writeSb3ExtensionFormat(archive, project, 'embedded-file');
   assert.deepEqual(
     discoverManifest(project)!.extensions.map((spec) => [spec.source, spec.execution]),
-    [[{type: 'embedded', path: sb3PlusExtensionPath(id)}, 'unsandboxed']],
+    [[{type: 'embedded-file', path: sb3PlusExtensionPath(id)}, 'unsandboxed']],
   );
-  writeSb3ExtensionFormat(archive, project, 'embedded-data');
+  await writeSb3ExtensionFormat(archive, project, 'embedded-data');
   assert.equal((project.extensionURLs as Record<string, string>)[id], originalURL);
 });
 
@@ -371,10 +416,10 @@ function fakeFetch(
 
 test('remote and cached URLs must serve the bytes their digest pins', async () => {
   const url = `https://example.test/${id}.js`;
-  for (const format of ['remote', 'cached'] as const) {
+  for (const format of ['remote-non-cacheable', 'remote-cacheable'] as const) {
     const archive: Record<string, Uint8Array> = {};
     const project = embeddedDataProject();
-    writeSb3ExtensionFormat(archive, project, format, {urls: {[id]: url}});
+    await writeSb3ExtensionFormat(archive, project, format, {urls: {[id]: url}});
 
     const requests: {url: string; init?: RequestInit | undefined}[] = [];
     assert.deepEqual(
@@ -397,7 +442,7 @@ test('remote and cached URLs must serve the bytes their digest pins', async () =
   }
   // Embedded forms name no URL, so there is nothing to fetch.
   const project = embeddedDataProject();
-  writeSb3ExtensionFormat({}, project, 'embedded-file');
+  await writeSb3ExtensionFormat({}, project, 'embedded-file');
   assert.deepEqual(await verifySb3ExtensionUrls(project, {fetch: fakeFetch({})}), []);
 });
 
@@ -422,7 +467,7 @@ test('the command refuses a remote SB3 its URL cannot serve, unless told to skip
       '--output',
       output,
       '--extensions',
-      'remote',
+      'remote-cacheable',
       '--extension-urls',
       urls,
     ];
@@ -442,7 +487,7 @@ test('the command refuses a remote SB3 its URL cannot serve, unless told to skip
       discoverManifest(readSb3(await readFile(output)).project)!.extensions[0]!.sha256,
       hex(code),
     );
-    assert.match(writes.join(''), /no remote or cached URL was fetched/u);
+    assert.match(writes.join(''), /no recorded URL was confirmed/u);
   } finally {
     await rm(directory, {recursive: true, force: true});
   }
