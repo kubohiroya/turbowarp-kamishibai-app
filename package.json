@@ -160,7 +160,7 @@
     "@turbowarp/sbdl": "7.0.0",
     "@types/node": "^26.6.4",
     "eslint": "^10.12.0",
-    "fake-indexeddb": "6.2.6",
+    "fake-indexeddb": "6.2.7",
     "gh-pages": "^6.3.0",
     "globals": "17.13.0",
     "playwright-core": "1.65.0-alpha-1792021904000",
