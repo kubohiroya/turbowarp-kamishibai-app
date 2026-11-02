@@ -48,7 +48,7 @@ Use 3.2.3 when you need the stable path for an event or an existing 3.1/3.2 stor
 
 ### Use 4.0 for YAML projects
 
-The candidate is 4.0.0-rc.81. It adds the `save-sb3-format` command, which names how an SB3 holds its extensions — `remote`, `cached`, `embedded-file`, or `embedded-data` — and rewrites them without silently downgrading or dropping anything, and it lets an asset bundle carry a verified retained copy of a remote asset so playback works offline. The rc.80 document-source contract, rc.79 title camera check, rc.78 lifecycle fix, and rc.77 previews remain available. See the [rc.81 release notes][rc81] for validation and rollback. Check the [current release status][current-release] before installing a versioned Standard SB3, Player, or npm package.
+The candidate is 4.0.0-rc.81. It adds the `save-sb3-format` command, which names how an SB3 holds its extensions — `remote-non-cacheable`, `remote-cacheable`, `embedded-file`, or `embedded-data` — and rewrites them without silently downgrading or dropping anything, and it lets an asset bundle carry a verified retained copy of a remote asset so playback works offline. The rc.80 document-source contract, rc.79 title camera check, rc.78 lifecycle fix, and rc.77 previews remain available. See the [rc.81 release notes][rc81] for validation and rollback. Check the [current release status][current-release] before installing a versioned Standard SB3, Player, or npm package.
 
 ```yaml
 kamishibai: '4.0'
