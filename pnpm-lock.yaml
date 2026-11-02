@@ -58,6 +58,9 @@ importers:
       '@kubohiroya/turbowarp-runtime-expression':
         specifier: ^0.9.0
         version: 0.9.0
+      '@kubohiroya/turbowarp-sb3-save-format':
+        specifier: 0.2.0-rc.0
+        version: 0.2.0-rc.0
       '@kubohiroya/turbowarp-svg-text':
         specifier: ^0.13.0
         version: 0.13.0
@@ -520,6 +523,10 @@ packages:
 
   '@kubohiroya/turbowarp-runtime-expression@0.9.0':
     resolution: {integrity: sha512-vktyu7/OdrCkfniozrfNYOqa/7BaNekrtkJP+eZM49+XwzC9sZwM3H1Pl25MmENu4XKjMf4FaHVxPCIfZ7h3MQ==}
+    engines: {node: '>=24'}
+
+  '@kubohiroya/turbowarp-sb3-save-format@0.2.0-rc.0':
+    resolution: {integrity: sha512-Fy15DezkrhyPvP6bgPZ5ntiV3lVpnsgBcbyuJi6YZY1oNuys2l+8ju8uOKKXsrB54Ht+B8a9JABwP5A4jjs9bg==}
     engines: {node: '>=24'}
 
   '@kubohiroya/turbowarp-svg-text@0.13.0':
@@ -3981,6 +3988,8 @@ snapshots:
   '@kubohiroya/turbowarp-runtime-adapter@0.5.0': {}
 
   '@kubohiroya/turbowarp-runtime-expression@0.9.0': {}
+
+  '@kubohiroya/turbowarp-sb3-save-format@0.2.0-rc.0': {}
 
   '@kubohiroya/turbowarp-svg-text@0.13.0': {}
 
