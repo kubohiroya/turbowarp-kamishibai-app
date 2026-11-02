@@ -38,8 +38,8 @@ importers:
         specifier: git+https://github.com/kubohiroya/turbowarp-document-source.git#a6669566d50062abb39acbb475811cb982e4d85c
         version: https://codeload.github.com/kubohiroya/turbowarp-document-source/tar.gz/a6669566d50062abb39acbb475811cb982e4d85c(supports-color@7.2.0)
       '@kubohiroya/turbowarp-extension-loader':
-        specifier: 0.2.0
-        version: 0.2.0
+        specifier: 0.5.0
+        version: 0.5.0
       '@kubohiroya/turbowarp-extension-manifest':
         specifier: ^0.5.0
         version: 0.5.0
@@ -490,8 +490,8 @@ packages:
     version: 0.1.0-rc.0
     engines: {node: '>=22'}
 
-  '@kubohiroya/turbowarp-extension-loader@0.2.0':
-    resolution: {integrity: sha512-/HVq/SG2Bph0Cikz+2RuxCdExPigq7rXvAorAMe+B6swpwY5xHhVZe7GNL3L0iGM9aeTw5c0/LY7Xk4IAncQOw==}
+  '@kubohiroya/turbowarp-extension-loader@0.5.0':
+    resolution: {integrity: sha512-vL3J638OXN/TtqJmXG3tuFYv5ximJICZAtue0bBpJLcuejSNLJUrqQFX2YT4MITKk0TG3qZQ3z7ym6cvCdJPXQ==}
     engines: {node: '>=26'}
 
   '@kubohiroya/turbowarp-extension-manifest@0.5.0':
@@ -3966,7 +3966,7 @@ snapshots:
       - '@kubohiroya/turbowarp-named-data'
       - supports-color
 
-  '@kubohiroya/turbowarp-extension-loader@0.2.0': {}
+  '@kubohiroya/turbowarp-extension-loader@0.5.0': {}
 
   '@kubohiroya/turbowarp-extension-manifest@0.5.0': {}
 

@@ -3,7 +3,7 @@
   "version": "4.0.0-rc.81",
   "private": false,
   "type": "module",
-  "description": "TurboWarp-Kamishibai — an AI-powered interactive storytelling system built on the TurboWarp ecosystem, using Teachable Machine recognition as story input",
+  "description": "TurboWarp-Kamishibai \u2014 an AI-powered interactive storytelling system built on the TurboWarp ecosystem, using Teachable Machine recognition as story input",
   "homepage": "https://kubohiroya.github.io/turbowarp-kamishibai-app/",
   "repository": {
     "type": "git",
@@ -124,7 +124,7 @@
     "@kubohiroya/turbowarp-async-input": "^0.11.0",
     "@kubohiroya/turbowarp-bubble": "^0.16.0",
     "@kubohiroya/turbowarp-camera-source": "^0.22.1",
-    "@kubohiroya/turbowarp-extension-loader": "0.2.0",
+    "@kubohiroya/turbowarp-extension-loader": "0.5.0",
     "@kubohiroya/turbowarp-extension-manifest": "^0.5.0",
     "@kubohiroya/turbowarp-kvs": "^0.5.1",
     "@kubohiroya/turbowarp-live-reload-controller": "^0.4.0",
