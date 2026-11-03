@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import {test} from 'vitest';
 
-import {createDsl4AssetSnapshotWatch, Dsl4AssetSnapshotWatchError} from '../src/dsl4/index.js';
+import {
+  createDsl4AssetSnapshotWatch,
+  Dsl4AssetSnapshotWatchError,
+} from '../src/dsl4/asset-snapshot-watch.js';
 import {requireDefined, requireRecord, requireString} from './helpers/require-value.ts';
 import {thrown} from './helpers/thrown-error.ts';
 
