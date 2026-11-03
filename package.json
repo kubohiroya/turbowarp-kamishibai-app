@@ -83,7 +83,7 @@
     "test:quick": "pnpm run build:lib && node scripts/test/run-suite.mjs quick",
     "test:full": "pnpm run build:lib && node scripts/test/run-suite.mjs full",
     "verify:quick": "pnpm lint && pnpm typecheck && pnpm test:quick",
-    "verify:pr": "pnpm sb3:check && pnpm lint && pnpm format && pnpm typecheck && pnpm test:quick",
+    "verify:pr": "pnpm run build:lib && node scripts/sb3/dsl4-release-workflow.ts check && pnpm lint && pnpm format && pnpm typecheck && node scripts/test/run-suite.mjs quick",
     "verify:full": "pnpm sb3:check && pnpm lint && pnpm format && pnpm typecheck && pnpm test:full && pnpm e2e && pnpm build && pnpm pack:smoke",
     "verify:release": "pnpm verify:full",
     "deploy": "pnpm run build:site && node scripts/deploy-site.ts",

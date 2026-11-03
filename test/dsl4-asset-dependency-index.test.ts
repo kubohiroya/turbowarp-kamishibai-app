@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {test} from 'vitest';
 
-import {createDsl4AssetDependencyIndex} from '../src/dsl4/index.js';
+import {createDsl4AssetDependencyIndex} from '../src/dsl4/asset-dependency-index.js';
 import {dsl4TestProjectRoot, dsl4TestSourceFrontend} from './helpers/dsl4-test-frontend.ts';
 import {requireDefined} from './helpers/require-value.ts';
 

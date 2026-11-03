@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {test} from 'vitest';
 
-import {createDsl4AssetReloadTransaction} from '../src/dsl4/index.js';
+import {createDsl4AssetReloadTransaction} from '../src/dsl4/asset-reload-transaction.js';
 import {thrown} from './helpers/thrown-error.ts';
 import {requireRecord} from './helpers/require-value.ts';
 

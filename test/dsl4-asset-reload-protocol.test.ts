@@ -4,7 +4,7 @@ import {test} from 'vitest';
 import {
   createDsl4AssetReloadProtocolSession,
   dsl4AssetReloadProtocolCapabilities,
-} from '../src/dsl4/index.js';
+} from '../src/dsl4/asset-reload-protocol.js';
 import {requireRecord} from './helpers/require-value.ts';
 import {thrown} from './helpers/thrown-error.ts';
 

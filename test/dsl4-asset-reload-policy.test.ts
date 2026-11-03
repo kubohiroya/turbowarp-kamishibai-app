@@ -8,8 +8,8 @@ import {fileURLToPath} from 'node:url';
 import {
   classifyDsl4AssetReload,
   createDsl4AssetReloadSnapshot,
-  createDsl4SourceFrontend,
-} from '../src/dsl4/index.js';
+} from '../src/dsl4/asset-reload-policy.js';
+import {createDsl4SourceFrontend} from '../src/dsl4/source-frontend.js';
 import {requireDefined, requireRecord} from './helpers/require-value.ts';
 import {thrown} from './helpers/thrown-error.ts';
 

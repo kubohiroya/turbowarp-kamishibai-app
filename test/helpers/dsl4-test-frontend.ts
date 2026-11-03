@@ -1,8 +1,8 @@
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 
-import {createDsl4ProductionSourceFrontend} from '../../src/builder/index.js';
-import {createDsl4SourceFrontend} from '../../src/dsl4/index.js';
+import {createDsl4ProductionSourceFrontend} from '../../src/dsl4/production-source-frontend.js';
+import {createDsl4SourceFrontend} from '../../src/dsl4/source-frontend.js';
 
 export const dsl4TestProjectRoot = fileURLToPath(new URL('../../', import.meta.url));
 export const dsl4TestSchema = JSON.parse(
