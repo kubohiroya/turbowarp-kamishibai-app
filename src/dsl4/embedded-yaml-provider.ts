@@ -3,7 +3,7 @@ import {createKamishibaiGraphDocumentProvider} from './embedded-yaml-graph-provi
 import {
   createProjectRepresentationAdapter,
   canPatchProjectRepresentations,
-} from '@kubohiroya/turbowarp-document-source/project-views';
+} from '@kubohiroya/turbowarp-document-data/project-views';
 import {
   buildKamishibaiDocumentViewCandidate,
   buildKamishibaiDocumentPreview,
@@ -12,10 +12,8 @@ import {
 import {activeKamishibaiDocumentView} from './embedded-yaml-view-state.js';
 import {documentViewsEnabledAtStartup} from './embedded-yaml-feature-flags.js';
 import {getSourceDocumentRegistry} from '@kubohiroya/turbowarp-document-data/composition';
-import {
-  getDocumentSourceRegistry,
-  type DocumentSourceVM,
-} from '@kubohiroya/turbowarp-document-source';
+import {type DocumentSourceVM} from '@kubohiroya/turbowarp-document-source';
+import {getDocumentSourceRegistry} from '@kubohiroya/turbowarp-document-data/document-source';
 import {
   createKamishibaiDocumentSourceOwnerOptions,
   documentSourceEnabledAtStartup,

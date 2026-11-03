@@ -1,6 +1,6 @@
 {
   "name": "@kubohiroya/turbowarp-kamishibai-app",
-  "version": "4.0.0-rc.81",
+  "version": "4.0.0-rc.82",
   "private": false,
   "type": "module",
   "description": "TurboWarp-Kamishibai \u2014 an AI-powered interactive storytelling system built on the TurboWarp ecosystem, using Teachable Machine recognition as story input",
@@ -120,20 +120,23 @@
   "license": "MPL-2.0",
   "dependencies": {
     "@kubohiroya/turbowarp-app-shell": "^0.6.0",
-    "@kubohiroya/turbowarp-asset-cache": "^0.6.0",
+    "@kubohiroya/turbowarp-asset-cache": "^0.6.1",
     "@kubohiroya/turbowarp-async-input": "^0.11.0",
     "@kubohiroya/turbowarp-bubble": "^0.16.0",
     "@kubohiroya/turbowarp-camera-source": "^0.22.1",
-    "@kubohiroya/turbowarp-extension-loader": "0.5.0",
+    "@kubohiroya/turbowarp-document-data": "0.6.0-rc.0",
+    "@kubohiroya/turbowarp-document-source": "0.2.0-rc.0",
+    "@kubohiroya/turbowarp-extension-loader": "0.8.0",
     "@kubohiroya/turbowarp-extension-manifest": "^0.5.0",
     "@kubohiroya/turbowarp-kvs": "^0.5.1",
     "@kubohiroya/turbowarp-live-reload-controller": "^0.4.0",
     "@kubohiroya/turbowarp-local-preview": "^0.3.0",
     "@kubohiroya/turbowarp-runtime-adapter": "^0.5.0",
     "@kubohiroya/turbowarp-runtime-expression": "^0.9.0",
-    "@kubohiroya/turbowarp-sb3-save-format": "0.4.0-rc.0",
+    "@kubohiroya/turbowarp-sb3-save-format": "0.4.0-rc.2",
     "@kubohiroya/turbowarp-svg-text": "^0.13.0",
     "@kubohiroya/turbowarp-teachable-machine": "^4.1.0",
+    "@kubohiroya/turbowarp-yaml-json": "0.9.0-rc.0",
     "@teachablemachine/pose": "0.8.6",
     "@tensorflow/tfjs": "4.22.0",
     "@turbowarp/scratch-storage": "2.0.0",
@@ -147,18 +150,16 @@
     "scratch-render": "github:TurboWarp/scratch-render#a67f7c9c07d459582c227d4fd3fae8f59d8fc9ce",
     "scratch-vm": "github:TurboWarp/scratch-vm#c4823421cb7c17d8d8a89878851ce1668c26a21f",
     "vite": "^8.3.3",
-    "yaml": "2.9.1",
-    "@kubohiroya/turbowarp-document-source": "0.1.0-rc.0",
-    "@kubohiroya/turbowarp-document-data": "0.5.0-rc.1",
-    "@kubohiroya/turbowarp-yaml-json": "0.8.0-rc.0"
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@kubohiroya/sb3-toolchain": "^0.20.0",
     "@kubohiroya/turbowarp-kamishibai-site-navigation": "^0.4.0",
-    "@kubohiroya/vite-plugin-turbowarp-extension": "^0.10.0",
+    "@kubohiroya/vite-plugin-turbowarp-extension": "^0.11.0",
     "@turbowarp/packager": "3.14.0",
     "@turbowarp/sbdl": "7.0.0",
     "@types/node": "^26.6.4",
+    "esbuild": "^0.28.2",
     "eslint": "^10.12.0",
     "fake-indexeddb": "6.2.7",
     "gh-pages": "^6.3.0",
@@ -171,8 +172,7 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.71.1",
     "typescript7": "npm:typescript@7.0.2",
-    "vitest": "^5.0.3",
-    "esbuild": "^0.28.2"
+    "vitest": "^5.0.3"
   },
   "engines": {
     "node": ">=24.0.0"

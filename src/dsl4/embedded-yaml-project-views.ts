@@ -11,15 +11,15 @@ import {
   createYamlBlockDefinitions,
   createYamlBlockMenus,
   type YamlViewBlock,
-} from '@kubohiroya/turbowarp-document-source/yaml-blocks';
+} from '@kubohiroya/turbowarp-yaml-json/yaml-blocks';
 import {
   createYamlSourceBlockView,
   readYamlSourceBlockView,
-} from '@kubohiroya/turbowarp-document-source/source-view';
+} from '@kubohiroya/turbowarp-yaml-json/source-view';
 import {
   readDocumentViewMetadata,
   writeDocumentViewMetadata,
-} from '@kubohiroya/turbowarp-document-source/view-metadata';
+} from '@kubohiroya/turbowarp-document-data/view-metadata';
 import {parseSourceSyntax} from '@kubohiroya/turbowarp-yaml-json/source-syntax';
 import {createDsl4BlockAuthoringInfo} from './structured-block-source-codec.js';
 import {dsl4BlockAuthoringExtensionId} from './block-source-shared.js';
@@ -222,7 +222,7 @@ export function readKamishibaiDocumentViewSource(
       baseline: syntax.baseline,
       blocks: root.target.blocks as Record<string, unknown>,
       descriptor:
-        descriptor as unknown as import('@kubohiroya/turbowarp-document-source/yaml-blocks').YamlViewDescriptor,
+        descriptor as unknown as import('@kubohiroya/turbowarp-yaml-json/yaml-blocks').YamlViewDescriptor,
       sourceRevision: String(selected.source.integrity),
     }).source;
   }

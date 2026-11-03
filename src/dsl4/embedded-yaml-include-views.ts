@@ -1,5 +1,5 @@
 import {parse} from 'yaml';
-import {yamlBlockIconURI} from '@kubohiroya/turbowarp-document-source/yaml-blocks';
+import {yamlBlockIconURI} from '@kubohiroya/turbowarp-yaml-json/yaml-blocks';
 import {
   decodeSourceDocumentReference,
   encodeSourceDocumentReference,

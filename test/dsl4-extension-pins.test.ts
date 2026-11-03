@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {test} from 'vitest';
@@ -65,13 +64,9 @@ test('locks every DSL4 extension to a reviewed npm release with matching caret s
   }
   const toolchainName = '@kubohiroya/sb3-toolchain';
   const toolchainVersion = releasePins.devDependencies[toolchainName];
-  const previewPatchPackage = '@kubohiroya/turbowarp-asset-cache@0.6.0';
-  const previewPatchPath = 'patches/@kubohiroya__turbowarp-asset-cache@0.6.0.patch';
-  const previewPatch = await readFile(path.join(repositoryRoot, previewPatchPath));
-  assert.deepEqual(workspace.patchedDependencies, {[previewPatchPackage]: previewPatchPath});
-  assert.deepEqual(lockfile.patchedDependencies, {
-    [previewPatchPackage]: createHash('sha256').update(previewPatch).digest('hex'),
-  });
+  // asset-cache 0.6.1 ships the fix the local 0.6.0 patch carried, so nothing is patched.
+  assert.equal(workspace.patchedDependencies, undefined);
+  assert.equal(lockfile.patchedDependencies, undefined);
   assert.equal(packageJson.devDependencies[toolchainName], `^${toolchainVersion}`);
   const toolchainDependency = lockfile.importers['.'].devDependencies[toolchainName];
   assert.equal(toolchainDependency.specifier, `^${toolchainVersion}`);

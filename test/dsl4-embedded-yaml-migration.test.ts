@@ -19,7 +19,7 @@ import {
   dsl4BundledEmbeddedYamlHatOpcode,
   dsl4BundledEmbeddedYamlRootOpcode,
 } from '../src/dsl4/embedded-yaml-identity.js';
-import {readDocumentViewMetadata} from '@kubohiroya/turbowarp-document-source/view-metadata';
+import {readDocumentViewMetadata} from '@kubohiroya/turbowarp-document-data/view-metadata';
 type Block = {
   opcode: string;
   next: string | null;

@@ -3,15 +3,15 @@ import {
   readEmbeddedYamlSourceGraphRecord,
   sourceGraphDocumentId,
 } from './embedded-yaml-source-graph.js';
+import {encodeReference} from '@kubohiroya/turbowarp-document-source';
 import {
   createEmbeddedYamlHatDefinition,
   createEmbeddedYamlRootHatDefinition,
   installEmbeddedYamlRootMarker,
   embeddedYamlFileIconURI,
-  encodeReference,
   installEmbeddedYamlMarker,
   removeEmbeddedYamlMarkers,
-} from '@kubohiroya/turbowarp-document-source';
+} from '@kubohiroya/turbowarp-document-data/document-source';
 import {
   dsl4ConfigBlockSourceHatOpcode,
   dsl4LabeledBlockSourceHatOpcode,

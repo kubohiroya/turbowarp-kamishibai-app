@@ -65,7 +65,7 @@ const externalExtensionMembers = Object.freeze(
       id: 'kubohiroyaassetcache',
       name: 'Asset Cache',
       package: '@kubohiroya/turbowarp-asset-cache',
-      version: '0.6.0',
+      version: '0.6.1',
       artifact: 'dist/asset-cache.js',
       sourcePath: path.join(
         path.dirname(

@@ -1,9 +1,8 @@
+import {readReference, validateEmbeddedYamlFilename} from '@kubohiroya/turbowarp-document-source';
 import {
-  readReference,
   validateEmbeddedYamlRootMarker,
   readEmbeddedYamlRootVersion,
-  validateEmbeddedYamlFilename,
-} from '@kubohiroya/turbowarp-document-source';
+} from '@kubohiroya/turbowarp-document-data/document-source';
 import type {SourceDocumentReference} from '@kubohiroya/turbowarp-document-data/composition';
 import {
   readEmbeddedYamlSourceGraphRecord,
