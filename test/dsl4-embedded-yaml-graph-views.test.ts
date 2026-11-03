@@ -1,5 +1,5 @@
 import {cloneKamishibaiDocumentProject} from '../src/dsl4/embedded-yaml-project-clone.js';
-import {installEmbeddedYamlMarker} from '@kubohiroya/turbowarp-document-source';
+import {installEmbeddedYamlMarker} from '@kubohiroya/turbowarp-document-data/document-source';
 import {installDsl4EmbeddedYamlRoot} from '../src/dsl4/embedded-yaml-hat.js';
 import {dsl4BundledEmbeddedYamlRootOpcode} from '../src/dsl4/embedded-yaml-identity.js';
 import {describe, it, expect} from 'vitest';
@@ -18,13 +18,13 @@ import {
   buildKamishibaiGraphDocumentPreviewArtifact as previewArtifact,
 } from '../src/dsl4/embedded-yaml-graph-views.js';
 import {encodeSourceDocumentReference} from '@kubohiroya/turbowarp-document-data/composition';
-import {readDocumentViewMetadata} from '@kubohiroya/turbowarp-document-source/view-metadata';
+import {readDocumentViewMetadata} from '@kubohiroya/turbowarp-document-data/view-metadata';
 import {dsl4BundledEmbeddedYamlHatOpcode} from '../src/dsl4/embedded-yaml-identity.js';
 import {
   dsl4BundledEmbeddedYamlIncludeOpcode,
   createDsl4EmbeddedYamlIncludeDefinition,
 } from '../src/dsl4/embedded-yaml-include-views.js';
-import {yamlBlockIconURI} from '@kubohiroya/turbowarp-document-source/yaml-blocks';
+import {yamlBlockIconURI} from '@kubohiroya/turbowarp-yaml-json/yaml-blocks';
 import {parse} from 'yaml';
 import {assertKamishibaiDocumentSourceReady} from '../src/dsl4/embedded-yaml-view-state.js';
 import {convertDsl4ProjectToCompiledProfile} from '../src/dsl4/compiled-project.js';

@@ -5,7 +5,7 @@ import {
   registerEmbeddedYamlRootHatShape,
   getProviderRegistry,
   type EmbeddedYamlRootShapeHost,
-} from '@kubohiroya/turbowarp-document-source';
+} from '@kubohiroya/turbowarp-document-data/document-source';
 import {
   registerKamishibaiEmbeddedYamlProvider,
   buildKamishibaiDocumentSourceProject,
@@ -81,7 +81,7 @@ import {
   createYamlBlockDefinitions,
   createYamlBlockMenus,
   yamlBlockOperations,
-} from '@kubohiroya/turbowarp-document-source/yaml-blocks';
+} from '@kubohiroya/turbowarp-yaml-json/yaml-blocks';
 import {documentViewsEnabledAtStartup} from '../../dist/dsl4/embedded-yaml-feature-flags.js';
 import {
   createDsl4EmbeddedYamlHatDefinition,

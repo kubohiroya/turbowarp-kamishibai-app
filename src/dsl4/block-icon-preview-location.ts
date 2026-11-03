@@ -1,8 +1,8 @@
 import {isSeq, parse, parseDocument} from 'yaml';
 import {extractDsl4BlockSourcesFromProject} from './turbowarp-yaml-json-block-source.js';
 import {readReference} from '@kubohiroya/turbowarp-document-source';
-import {readDocumentViewMetadata} from '@kubohiroya/turbowarp-document-source/view-metadata';
-import {createYamlBlockOpcodes} from '@kubohiroya/turbowarp-document-source/yaml-blocks';
+import {readDocumentViewMetadata} from '@kubohiroya/turbowarp-document-data/view-metadata';
+import {createYamlBlockOpcodes} from '@kubohiroya/turbowarp-yaml-json/yaml-blocks';
 import {kamishibaiDocumentOwner} from './embedded-yaml-document-owner.js';
 import {extractEmbeddedYamlDocumentSources} from './embedded-yaml-migration.js';
 import {readKamishibaiDocumentViewSource} from './embedded-yaml-project-views.js';

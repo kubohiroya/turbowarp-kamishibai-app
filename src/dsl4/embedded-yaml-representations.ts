@@ -1,5 +1,5 @@
 import {cloneKamishibaiDocumentProject} from './embedded-yaml-project-clone.js';
-import {createYamlBlockOpcodes} from '@kubohiroya/turbowarp-document-source/yaml-blocks';
+import {createYamlBlockOpcodes} from '@kubohiroya/turbowarp-yaml-json/yaml-blocks';
 import {
   addSchemaLineCommentBlocks,
   stripSchemaLineCommentBlocks,

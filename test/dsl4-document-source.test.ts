@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import {test} from 'vitest';
 
 import {
-  getDocumentSourceRegistry,
   normalizeDocumentSource,
-  readDocumentSourceURLs,
   type DocumentSourceMetadata,
 } from '@kubohiroya/turbowarp-document-source';
+import {
+  getDocumentSourceRegistry,
+  readDocumentSourceURLs,
+} from '@kubohiroya/turbowarp-document-data/document-source';
 
 import {
   buildKamishibaiDocumentSourceProject,

@@ -27,10 +27,11 @@ const pureSharedPackages = Object.freeze([
 /** Compositions may have pure transitive dependencies; unlike the packages above, they are audited as a graph. */
 const pureCompositionEntries = Object.freeze([
   '@kubohiroya/turbowarp-document-source',
-  '@kubohiroya/turbowarp-document-source/project-views',
-  '@kubohiroya/turbowarp-document-source/yaml-blocks',
-  '@kubohiroya/turbowarp-document-source/source-view',
-  '@kubohiroya/turbowarp-document-source/view-metadata',
+  '@kubohiroya/turbowarp-document-data/document-source',
+  '@kubohiroya/turbowarp-document-data/project-views',
+  '@kubohiroya/turbowarp-yaml-json/yaml-blocks',
+  '@kubohiroya/turbowarp-yaml-json/source-view',
+  '@kubohiroya/turbowarp-document-data/view-metadata',
   '@kubohiroya/turbowarp-document-data/composition',
   '@kubohiroya/turbowarp-yaml-json/source-syntax',
   '@kubohiroya/turbowarp-runtime-expression/composition',

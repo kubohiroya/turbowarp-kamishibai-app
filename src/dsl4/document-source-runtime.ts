@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import {
-  fetchDocumentSource,
-  readDocumentSourceURLs,
   encodeReference,
 } from '@kubohiroya/turbowarp-document-source';
+import {
+  fetchDocumentSource,
+  readDocumentSourceURLs,
+} from '@kubohiroya/turbowarp-document-data/document-source';
 import {kamishibaiEmbeddedYamlReference} from './embedded-yaml-identity.js';
 
 const error = (code: string, message: string, cause?: unknown) =>

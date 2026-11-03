@@ -1,5 +1,5 @@
 import {addSchemaLineCommentBlocks} from './embedded-yaml-schema-comments.js';
-import {createYamlBlockOpcodes} from '@kubohiroya/turbowarp-document-source/yaml-blocks';
+import {createYamlBlockOpcodes} from '@kubohiroya/turbowarp-yaml-json/yaml-blocks';
 import {buildKamishibaiGraphDocumentViewCandidate} from './embedded-yaml-graph-views.js';
 import {replaceGraphDocumentSource} from './embedded-yaml-graph-provider.js';
 import {patchKamishibaiSourceValue} from './embedded-yaml-syntax-patch.js';
@@ -12,7 +12,7 @@ import {encodeSourceDocumentReference} from '@kubohiroya/turbowarp-document-data
 import {
   readDocumentViewMetadata,
   writeDocumentViewMetadata,
-} from '@kubohiroya/turbowarp-document-source/view-metadata';
+} from '@kubohiroya/turbowarp-document-data/view-metadata';
 import {extractDsl4BlockSourcesFromProject} from './turbowarp-yaml-json-block-source.js';
 import {
   dsl4LabeledBlockSourceHatOpcode,

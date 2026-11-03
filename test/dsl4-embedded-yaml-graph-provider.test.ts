@@ -1,7 +1,8 @@
 import {createRequire} from 'node:module';
 import assert from 'node:assert/strict';
 import {EventEmitter} from 'node:events';
-import {createEmbeddedYamlMarker, encodeReference} from '@kubohiroya/turbowarp-document-source';
+import {encodeReference} from '@kubohiroya/turbowarp-document-source';
+import {createEmbeddedYamlMarker} from '@kubohiroya/turbowarp-document-data/document-source';
 import {installDsl4EmbeddedYamlRoot} from '../src/dsl4/embedded-yaml-hat.js';
 import {
   dsl4BundledEmbeddedYamlHatOpcode,

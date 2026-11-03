@@ -53,11 +53,13 @@ import {
   graphDocumentId,
 } from '../dsl4/embedded-yaml-source-graph.js';
 import {
-  installEmbeddedYamlMarker,
-  installEmbeddedYamlRootMarker,
   readReference,
   encodeReference,
 } from '@kubohiroya/turbowarp-document-source';
+import {
+  installEmbeddedYamlMarker,
+  installEmbeddedYamlRootMarker,
+} from '@kubohiroya/turbowarp-document-data/document-source';
 import {
   dsl4EmbeddedYamlHatOpcode,
   dsl4BundledEmbeddedYamlHatOpcode,

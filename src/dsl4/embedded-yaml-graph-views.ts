@@ -13,15 +13,15 @@ import {
   createYamlBlockDefinitions,
   createYamlBlockMenus,
   createYamlBlockOpcodes,
-} from '@kubohiroya/turbowarp-document-source/yaml-blocks';
+} from '@kubohiroya/turbowarp-yaml-json/yaml-blocks';
 import {
   createYamlSourceBlockView,
   readYamlSourceBlockView,
-} from '@kubohiroya/turbowarp-document-source/source-view';
+} from '@kubohiroya/turbowarp-yaml-json/source-view';
 import {
   readDocumentViewMetadata,
   writeDocumentViewMetadata,
-} from '@kubohiroya/turbowarp-document-source/view-metadata';
+} from '@kubohiroya/turbowarp-document-data/view-metadata';
 import {parseSourceSyntax} from '@kubohiroya/turbowarp-yaml-json/source-syntax';
 import {
   encodeSourceDocumentReference,
@@ -544,7 +544,7 @@ function readGraphDocumentView(project: ObjectRecord, reference: SourceDocumentR
       baseline: parseSourceSyntax(source, {format: 'yaml'}).baseline,
       blocks: r.target.blocks as ObjectRecord,
       descriptor:
-        descriptor as unknown as import('@kubohiroya/turbowarp-document-source/yaml-blocks').YamlViewDescriptor,
+        descriptor as unknown as import('@kubohiroya/turbowarp-yaml-json/yaml-blocks').YamlViewDescriptor,
       sourceRevision: selected.file.integrity,
     }).source;
   } else {
