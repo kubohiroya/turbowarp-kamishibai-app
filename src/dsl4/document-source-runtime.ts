@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-import {
-  encodeReference,
-} from '@kubohiroya/turbowarp-document-source';
+import {encodeReference} from '@kubohiroya/turbowarp-document-source';
 import {
   fetchDocumentSource,
   readDocumentSourceURLs,

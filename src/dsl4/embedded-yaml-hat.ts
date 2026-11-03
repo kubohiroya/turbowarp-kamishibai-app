@@ -3,9 +3,7 @@ import {
   readEmbeddedYamlSourceGraphRecord,
   sourceGraphDocumentId,
 } from './embedded-yaml-source-graph.js';
-import {
-  encodeReference,
-} from '@kubohiroya/turbowarp-document-source';
+import {encodeReference} from '@kubohiroya/turbowarp-document-source';
 import {
   createEmbeddedYamlHatDefinition,
   createEmbeddedYamlRootHatDefinition,

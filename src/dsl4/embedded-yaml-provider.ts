@@ -12,12 +12,8 @@ import {
 import {activeKamishibaiDocumentView} from './embedded-yaml-view-state.js';
 import {documentViewsEnabledAtStartup} from './embedded-yaml-feature-flags.js';
 import {getSourceDocumentRegistry} from '@kubohiroya/turbowarp-document-data/composition';
-import {
-  type DocumentSourceVM,
-} from '@kubohiroya/turbowarp-document-source';
-import {
-  getDocumentSourceRegistry,
-} from '@kubohiroya/turbowarp-document-data/document-source';
+import {type DocumentSourceVM} from '@kubohiroya/turbowarp-document-source';
+import {getDocumentSourceRegistry} from '@kubohiroya/turbowarp-document-data/document-source';
 import {
   createKamishibaiDocumentSourceOwnerOptions,
   documentSourceEnabledAtStartup,

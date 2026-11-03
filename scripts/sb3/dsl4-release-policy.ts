@@ -38,7 +38,7 @@ export interface Dsl4ReleaseMetadata {
 }
 
 export const dsl4ReleaseVersion = releasePins.release.version;
-export const dsl4NextReleaseVersion = '4.0.0-rc.82';
+export const dsl4NextReleaseVersion = '4.0.0-rc.83';
 export const dsl4ReleaseSeries = releasePins.release.series;
 export const dsl4ReleaseBuildDate = '2026-11-02';
 export const dsl4ReleaseChannel = releasePins.release.channel;

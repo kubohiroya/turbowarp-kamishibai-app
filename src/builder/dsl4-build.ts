@@ -52,10 +52,7 @@ import {
   createEmbeddedYamlSourceGraphRecord,
   graphDocumentId,
 } from '../dsl4/embedded-yaml-source-graph.js';
-import {
-  readReference,
-  encodeReference,
-} from '@kubohiroya/turbowarp-document-source';
+import {readReference, encodeReference} from '@kubohiroya/turbowarp-document-source';
 import {
   installEmbeddedYamlMarker,
   installEmbeddedYamlRootMarker,

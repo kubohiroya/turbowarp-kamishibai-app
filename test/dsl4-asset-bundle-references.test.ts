@@ -155,7 +155,8 @@ test('native bitmap upgrade is not a dirty document and same-format Save retains
     await import('../src/dsl4/embedded-yaml-project-clone.js');
   const {assertKamishibaiDocumentSourceReady} =
     await import('../src/dsl4/embedded-yaml-view-state.js');
-  const {installEmbeddedYamlMarker} = await import('@kubohiroya/turbowarp-document-data/document-source');
+  const {installEmbeddedYamlMarker} =
+    await import('@kubohiroya/turbowarp-document-data/document-source');
   const {installDsl4EmbeddedYamlRoot} = await import('../src/dsl4/embedded-yaml-hat.js');
   const {dsl4BundledEmbeddedYamlHatOpcode} = await import('../src/dsl4/embedded-yaml-identity.js');
   const frontend = createDsl4ProductionSourceFrontend(schema);

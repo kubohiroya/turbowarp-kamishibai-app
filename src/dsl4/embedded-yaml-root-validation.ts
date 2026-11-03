@@ -1,7 +1,4 @@
-import {
-  readReference,
-  validateEmbeddedYamlFilename,
-} from '@kubohiroya/turbowarp-document-source';
+import {readReference, validateEmbeddedYamlFilename} from '@kubohiroya/turbowarp-document-source';
 import {
   validateEmbeddedYamlRootMarker,
   readEmbeddedYamlRootVersion,
