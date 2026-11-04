@@ -6,6 +6,7 @@ TurboWarp Plus EditorのExtension Data Editorに、既存フォームと同じ�
 
 ## 操作
 
+- asset アイコンをクリックすると、素材の画像表示や音声・動画の再生を既存フォームから確認できる。未保存の素材指定もプレビューに反映される。
 - scene内のactionアイコンにマウスを合わせると、その位置の画面を静止画で確認する。マウスを離すと閉じる。
 - sceneアイコンをクリックすると、その場面を再生する。場面の設定フォームも利用できる。
 - show actorのアイコンをクリックすると、アクター本体をドラッグして座標、枠のボーダーをドラッグして表示スケールを変更する。
@@ -43,9 +44,11 @@ Teachable Machineは後続のbundle memberとして初期化されるため、�
 
 ## 導入と切戻し
 
-プレビューUIは既定OFF。対応するEditorの起動URLに`twPlusBlockPreview=1`を付けるか、読み込み前に`globalThis.TW_BLOCK_ICON_PREVIEWS = true`を指定して有効化する。`src/dsl4/block-icon-preview-feature-flags.ts`が起動時に一度だけ読み、作品データや起動後の変更では切り替わらない。編集用runtimeのauthoring profileと登録API確認を併用し、再生専用runtimeへUIを含めない。新旧EditorのAPI差を台本やSB3の自動移行で補わない。
+asset のプレビューは、対応する Editor と編集用 runtime で既定 ON。場面・動作のプレビューは既定 OFF で、起動 URL の `twPlusBlockPreview=1` または読み込み前の `globalThis.TW_BLOCK_ICON_PREVIEWS = true` で有効化する。`src/dsl4/block-icon-preview-feature-flags.ts` が起動時に一度だけ設定を読む。編集用 runtime の authoring profile とプレビュー登録 API が必要。
 
-切戻しは起動URLから`twPlusBlockPreview=1`と起動前のglobal指定を外してEditorを再読み込みする。コードを戻す場合は共通データエディターと今回の紙芝居側変更をrevertし、元のYAMLから編集用SB3を再生成する。公開済みの同じ版のSB3・npmパッケージは差し替えない。
+asset のプレビューを切り戻すには、起動 URL に `twPlusBlockPreview=0` を指定するか、読み込み前に `globalThis.TW_BLOCK_ICON_PREVIEWS = false` を設定して Editor を再読み込みする。asset では起動前の真偽値を URL より優先する。場面・動作のプレビューを切り戻すには有効化指定を外して再読み込みする。コードを戻す場合は該当変更を revert し、元の YAML から編集用 SB3 を再生成する。
+
+回帰確認では、プレビュー設定を指定せずに asset アイコンを開いてフォームと素材が表示されることを確認する。次に `twPlusBlockPreview=0` で開き直し、asset アイコンからフォームだけが開くことを確認する。場面・動作のプレビューは `twPlusBlockPreview=1` で確認する。
 
 Asset Cacheの対応版を将来採用するときは、runtime注入と購読の検証を維持してパッチ指定・lock・パッチファイルを一組で外す。今回、依存パッケージやEditorのnpm公開・Pages配信は行わない。
 

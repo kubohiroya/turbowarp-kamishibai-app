@@ -1,3 +1,4 @@
+import type {Sb3SaveFormat} from '@kubohiroya/turbowarp-sb3-save-format';
 import {fromByteArray, toByteArray} from 'base64-js';
 import {dsl4RetainedRemotePayloadPath} from '../asset-bundle-descriptor.js';
 import {dsl4BinaryEntryContentType} from '../binary-entry-provider.js';
@@ -19,6 +20,13 @@ const previewTags = new Map<string, 'img' | 'audio' | 'video'>([
   ['sound', 'audio'],
   ['video', 'video'],
 ]);
+
+interface AssetPreviewMedia {
+  bytes: Uint8Array;
+  contentType: string;
+  storage: Sb3SaveFormat;
+  retainedFallback?: boolean;
+}
 
 function readAssetId(vm: Record<string, unknown>, snapshot: Dsl4BlockPreviewSnapshot) {
   const captured = snapshot.arguments.NAME;
@@ -95,10 +103,12 @@ async function readBundleFile(
   path: unknown,
   maxBytes: number,
   signal: AbortSignal,
+  expectedIntegrity?: string,
 ) {
   const files = Array.isArray(bundle.files) ? bundle.files.map(record) : [];
   const file = files.find((candidate) => candidate.assetId === assetId && candidate.path === path);
-  if (!file) return undefined;
+  if (!file || (expectedIntegrity !== undefined && file.integrity !== expectedIntegrity))
+    return undefined;
   if (!Number.isSafeInteger(file.size) || Number(file.size) <= 0 || Number(file.size) > maxBytes)
     throw new Error('プレビュー用素材のサイズが上限を超えているか、不正です。');
   let bytes: unknown;
@@ -131,10 +141,10 @@ async function loadAssetMedia(
   asset: Record<string, unknown>,
   maxBytes: number,
   signal: AbortSignal,
-) {
+): Promise<AssetPreviewMedia> {
   const runtime = record(vm.runtime);
   if (asset.delivery !== 'remote' && typeof asset.file !== 'string')
-    return projectMedia(runtime, kind, asset);
+    return {...projectMedia(runtime, kind, asset), storage: 'embedded-file'};
 
   const bundle = storedBundle(runtime);
   if (asset.delivery === 'remote') {
@@ -154,26 +164,40 @@ async function loadAssetMedia(
     )
       throw new Error('Web 素材のサイズ・形式・ハッシュを確認してください。');
 
-    const retained = hasIntegrity
-      ? await readBundleFile(vm, bundle, id, dsl4RetainedRemotePayloadPath, maxBytes, signal)
-      : undefined;
-    // Only a copy matching the current draft's integrity can stand in for the URL.
     const expected =
       typeof integrity === 'string' && hasIntegrity
         ? `sha256-${fromByteArray(Uint8Array.from(integrity.slice(7).match(/../gu)!, (hex) => Number.parseInt(hex, 16)))}`
         : undefined;
-    if (
-      retained &&
-      retained.byteLength === size &&
-      (await computeDsl4Sha256Integrity(retained)) === expected
-    )
-      return {bytes: retained, contentType: String(contentType)};
+    const retained = expected
+      ? await readBundleFile(
+          vm,
+          bundle,
+          id,
+          dsl4RetainedRemotePayloadPath,
+          maxBytes,
+          signal,
+          expected,
+        ).catch(() => {
+          signal.throwIfAborted();
+          return undefined;
+        })
+      : undefined;
+    const usableCopy = retained?.byteLength === size ? retained : undefined;
 
     signal.throwIfAborted();
-    const loaded = await createDsl4BrowserRemoteAssetLoader({maxBytes})(
-      {url: source.url},
-      {signal},
-    );
+    let loaded;
+    try {
+      loaded = await createDsl4BrowserRemoteAssetLoader({maxBytes})({url: source.url}, {signal});
+    } catch (error) {
+      signal.throwIfAborted();
+      if (!usableCopy) throw error;
+      return {
+        bytes: usableCopy,
+        contentType: String(contentType),
+        storage: 'remote-cacheable',
+        retainedFallback: true,
+      };
+    }
     const loadedType = loaded.contentType.split(';', 1)[0]?.trim().toLowerCase() ?? '';
     if (
       expected &&
@@ -182,7 +206,11 @@ async function loadAssetMedia(
         (await computeDsl4Sha256Integrity(loaded.bytes)) !== expected)
     )
       throw new Error('Web 素材が指定されたサイズ・形式・ハッシュと一致しません。');
-    return {bytes: loaded.bytes, contentType: loadedType};
+    return {
+      bytes: loaded.bytes,
+      contentType: loadedType,
+      storage: usableCopy ? 'remote-cacheable' : 'remote-non-cacheable',
+    };
   }
 
   const rows = record(bundle.manifest).assets;
@@ -205,7 +233,11 @@ async function loadAssetMedia(
     kind === 'video'
       ? dsl4VideoContentType(bytes)
       : dsl4BinaryEntryContentType(path.replace(/\.wave$/iu, '.wav'));
-  return {bytes, contentType: contentType ?? ''};
+  return {
+    bytes,
+    contentType: contentType ?? '',
+    storage: bundle.formatVersion === 1 ? 'embedded-data' : 'embedded-file',
+  };
 }
 
 export function mountDsl4BlockIconAssetPreview(
@@ -226,7 +258,17 @@ export function mountDsl4BlockIconAssetPreview(
   heading.textContent = '素材プレビュー';
   const status = document.createElement('div');
   status.setAttribute('role', 'status');
-  root.append(heading, status);
+  const style = document.createElement('style');
+  style.textContent = `
+    [data-dsl4-asset-preview] img[data-dsl4-asset-transparency] {
+      background: conic-gradient(#d0d0d0 25%, white 0 50%, #d0d0d0 0 75%, white 0) 0 0 / 16px 16px;
+    }
+    [data-dsl4-asset-preview] img[data-dsl4-asset-transparency]:hover {
+      outline: 1px solid #008000;
+      outline-offset: -1px;
+    }
+  `;
+  root.append(heading, status, style);
   container.appendChild(root);
 
   let selection: string | undefined;
@@ -250,7 +292,8 @@ export function mountDsl4BlockIconAssetPreview(
     if (kind === 'recognitionModel') throw new Error('認識モデルはプレビューに対応していません。');
     const tag = previewTags.get(kind);
     if (!tag) throw new Error('プレビューする素材の種類を選んでください。');
-    const {bytes, contentType} = await loadAssetMedia(
+    if (asset.delivery === 'remote') status.textContent = 'Web 素材を取得しています…';
+    const {bytes, contentType, storage, retainedFallback} = await loadAssetMedia(
       record(vm),
       id,
       kind,
@@ -260,19 +303,43 @@ export function mountDsl4BlockIconAssetPreview(
     );
     if (signal.aborted) return;
     const prefix = tag === 'img' ? 'image/' : `${tag}/`;
-    if (!contentType.startsWith(prefix) || bytes.byteLength === 0 || bytes.byteLength > maxBytes)
+    const byteLength = bytes.byteLength;
+    if (!contentType.startsWith(prefix) || byteLength === 0 || byteLength > maxBytes)
       throw new Error('この素材の形式またはサイズではプレビューできません。');
 
     const media = document.createElement(tag);
     media.style.cssText = 'display:block;max-width:100%;max-height:50vh;object-fit:contain;';
-    if (tag === 'img') (media as HTMLImageElement).alt = id;
-    else {
+    if (tag === 'img') {
+      (media as HTMLImageElement).alt = id;
+      if (kind === 'costume' || kind === 'image') media.dataset.dsl4AssetTransparency = '';
+    } else {
       const player = media as HTMLMediaElement;
       player.controls = true;
       player.preload = 'metadata';
       player.setAttribute('aria-label', id);
       if (tag === 'video') (player as HTMLVideoElement).playsInline = true;
     }
+    const details = tag === 'audio' ? null : document.createElement('div');
+    const format = document.createElement('div');
+    format.dataset.dsl4AssetPreviewStorage = '';
+    format.style.cssText = 'margin-top:0.5em;font-size:0.875em;';
+    format.textContent = `保持形態 ${storage}`;
+    const detailsEvent = tag === 'img' ? 'load' : 'loadedmetadata';
+    const showDetails = () => {
+      if (!details) return;
+      const width =
+        tag === 'img'
+          ? (media as HTMLImageElement).naturalWidth
+          : (media as HTMLVideoElement).videoWidth;
+      const height =
+        tag === 'img'
+          ? (media as HTMLImageElement).naturalHeight
+          : (media as HTMLVideoElement).videoHeight;
+      if (width > 0 && height > 0) {
+        details.textContent = `${width} × ${height} px · ${byteLength.toLocaleString('ja-JP')} バイト`;
+        details.hidden = false;
+      }
+    };
     const url = URL.createObjectURL(new Blob([new Uint8Array(bytes).buffer], {type: contentType}));
     const onError = () => {
       clearMedia?.();
@@ -281,15 +348,28 @@ export function mountDsl4BlockIconAssetPreview(
     };
     clearMedia = () => {
       media.removeEventListener('error', onError);
+      if (details) media.removeEventListener(detailsEvent, showDetails);
       media.removeAttribute('src');
       if (tag !== 'img') (media as HTMLMediaElement).load();
       media.remove();
+      details?.remove();
+      format.remove();
       URL.revokeObjectURL(url);
     };
+    root.appendChild(media);
+    if (details) {
+      details.dataset.dsl4AssetPreviewDetails = '';
+      details.style.cssText = 'margin-top:0.5em;font-size:0.875em;';
+      details.hidden = true;
+      root.appendChild(details);
+      media.addEventListener(detailsEvent, showDetails);
+    }
+    root.appendChild(format);
     media.addEventListener('error', onError);
     media.src = url;
-    root.appendChild(media);
-    status.textContent = '';
+    status.textContent = retainedFallback
+      ? 'Web 素材を取得できなかったため、SB3 内の保持コピーを表示しています。'
+      : '';
   }
 
   function refresh(initial = false) {

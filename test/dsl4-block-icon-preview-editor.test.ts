@@ -441,9 +441,10 @@ test('the asset icon preview renders the current form draft and releases replace
               {
                 id: 'stage',
                 isStage: true,
-                sprite: {costumes: [costume('First'), costume('Second')]},
+                sprite: {costumes: [costume('First')]},
                 blocks: {getBlock: (id: string) => blocks.get(id)},
               },
+              {isStage: false, sprite: {name: 'Hero', costumes: [costume('Second')]}},
             ],
           },
         },
@@ -451,16 +452,16 @@ test('the asset icon preview renders the current form draft and releases replace
           blockEditors: {
             apiVersion: 1,
             registerPreview(definition) {
-              if (definition.opcodes.includes(opcode)) {
-                assert.equal(definition.hover, undefined);
-                mount = definition.mount;
-              }
+              assert.deepEqual(definition.opcodes, [opcode]);
+              assert.equal(definition.hover, undefined);
+              mount = definition.mount;
               return () => {};
             },
           },
         },
       },
       sourceFrontend: dsl4TestSourceFrontend,
+      sceneActionEnabled: false,
     });
     assert.ok(mount);
     let draft: Draft = {data: 'backdrop'};
@@ -493,8 +494,20 @@ test('the asset icon preview renders the current form draft and releases replace
     );
     const section = container.children[0]!;
     await vi.advanceTimersByTimeAsync(0);
-    assert.equal(section.children[2]!.tagName, 'IMG');
-    assert.equal(section.children[2]!.src, 'blob:first');
+    const image = () => section.children.find((child) => child.tagName === 'IMG');
+    const details = () =>
+      section.children.find((child) => Object.hasOwn(child.dataset, 'dsl4AssetPreviewDetails'));
+    const storage = () =>
+      section.children.find((child) => Object.hasOwn(child.dataset, 'dsl4AssetPreviewStorage'));
+    assert.equal(image()?.src, 'blob:first');
+    assert.equal(image()?.dataset.dsl4AssetTransparency, undefined);
+    assert.equal(details()?.hidden, true);
+    const firstImage = image()!;
+    Object.assign(firstImage, {naturalWidth: 640, naturalHeight: 480});
+    firstImage.dispatch('load');
+    assert.equal(details()?.textContent, '640 × 480 px · 3 バイト');
+    assert.equal(details()?.hidden, false);
+    assert.equal(storage()?.textContent, '保持形態 embedded-file');
 
     const edit = (data: Draft['data']) => {
       draft = {data};
@@ -504,10 +517,14 @@ test('the asset icon preview renders the current form draft and releases replace
     await vi.advanceTimersByTimeAsync(250);
     assert.match(section.children[1]!.textContent, /見つかりません/u);
     assert.deepEqual(revokeUrl.mock.calls, [['blob:first']]);
+    assert.equal(details(), undefined);
+    assert.equal(storage(), undefined);
+    assert.equal(firstImage.listeners.get('load')?.length, 0);
 
-    edit({kind: 'backdrop', name: 'Second'});
+    edit({kind: 'costume', target: 'Hero', name: 'Second'});
     await vi.advanceTimersByTimeAsync(250);
-    assert.equal(section.children[2]!.src, 'blob:second');
+    assert.equal(image()?.src, 'blob:second');
+    assert.equal(image()?.dataset.dsl4AssetTransparency, '');
     const blob = createUrl.mock.calls[1]![0];
     assert.ok(blob instanceof Blob);
     assert.equal(blob.type, 'image/png');

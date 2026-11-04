@@ -618,6 +618,8 @@ export function mountDsl4BlockIconPreview({
 /** Register through the shared editor capability, keeping unsupported Editor hosts unchanged. */
 export function installDsl4BlockIconPreviews({
   Scratch,
+  assetEnabled = true,
+  sceneActionEnabled = true,
   sourceFrontend,
   runtimeVersion,
   tmPoseRuntime,
@@ -626,6 +628,8 @@ export function installDsl4BlockIconPreviews({
   createRuntime = createDsl4BlockIconPreviewRuntime,
 }: {
   Scratch: PreviewScratch;
+  assetEnabled?: boolean;
+  sceneActionEnabled?: boolean;
   sourceFrontend: Dsl4SourceFrontend;
   schema?: Readonly<Record<string, unknown>>;
   runtimeVersion?: string;
@@ -720,56 +724,60 @@ export function installDsl4BlockIconPreviews({
     });
   }
   try {
-    const namespaces = [
-      {extensionId: 'kubohiroyakamishibairuntime4', prefix: 'kubohiroyakamishibairuntime4_'},
-      {
-        extensionId: 'kubohiroyakamishibai4',
-        prefix: 'kubohiroyakamishibai4_kubohiroyakamishibairuntime4__',
-      },
-    ];
-    for (const {extensionId, prefix} of namespaces) {
-      // The SB3 component GUI rewrites runtime registrations into its bundle namespace.
-      if (api.registerFixedInputEditor && extensionId === 'kubohiroyakamishibairuntime4') {
-        for (const command of editableCommands)
-          removers.push(
-            api.registerFixedInputEditor(
-              createFixedEditorOptions(extensionId, prefix + command, command),
-            ),
-          );
+    if (sceneActionEnabled) {
+      const namespaces = [
+        {extensionId: 'kubohiroyakamishibairuntime4', prefix: 'kubohiroyakamishibairuntime4_'},
+        {
+          extensionId: 'kubohiroyakamishibai4',
+          prefix: 'kubohiroyakamishibai4_kubohiroyakamishibairuntime4__',
+        },
+      ];
+      for (const {extensionId, prefix} of namespaces) {
+        // The SB3 component GUI rewrites runtime registrations into its bundle namespace.
+        if (api.registerFixedInputEditor && extensionId === 'kubohiroyakamishibairuntime4') {
+          for (const command of editableCommands)
+            removers.push(
+              api.registerFixedInputEditor(
+                createFixedEditorOptions(extensionId, prefix + command, command),
+              ),
+            );
+        }
+        removers.push(
+          api.registerPreview({
+            extensionId,
+            opcodes: dsl4TurboWarpActionBlockSpecs.map((spec) => prefix + spec.command),
+            mount,
+            hover,
+          }),
+        );
       }
       removers.push(
         api.registerPreview({
-          extensionId,
-          opcodes: dsl4TurboWarpActionBlockSpecs.map((spec) => prefix + spec.command),
+          extensionId: dsl4BlockAuthoringExtensionId,
+          opcodes: [`${dsl4BlockAuthoringExtensionId}_scene`],
           mount,
           hover,
         }),
       );
     }
-    removers.push(
-      api.registerPreview({
-        extensionId: dsl4BlockAuthoringExtensionId,
-        opcodes: [`${dsl4BlockAuthoringExtensionId}_scene`],
-        mount,
-        hover,
-      }),
-    );
-    removers.push(
-      api.registerPreview({
-        extensionId: dsl4BlockAuthoringExtensionId,
-        opcodes: [`${dsl4BlockAuthoringExtensionId}_asset`],
-        mount: (container, context, snapshot) =>
-          ownView(
-            mountDsl4BlockIconAssetPreview(
-              container,
-              context,
-              snapshot,
-              Scratch.vm,
-              limits?.maxTotalAssetBytes,
+    if (assetEnabled) {
+      removers.push(
+        api.registerPreview({
+          extensionId: dsl4BlockAuthoringExtensionId,
+          opcodes: [`${dsl4BlockAuthoringExtensionId}_asset`],
+          mount: (container, context, snapshot) =>
+            ownView(
+              mountDsl4BlockIconAssetPreview(
+                container,
+                context,
+                snapshot,
+                Scratch.vm,
+                limits?.maxTotalAssetBytes,
+              ),
             ),
-          ),
-      }),
-    );
+        }),
+      );
+    }
   } catch (error) {
     for (const remove of removers.reverse()) remove();
     throw error;

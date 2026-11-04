@@ -101,7 +101,10 @@ import {
   installDsl4BlockIconPreviews,
   type Dsl4BlockPreviewScratch,
 } from '../../dist/dsl4/platform/block-icon-preview-editor.js';
-import {blockIconPreviewsEnabledAtStartup} from '../../dist/dsl4/block-icon-preview-feature-flags.js';
+import {
+  assetIconPreviewsEnabledAtStartup,
+  blockIconPreviewsEnabledAtStartup,
+} from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
 const extensionVersion = '4.0.0-rc.82';
@@ -667,11 +670,13 @@ class KamishibaiDsl4RuntimeExtension {
     });
     if (
       DSL4_AUTHORING_PROFILE &&
-      blockIconPreviewsEnabledAtStartup &&
+      (assetIconPreviewsEnabledAtStartup || blockIconPreviewsEnabledAtStartup) &&
       typeof Scratch.gui?.blockEditors?.registerPreview === 'function'
     ) {
       installDsl4BlockIconPreviews({
         Scratch,
+        assetEnabled: assetIconPreviewsEnabledAtStartup,
+        sceneActionEnabled: blockIconPreviewsEnabledAtStartup,
         sourceFrontend: this.frontend,
         schema,
         runtimeVersion: extensionVersion,
