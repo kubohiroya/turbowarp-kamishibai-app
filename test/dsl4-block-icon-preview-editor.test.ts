@@ -382,7 +382,7 @@ test('installation is inert without the preview capability and registers fixed e
       };
     },
   });
-  assert.equal(previews.length, 3);
+  assert.equal(previews.length, 4);
   assert.equal(fixed.length, 5);
   const show = fixed[0] as {bindings: {argument: string; encode(value: unknown): unknown}[]};
   const x = show.bindings.find((binding) => binding.argument === 'X')!;
@@ -401,9 +401,144 @@ test('installation is inert without the preview capability and registers fixed e
     previews[1]!.opcodes.includes('kubohiroyakamishibai4_kubohiroyakamishibairuntime4__say'),
   );
   assert.deepEqual(previews[2]!.opcodes, ['kubohiroyakamishibaiauthoring4_scene']);
+  assert.deepEqual(previews[3]!.opcodes, ['kubohiroyakamishibaiauthoring4_asset']);
   dispose();
   dispose();
-  assert.equal(removed.size, 8);
+  assert.equal(removed.size, 9);
+});
+
+test('the asset icon preview renders the current form draft and releases replaced or closed media', async () => {
+  vi.useFakeTimers();
+  const createUrl = vi
+    .spyOn(URL, 'createObjectURL')
+    .mockReturnValueOnce('blob:first')
+    .mockReturnValueOnce('blob:second');
+  const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+  try {
+    const document = createFakeDocument();
+    const container = document.createElement('div');
+    const opcode = 'kubohiroyakamishibaiauthoring4_asset';
+    let mount:
+      | ((
+          container: HTMLElement,
+          context: MountOptions['context'],
+          snapshot: Dsl4BlockPreviewSnapshot,
+        ) => () => void)
+      | undefined;
+    const costume = (name: string) => ({
+      name,
+      asset: {data: new Uint8Array([1, 2, 3]), dataFormat: 'png'},
+    });
+    const blocks = new Map([
+      ['asset', {opcode, inputs: {NAME: {block: 'name', shadow: 'name'}}}],
+      ['name', {opcode: 'text', shadow: true, fields: {TEXT: {value: 'First'}}}],
+    ]);
+    const dispose = installDsl4BlockIconPreviews({
+      Scratch: {
+        vm: {
+          runtime: {
+            targets: [
+              {
+                id: 'stage',
+                isStage: true,
+                sprite: {costumes: [costume('First')]},
+                blocks: {getBlock: (id: string) => blocks.get(id)},
+              },
+              {isStage: false, sprite: {name: 'Hero', costumes: [costume('Second')]}},
+            ],
+          },
+        },
+        gui: {
+          blockEditors: {
+            apiVersion: 1,
+            registerPreview(definition) {
+              assert.deepEqual(definition.opcodes, [opcode]);
+              assert.equal(definition.hover, undefined);
+              mount = definition.mount;
+              return () => {};
+            },
+          },
+        },
+      },
+      sourceFrontend: dsl4TestSourceFrontend,
+      sceneActionEnabled: false,
+    });
+    assert.ok(mount);
+    let draft: Draft = {data: 'backdrop'};
+    let status = 'editing';
+    const listeners = new Set<() => void>();
+    const close = mount(
+      container as unknown as HTMLElement,
+      {
+        getDraft() {
+          assert.equal(status, 'editing');
+          return draft;
+        },
+        setDraft: () => assert.fail('a preview must not write the form draft'),
+        getState: () => ({status}),
+        subscribe(listener) {
+          listeners.add(listener);
+          return () => {
+            listeners.delete(listener);
+          };
+        },
+      },
+      {
+        targetId: 'stage',
+        blockId: 'asset',
+        opcode,
+        arguments: {
+          VALUE: {kind: 'literal', value: '"backdrop"'},
+        },
+      },
+    );
+    const section = container.children[0]!;
+    await vi.advanceTimersByTimeAsync(0);
+    const image = () => section.children.find((child) => child.tagName === 'IMG');
+    const details = () =>
+      section.children.find((child) => Object.hasOwn(child.dataset, 'dsl4AssetPreviewDetails'));
+    const storage = () =>
+      section.children.find((child) => Object.hasOwn(child.dataset, 'dsl4AssetPreviewStorage'));
+    assert.equal(image()?.src, 'blob:first');
+    assert.equal(image()?.dataset.dsl4AssetTransparency, undefined);
+    assert.equal(details()?.hidden, true);
+    const firstImage = image()!;
+    Object.assign(firstImage, {naturalWidth: 640, naturalHeight: 480});
+    firstImage.dispatch('load');
+    assert.equal(details()?.textContent, '640 × 480 px · 3 バイト');
+    assert.equal(details()?.hidden, false);
+    assert.equal(storage()?.textContent, '保持形態 embedded-file');
+
+    const edit = (data: Draft['data']) => {
+      draft = {data};
+      for (const notify of listeners) notify();
+    };
+    edit({kind: 'backdrop', name: 'Missing'});
+    await vi.advanceTimersByTimeAsync(250);
+    assert.match(section.children[1]!.textContent, /見つかりません/u);
+    assert.deepEqual(revokeUrl.mock.calls, [['blob:first']]);
+    assert.equal(details(), undefined);
+    assert.equal(storage(), undefined);
+    assert.equal(firstImage.listeners.get('load')?.length, 0);
+
+    edit({kind: 'costume', target: 'Hero', name: 'Second'});
+    await vi.advanceTimersByTimeAsync(250);
+    assert.equal(image()?.src, 'blob:second');
+    assert.equal(image()?.dataset.dsl4AssetTransparency, '');
+    const blob = createUrl.mock.calls[1]![0];
+    assert.ok(blob instanceof Blob);
+    assert.equal(blob.type, 'image/png');
+    status = 'cancelled';
+    for (const notify of listeners) notify();
+    close();
+    assert.equal(listeners.size, 0);
+    assert.equal(container.children.length, 0);
+    assert.deepEqual(revokeUrl.mock.calls, [['blob:first'], ['blob:second']]);
+    dispose();
+  } finally {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  }
 });
 
 test('reloading the extension on the same VM releases its old registrations and pending hover before replacing them', async () => {
@@ -475,7 +610,7 @@ test('hover waits for intent, owns an isolated still request and aborts it when 
     document.body.appendChild(anchor);
     Object.defineProperty(anchor, 'isConnected', {value: true});
     const definitions: {
-      hover(anchor: HTMLElement | SVGElement, snapshot: Dsl4BlockPreviewSnapshot): () => void;
+      hover?(anchor: HTMLElement | SVGElement, snapshot: Dsl4BlockPreviewSnapshot): () => void;
     }[] = [];
     const opened: Parameters<MountOptions['runtime']['open']>[0][] = [];
     const result = deferred<Preview>();
@@ -500,7 +635,7 @@ test('hover waits for intent, owns an isolated still request and aborts it when 
         },
       }),
     });
-    const leave = definitions[0]!.hover(anchor as unknown as HTMLElement, snapshot);
+    const leave = definitions[0]!.hover!(anchor as unknown as HTMLElement, snapshot);
     await vi.advanceTimersByTimeAsync(219);
     assert.equal(opened.length, 0);
     await vi.advanceTimersByTimeAsync(1);

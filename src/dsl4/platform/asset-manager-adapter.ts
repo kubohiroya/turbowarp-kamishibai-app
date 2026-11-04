@@ -140,8 +140,8 @@ function actorVariableMatches(target: unknown, actorId: string) {
  * logical actor ID in its `actorName` variable. Asset Manager resolves project costumes by
  * physical sprite name, so passing the logical ID directly produces a missing-source error.
  */
-function resolveProjectTargetName(
-  runtimeHost: RuntimeHostPort | null,
+export function resolveProjectTargetName(
+  runtimeHost: Pick<RuntimeHostPort, 'spriteTargets'> | null,
   logicalTarget: string,
   preferActor = false,
 ) {
