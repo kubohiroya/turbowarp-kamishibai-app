@@ -1,5 +1,7 @@
+import {dsl4BlockAuthoringExtensionId} from '../block-source-shared.js';
 import {dsl4TurboWarpActionBlockSpecs} from '../core-action-block-codec.js';
 import type {Dsl4SourceFrontend} from '../source-frontend.js';
+import {mountDsl4BlockIconAssetPreview} from './block-icon-asset-preview.js';
 import {createDsl4BlockIconPreviewRuntime} from './block-icon-preview-runtime.js';
 
 type Literal = string | number | boolean;
@@ -49,7 +51,7 @@ interface PreviewDefinition {
   extensionId: string;
   opcodes: string[];
   mount(container: HTMLElement, context: Context, snapshot: Snapshot): () => void;
-  hover(anchor: HTMLElement | SVGElement, snapshot: Snapshot): () => void;
+  hover?(anchor: HTMLElement | SVGElement, snapshot: Snapshot): () => void;
 }
 interface RegistrationAPI {
   apiVersion: number;
@@ -746,10 +748,26 @@ export function installDsl4BlockIconPreviews({
     }
     removers.push(
       api.registerPreview({
-        extensionId: 'kubohiroyakamishibaiauthoring4',
-        opcodes: ['kubohiroyakamishibaiauthoring4_scene'],
+        extensionId: dsl4BlockAuthoringExtensionId,
+        opcodes: [`${dsl4BlockAuthoringExtensionId}_scene`],
         mount,
         hover,
+      }),
+    );
+    removers.push(
+      api.registerPreview({
+        extensionId: dsl4BlockAuthoringExtensionId,
+        opcodes: [`${dsl4BlockAuthoringExtensionId}_asset`],
+        mount: (container, context, snapshot) =>
+          ownView(
+            mountDsl4BlockIconAssetPreview(
+              container,
+              context,
+              snapshot,
+              Scratch.vm,
+              limits?.maxTotalAssetBytes,
+            ),
+          ),
       }),
     );
   } catch (error) {
