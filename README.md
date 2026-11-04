@@ -24,7 +24,7 @@ This repository contains the runtime, DSL, CLI and JavaScript APIs, distributabl
 
 ## Choose a Version
 
-|                 | 3.2.3                                           | 4.0.0-rc.84                                                   |
+|                 | 3.2.3                                           | 4.0.0-rc.85                                                   |
 | --------------- | ----------------------------------------------- | ------------------------------------------------------------- |
 | Status          | Stable and currently recommended                | Release candidate                                             |
 | Best for        | Workshops, stable use, existing 3.1/3.2 stories | Evaluating YAML authoring, browser workflows, and the CLI/API |
@@ -32,7 +32,7 @@ This repository contains the runtime, DSL, CLI and JavaScript APIs, distributabl
 | Get it          | [Downloads][downloads]                          | [Downloads][downloads] (SB3)                                  |
 | Read on updates | [Published documentation][docs]                 | [4.0 release status][current-release]                         |
 
-If you are unsure, use 3.2.3. Version 4.0.0-rc.84 is a candidate for evaluating the 4.0 authoring workflow and APIs before the stable release. Published 3.1 and 3.2 stories continue to work without migrating to 4.0.
+If you are unsure, use 3.2.3. Version 4.0.0-rc.85 is a candidate for evaluating the 4.0 authoring workflow and APIs before the stable release. Published 3.1 and 3.2 stories continue to work without migrating to 4.0.
 
 ## Try It First
 
@@ -48,7 +48,7 @@ Use 3.2.3 when you need the stable path for an event or an existing 3.1/3.2 stor
 
 ### Use 4.0 for YAML projects
 
-The current candidate is 4.0.0-rc.84. Asset block dialogs in authoring SB3s preview images, audio, and video by default. The preview shows the storage format, image and video dimensions and file size, and a checkerboard behind transparent costumes and images. See the [rc.84 release notes][rc84] and check the [current release status][current-release] before installing a versioned Standard SB3, Player, or npm package.
+The current candidate is 4.0.0-rc.85. Asset block dialogs in authoring SB3s preview images, audio, and video by default. The preview shows storage type, media dimensions and size, and transparency. Standard SB3 bundles two compressed SIMD WASM variants and falls back to JavaScript CPU when WASM is requested without SIMD. See the [rc.85 release notes][rc85] and check the [current release status][current-release] before installing a versioned Standard SB3, Player, or npm package.
 
 ```yaml
 kamishibai: '4.0'
@@ -69,12 +69,12 @@ For practical scripts, asset references, pose models, branches, speech bubbles, 
 
 ## CLI Quick Start
 
-rc.64 fixes the initial language of the recognition backend settings, following the TurboWarp language or the browser language when the host has no preference. The panel supports English and Japanese, including its accessible labels; the app’s language switch also updates it. Teachable Machine 4.0.2 and backend selection were added in rc.63. The earlier rc.58 fixed preview cleanup for the client’s own stream abort. Stories sealed with rc.51 through rc.55 remain unsupported; rebuild them as source or compiled distributions. The following examples target rc.82 and should be run after its release job completes; confirm the [release status][current-release] first.
+rc.64 fixes the initial language of the recognition backend settings, following the TurboWarp language or the browser language when the host has no preference. The panel supports English and Japanese, including its accessible labels; the app’s language switch also updates it. Teachable Machine 4.0.2 and backend selection were added in rc.63. The earlier rc.58 fixed preview cleanup for the client’s own stream abort. Stories sealed with rc.51 through rc.55 remain unsupported; rebuild them as source or compiled distributions. The following examples target rc.85 and should be run after its release job completes; confirm the [release status][current-release] first.
 
-The [`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.0-rc.84) CLI is intended for CI, reproducible builds, larger projects, and distribution-profile management. Use Node.js 24.0.0 or later and pnpm 11, and install the exact version you have validated. The CLI command is `turbowarp-kamishibai`, and `tm-kamishibai` stays as a deprecated alias.
+The [`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.0-rc.85) CLI is intended for CI, reproducible builds, larger projects, and distribution-profile management. Use Node.js 24.0.0 or later and pnpm 11, and install the exact version you have validated. The CLI command is `turbowarp-kamishibai`, and `tm-kamishibai` stays as a deprecated alias.
 
 ```bash
-pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.0-rc.84
+pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.0-rc.85
 pnpm exec turbowarp-kamishibai --help
 pnpm exec turbowarp-kamishibai validate-dsl4 --input opening.k4.yml --format pretty
 pnpm exec turbowarp-kamishibai preview-dsl4 --watch --base kamishibai-4-base.sb3 --project-root .
@@ -159,7 +159,7 @@ or pin the updated package, then update this repository's dependency.
 
 - [Published documentation](https://kubohiroya.github.io/turbowarp-kamishibai-docs/): operating instructions, author guides, command references, troubleshooting, migration notes, and workshop materials
 - [Documentation source](https://github.com/kubohiroya/turbowarp-kamishibai-docs): source documents and issues
-- [v4.0.0-rc.84 release notes][rc84]: media previews in asset block dialogs
+- [v4.0.0-rc.85 release notes][rc85]: smaller embedded WASM and CPU fallback without SIMD
 - [v4.0.0-rc.82 release notes][rc82]: latest published upstream packages and the document-source 0.2 contract
 - [v4.0.0-rc.81 release notes][rc81]: named SB3 save formats and verified retained copies of remote assets
 - [v4.0.0-rc.71 release notes][rc71]: actionable runtime errors and original block locations
@@ -184,5 +184,5 @@ Software and assets copyrighted by this project are licensed under MPL-2.0 unles
 [rc71]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.71.md
 [rc81]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.81.md
 [rc82]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.82.md
-[rc84]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.84.md
-[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.0-rc.84
+[rc85]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.85.md
+[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.0-rc.85
