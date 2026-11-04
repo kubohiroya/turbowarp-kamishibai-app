@@ -49,7 +49,10 @@ const bundleMetadata: ExtensionBundleMetadata = {
   docsURL: packageMetadata.homepage,
   banner: dsl4RuntimeBlockIconURI,
 };
-const officialWebsiteFaviconPath = path.join(projectRoot, 'site/favicon.png');
+const officialWebsiteFaviconPath = path.join(
+  projectRoot,
+  'scripts/sb3/assets/title-website-icon.png',
+);
 const applicationMenuIconPaths = Object.freeze({
   open: path.join(projectRoot, 'scripts/sb3/assets/application-menu-open.svg'),
   reload: path.join(projectRoot, 'scripts/sb3/assets/application-menu-reload.svg'),
