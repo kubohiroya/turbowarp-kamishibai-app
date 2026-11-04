@@ -8,11 +8,12 @@ import {fileURLToPath} from 'node:url';
 import {runInNewContext, runInThisContext} from 'node:vm';
 import {test, vi} from 'vitest';
 
-import {strFromU8, strToU8, unzipSync, zipSync} from 'fflate';
+import {inflateSync, strFromU8, strToU8, unzipSync, zipSync} from 'fflate';
 import {buildSb3, importSb3} from '@kubohiroya/sb3-toolchain';
 import {readCameraSourceRuntime} from '@kubohiroya/turbowarp-camera-source/runtime';
 
 import {createKamishibaiSb3} from '../scripts/sb3/build.ts';
+import {dsl4ReleaseCompactWasm} from '../scripts/sb3/dsl4-release-policy.ts';
 import {authorDsl4BlockSourceSb3} from '../src/builder/dsl4-block-source-author.js';
 import {
   createDsl4ReleaseSourceFiles,
@@ -260,31 +261,34 @@ async function buildRelease() {
   return buildCurrentRuntimeRelease();
 }
 
-let pendingCurrentRuntimeRelease;
+const pendingCurrentRuntimeReleases = new Map<boolean, Promise<{archive: Buffer}>>();
 
-function buildCurrentRuntimeRelease() {
-  pendingCurrentRuntimeRelease ??= (async () => {
+function buildCurrentRuntimeRelease(compactWasm = dsl4ReleaseCompactWasm) {
+  const pending = pendingCurrentRuntimeReleases.get(compactWasm);
+  if (pending) return pending;
+  const built = (async () => {
     const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'dsl4-current-release-'));
     const sourceDirectory = path.join(temporaryRoot, 'app');
     try {
-      for (const [relativePath, contents] of await createDsl4ReleaseSourceFiles()) {
+      for (const [relativePath, contents] of await createDsl4ReleaseSourceFiles({compactWasm})) {
         const outputPath = path.join(sourceDirectory, relativePath);
         await mkdir(path.dirname(outputPath), {recursive: true});
         await writeFile(outputPath, contents);
       }
-      const built = await createKamishibaiSb3({
+      const result = await createKamishibaiSb3({
         buildDate: '2026-08-16',
         faviconPath: fileURLToPath(new URL('../site/favicon.png', import.meta.url)),
         packageJsonPath: fileURLToPath(new URL('../package.json', import.meta.url)),
         sourceDirectory,
         version: releasePins.release.version,
       });
-      return {archive: Buffer.from(built.archive)};
+      return {archive: Buffer.from(result.archive)};
     } finally {
       await rm(temporaryRoot, {recursive: true, force: true});
     }
   })();
-  return pendingCurrentRuntimeRelease;
+  pendingCurrentRuntimeReleases.set(compactWasm, built);
+  return built;
 }
 
 async function buildEmbeddedStoryRelease({navigationFixture = false} = {}) {
@@ -952,6 +956,54 @@ test('keeps PoseNet model data out of the current generated runtime extension', 
     true,
     `runtime project.json must stay below ${currentRuntimeProjectJsonMaximumBytes} bytes; received ${projectBytes.byteLength}`,
   );
+});
+
+test('compacts the Standard SB3 with two byte-identical offline SIMD WASM variants', async () => {
+  const baseline = unzipSync((await buildCurrentRuntimeRelease(false)).archive);
+  const {archive} = await buildCurrentRuntimeRelease(true);
+  const compact = unzipSync(archive);
+  const projectBytes = entryOf(compact, 'project.json');
+  assert(entryOf(baseline, 'project.json').length - projectBytes.length > 1024 * 1024);
+  assert(projectBytes.length < 15 * 1024 * 1024);
+  const project = projectOf(JSON.parse(strFromU8(projectBytes)));
+  const source = Buffer.from(
+    extensionUrlOf(project).slice('data:text/javascript;base64,'.length),
+    'base64',
+  ).toString();
+  const assets = [
+    ...source.matchAll(
+      /get "(tfjs-backend-wasm(?:-threaded-simd|-simd)\.wasm)"\(\)\{const url=kamishibaiPackedWasm\.expand\("([A-Za-z0-9+/=]+)",(\d+)\)/gu,
+    ),
+  ];
+  assert.deepEqual(assets.map(([, name]) => name).sort(), [
+    'tfjs-backend-wasm-simd.wasm',
+    'tfjs-backend-wasm-threaded-simd.wasm',
+  ]);
+  for (const [, name, packed, size] of assets) {
+    const expected = await readFile(
+      require.resolve(`@kubohiroya/turbowarp-teachable-machine/wasm-assets/${name}`),
+    );
+    assert.equal(expected.byteLength, Number(size));
+    assert.deepEqual(Buffer.from(inflateSync(Buffer.from(packed!, 'base64'))), expected);
+    assert(!source.includes(expected.toString('base64')));
+  }
+  const scalar = await readFile(
+    require.resolve('@kubohiroya/turbowarp-teachable-machine/wasm-assets/tfjs-backend-wasm.wasm'),
+  );
+  assert(!source.includes(scalar.toString('base64')));
+  assert.doesNotMatch(source, /get "tfjs-backend-wasm\.wasm"/u);
+  const restoreGlobals = installUnsandboxedScriptDom();
+  const vm = new VirtualMachine();
+  try {
+    vm.securityManager.canLoadExtensionFromProject = () => true;
+    vm.securityManager.getSandboxMode = () => 'unsandboxed';
+    await loadProjectQuietly(vm, archive);
+    assert.equal(await extensionReporter(vm, 'versionReporter'), releasePins.release.version);
+    assert.equal(vm.runtime.getTargetForStage()?.getName(), 'Stage');
+  } finally {
+    vm.quit();
+    restoreGlobals();
+  }
 });
 
 test('builds one self-contained DSL 4.0 release with a pinned runtime extension', async () => {

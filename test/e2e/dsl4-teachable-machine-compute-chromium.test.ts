@@ -42,7 +42,7 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
     [
       '/teachable-machine.js',
       {
-        bytes: await createDsl4TeachableMachineExtensionSource(),
+        bytes: await createDsl4TeachableMachineExtensionSource({compactWasm: true}),
         type: 'text/javascript',
       },
     ],
@@ -119,7 +119,7 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
     const errors: string[] = [];
     const remote: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
-    await page.route('**/*', (route) => {
+    await context.route('**/*', (route) => {
       const url = route.request().url();
       if (/^https?:/.test(url) && !url.startsWith(`${origin}/`)) {
         remote.push(url);
@@ -179,11 +179,32 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
     await page.reload();
     await page.waitForFunction('globalThis.kamishibaiComputeProbe !== undefined');
     assert.equal(await page.evaluate('globalThis.kamishibaiComputeProbe.getPreference()'), 'wasm');
+
+    const withoutSimd = await context.newPage();
+    withoutSimd.on('pageerror', (error) => errors.push(error.message));
+    await withoutSimd.goto(origin);
+    await withoutSimd.waitForFunction('globalThis.kamishibaiComputeProbe !== undefined');
+    const simdFallbacks = (await withoutSimd.evaluate(`
+      (async () => {
+        globalThis.tf.env().set('WASM_HAS_SIMD_SUPPORT', false);
+        const explicit = await globalThis.tmCompute.select('wasm');
+        Object.defineProperty(navigator, 'gpu', {value: undefined});
+        globalThis.tf.removeBackend('webgl');
+        const automatic = await globalThis.tmCompute.select('auto');
+        return {explicit, automatic};
+      })()
+    `)) as Record<'explicit' | 'automatic', Record<string, unknown>>;
+    assert.equal(simdFallbacks.explicit.backend, 'cpu');
+    assert.equal(simdFallbacks.explicit.requested, 'wasm');
+    assert.equal(simdFallbacks.explicit.fallback, true);
+    assert.equal(simdFallbacks.automatic.backend, 'cpu');
+    await withoutSimd.close();
     assert.deepEqual(errors, []);
     assert.deepEqual(remote, []);
     const report = {
       browser: browser.version(),
       results,
+      simdFallbacks,
       errors,
       remoteRequests: remote,
       devicePreferencePersisted: true,
