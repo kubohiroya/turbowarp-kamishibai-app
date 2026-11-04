@@ -10,6 +10,7 @@ import {buildExtensionBundles} from '@kubohiroya/sb3-toolchain';
 import type {ExtensionBundleMetadata} from '@kubohiroya/sb3-toolchain';
 import {build} from 'vite';
 
+import {dsl4ReleaseCompactWasm} from './dsl4-release-policy.ts';
 import {createDsl4TeachableMachineExtensionSource} from './teachable-machine-runtime.ts';
 import {installDsl4PackagedRuntimeComponent} from '../../dist/builder/dsl4-source.js';
 import {createDsl4ProductionSourceFrontend} from '../../dist/builder/dsl4-source-frontend.js';
@@ -616,13 +617,13 @@ async function buildDsl4RuntimeExtensionSource(profile: string, narrativeControl
   return Buffer.from(output.code, 'utf8');
 }
 
-async function loadExternalExtensionSources() {
+async function loadExternalExtensionSources(compactWasm: boolean) {
   return Promise.all(
     externalExtensionMembers.map(async (member) => ({
       ...member,
       contents:
         member.id === 'kubohiroyatm'
-          ? await createDsl4TeachableMachineExtensionSource()
+          ? await createDsl4TeachableMachineExtensionSource({compactWasm})
           : await readFile(member.sourcePath),
     })),
   );
@@ -657,10 +658,11 @@ function extensionSourceDescriptors(externalExtensionSources: readonly Extension
 export async function createDsl4RuntimeBundleSource({
   profile = 'authoring',
   narrativeControlEnabled = dsl4StandardProductionFeatureFlags.dsl4NarrativeControl,
+  compactWasm = dsl4ReleaseCompactWasm,
 } = {}) {
   const [runtimeExtensionSource, externalExtensionSources] = await Promise.all([
     createDsl4RuntimeExtensionSource({profile, narrativeControlEnabled}),
-    loadExternalExtensionSources(),
+    loadExternalExtensionSources(compactWasm),
   ]);
   const extensions = extensionSourceDescriptors(externalExtensionSources);
   const extensionContents = new Map<string, Buffer>([
@@ -691,12 +693,12 @@ export async function createDsl4RuntimeBundleSource({
   );
 }
 
-export async function createDsl4ReleaseSourceFiles() {
+export async function createDsl4ReleaseSourceFiles({compactWasm = dsl4ReleaseCompactWasm} = {}) {
   const assets = titleAssets();
   const project = await createProject(assets);
   const [runtimeExtensionSource, externalExtensionSources] = await Promise.all([
     createDsl4RuntimeExtensionSource(),
-    loadExternalExtensionSources(),
+    loadExternalExtensionSources(compactWasm),
   ]);
   const archiveEntries = ['project.json', ...assets.map(({filename}) => filename)];
   const files = new Map([
