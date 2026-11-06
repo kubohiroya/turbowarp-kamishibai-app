@@ -160,7 +160,6 @@ or pin the updated package, then update this repository's dependency.
 - [Published documentation](https://kubohiroya.github.io/turbowarp-kamishibai-docs/): operating instructions, author guides, command references, troubleshooting, migration notes, and workshop materials
 - [Documentation source](https://github.com/kubohiroya/turbowarp-kamishibai-docs): source documents and issues
 - [v4.0.0-rc.86 release notes][rc86]: Teachable Machine recognition-model previews in Asset block dialogs
-- [v4.0.0-rc.85 release notes][rc85]: smaller embedded WASM and CPU fallback without SIMD
 - [v4.0.0-rc.82 release notes][rc82]: latest published upstream packages and the document-source 0.2 contract
 - [v4.0.0-rc.81 release notes][rc81]: named SB3 save formats and verified retained copies of remote assets
 - [v4.0.0-rc.71 release notes][rc71]: actionable runtime errors and original block locations
@@ -185,6 +184,5 @@ Software and assets copyrighted by this project are licensed under MPL-2.0 unles
 [rc71]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.71.md
 [rc81]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.81.md
 [rc82]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.82.md
-[rc85]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.85.md
 [rc86]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.86.md
 [current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.0-rc.86

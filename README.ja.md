@@ -161,7 +161,6 @@ pnpm verify:quick
 - [公開ドキュメント](https://kubohiroya.github.io/turbowarp-kamishibai-docs/): 操作、作者ガイド、コマンドリファレンス、トラブルシューティング、移行ノート、ワークショップ資料
 - [ドキュメントsource](https://github.com/kubohiroya/turbowarp-kamishibai-docs): 公開文書の原稿とissue
 - [v4.0.0-rc.86リリースノート][rc86]: Asset ブロックの Teachable Machine モデルプレビュー
-- [v4.0.0-rc.85リリースノート][rc85]: WASM の同梱サイズ削減と SIMD 非対応時の CPU 切り替え
 - [v4.0.0-rc.82リリースノート][rc82]: 上流パッケージの最新公開版とdocument-source 0.2の共通契約
 - [v4.0.0-rc.81リリースノート][rc81]: 保存形式の指定とremoteアセットの検証済み保持コピー
 - [v4.0.0-rc.71リリースノート][rc71]: 実行エラーの案内と元ブロックの位置対応を改善
@@ -186,6 +185,5 @@ pnpm verify:quick
 [rc71]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.71.md
 [rc81]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.81.md
 [rc82]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.82.md
-[rc85]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.85.md
 [rc86]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.86.md
 [current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.0-rc.86
