@@ -7,9 +7,17 @@ import {
   dsl4BlockSourceRuntimeExtensionId,
 } from '../block-source-shared.js';
 import {definitionRecord as record} from '../definition-references.js';
+import {extractDsl4PoseArchive} from '../pose-archive-extractor.js';
+import {isDsl4PoseArchivePath, isDsl4RemotePoseArchiveUrl} from '../pose-archive-locator.js';
+import {
+  dsl4RemotePoseFileUrl,
+  parseDsl4RemotePoseJson,
+  resolveDsl4RemotePoseWeightsPath,
+} from '../remote-pose-directory.js';
 import {computeDsl4Sha256Integrity} from '../source-descriptor.js';
 import {dsl4VideoContentType} from '../video-source.js';
 import {resolveProjectTargetName} from './asset-manager-adapter.js';
+import {mountDsl4RecognitionModelPreview} from './block-icon-recognition-model-preview.js';
 import type {Dsl4BlockPreviewSnapshot} from './block-icon-preview-editor.js';
 import {createDsl4BrowserRemoteAssetLoader} from './browser-remote-asset-loader.js';
 
@@ -104,6 +112,10 @@ async function readBundleFile(
   maxBytes: number,
   signal: AbortSignal,
   expectedIntegrity?: string,
+  readEntries = async () =>
+    record(
+      typeof vm.saveProjectSb3DontZip === 'function' ? await vm.saveProjectSb3DontZip() : undefined,
+    ),
 ) {
   const files = Array.isArray(bundle.files) ? bundle.files.map(record) : [];
   const file = files.find((candidate) => candidate.assetId === assetId && candidate.path === path);
@@ -118,10 +130,9 @@ async function readBundleFile(
     bytes = toByteArray(file.data);
   } else if (
     (bundle.formatVersion === 2 || bundle.formatVersion === 3) &&
-    typeof file.entry === 'string' &&
-    typeof vm.saveProjectSb3DontZip === 'function'
+    typeof file.entry === 'string'
   ) {
-    const entries = record(await vm.saveProjectSb3DontZip());
+    const entries = await readEntries();
     bytes = Object.hasOwn(entries, file.entry) ? entries[file.entry] : undefined;
   }
   signal.throwIfAborted();
@@ -132,6 +143,97 @@ async function readBundleFile(
   )
     throw new Error('埋め込み素材のデータが記録された内容と一致しません。');
   return bytes;
+}
+
+async function loadRemoteAsset(
+  vm: Record<string, unknown>,
+  bundle: Record<string, unknown>,
+  id: string,
+  source: Record<string, unknown>,
+  maxBytes: number,
+  signal: AbortSignal,
+): Promise<AssetPreviewMedia> {
+  const hasIntegrity = ['size', 'contentType', 'integrity'].some((key) =>
+    Object.hasOwn(source, key),
+  );
+  const {integrity, size, contentType} = source;
+  if (
+    hasIntegrity &&
+    (typeof integrity !== 'string' ||
+      !/^sha256-[a-f0-9]{64}$/u.test(integrity) ||
+      !Number.isSafeInteger(size) ||
+      Number(size) <= 0 ||
+      Number(size) > maxBytes ||
+      typeof contentType !== 'string')
+  )
+    throw new Error('Web 素材のサイズ・形式・ハッシュを確認してください。');
+
+  const expected =
+    typeof integrity === 'string' && hasIntegrity
+      ? `sha256-${fromByteArray(Uint8Array.from(integrity.slice(7).match(/../gu)!, (hex) => Number.parseInt(hex, 16)))}`
+      : undefined;
+  const retained = expected
+    ? await readBundleFile(
+        vm,
+        bundle,
+        id,
+        dsl4RetainedRemotePayloadPath,
+        maxBytes,
+        signal,
+        expected,
+      ).catch(() => {
+        signal.throwIfAborted();
+        return undefined;
+      })
+    : undefined;
+  const usableCopy = retained?.byteLength === size ? retained : undefined;
+
+  signal.throwIfAborted();
+  let loaded;
+  try {
+    loaded = await createDsl4BrowserRemoteAssetLoader({maxBytes})({url: source.url}, {signal});
+  } catch (error) {
+    signal.throwIfAborted();
+    if (!usableCopy) throw error;
+    return {
+      bytes: usableCopy,
+      contentType: String(contentType),
+      storage: 'remote-cacheable',
+      retainedFallback: true,
+    };
+  }
+  const loadedType = loaded.contentType.split(';', 1)[0]?.trim().toLowerCase() ?? '';
+  if (
+    expected &&
+    (loaded.bytes.byteLength !== size ||
+      loadedType !== contentType ||
+      (await computeDsl4Sha256Integrity(loaded.bytes)) !== expected)
+  )
+    throw new Error('Web 素材が指定されたサイズ・形式・ハッシュと一致しません。');
+  return {
+    bytes: loaded.bytes,
+    contentType: loadedType,
+    storage: usableCopy ? 'remote-cacheable' : 'remote-non-cacheable',
+  };
+}
+
+function findBundleAsset(
+  bundle: Record<string, unknown>,
+  id: string,
+  kind: string,
+  inputPath: string,
+) {
+  const rows = record(bundle.manifest).assets;
+  const matches = (Array.isArray(rows) ? rows.map(record) : []).filter(
+    (row) =>
+      row.kind === kind &&
+      record(row.source).type === 'file' &&
+      record(row.source).inputPath === inputPath,
+  );
+  return (
+    matches.find((candidate) => candidate.id === id) ??
+    (matches.length === 1 ? matches[0] : undefined)
+  );
 }
 
 async function loadAssetMedia(
@@ -147,82 +249,10 @@ async function loadAssetMedia(
     return {...projectMedia(runtime, kind, asset), storage: 'embedded-file'};
 
   const bundle = storedBundle(runtime);
-  if (asset.delivery === 'remote') {
-    const source = record(asset.source);
-    const hasIntegrity = ['size', 'contentType', 'integrity'].some((key) =>
-      Object.hasOwn(source, key),
-    );
-    const {integrity, size, contentType} = source;
-    if (
-      hasIntegrity &&
-      (typeof integrity !== 'string' ||
-        !/^sha256-[a-f0-9]{64}$/u.test(integrity) ||
-        !Number.isSafeInteger(size) ||
-        Number(size) <= 0 ||
-        Number(size) > maxBytes ||
-        typeof contentType !== 'string')
-    )
-      throw new Error('Web 素材のサイズ・形式・ハッシュを確認してください。');
+  if (asset.delivery === 'remote')
+    return loadRemoteAsset(vm, bundle, id, record(asset.source), maxBytes, signal);
 
-    const expected =
-      typeof integrity === 'string' && hasIntegrity
-        ? `sha256-${fromByteArray(Uint8Array.from(integrity.slice(7).match(/../gu)!, (hex) => Number.parseInt(hex, 16)))}`
-        : undefined;
-    const retained = expected
-      ? await readBundleFile(
-          vm,
-          bundle,
-          id,
-          dsl4RetainedRemotePayloadPath,
-          maxBytes,
-          signal,
-          expected,
-        ).catch(() => {
-          signal.throwIfAborted();
-          return undefined;
-        })
-      : undefined;
-    const usableCopy = retained?.byteLength === size ? retained : undefined;
-
-    signal.throwIfAborted();
-    let loaded;
-    try {
-      loaded = await createDsl4BrowserRemoteAssetLoader({maxBytes})({url: source.url}, {signal});
-    } catch (error) {
-      signal.throwIfAborted();
-      if (!usableCopy) throw error;
-      return {
-        bytes: usableCopy,
-        contentType: String(contentType),
-        storage: 'remote-cacheable',
-        retainedFallback: true,
-      };
-    }
-    const loadedType = loaded.contentType.split(';', 1)[0]?.trim().toLowerCase() ?? '';
-    if (
-      expected &&
-      (loaded.bytes.byteLength !== size ||
-        loadedType !== contentType ||
-        (await computeDsl4Sha256Integrity(loaded.bytes)) !== expected)
-    )
-      throw new Error('Web 素材が指定されたサイズ・形式・ハッシュと一致しません。');
-    return {
-      bytes: loaded.bytes,
-      contentType: loadedType,
-      storage: usableCopy ? 'remote-cacheable' : 'remote-non-cacheable',
-    };
-  }
-
-  const rows = record(bundle.manifest).assets;
-  const matches = (Array.isArray(rows) ? rows.map(record) : []).filter(
-    (row) =>
-      row.kind === kind &&
-      record(row.source).type === 'file' &&
-      record(row.source).inputPath === asset.file,
-  );
-  const row =
-    matches.find((candidate) => candidate.id === id) ??
-    (matches.length === 1 ? matches[0] : undefined);
+  const row = findBundleAsset(bundle, id, kind, asset.file as string);
   const files = record(row?.source).files;
   const path = Array.isArray(files) && files.length === 1 ? record(files[0]).path : undefined;
   const missing = '指定されたファイルの実体が作品に埋め込まれていません。';
@@ -238,6 +268,95 @@ async function loadAssetMedia(
     contentType: contentType ?? '',
     storage: bundle.formatVersion === 1 ? 'embedded-data' : 'embedded-file',
   };
+}
+
+async function loadRecognitionModel(
+  vm: Record<string, unknown>,
+  id: string,
+  asset: Record<string, unknown>,
+  maxBytes: number,
+  signal: AbortSignal,
+) {
+  const bundle = storedBundle(record(vm.runtime));
+  const source = record(asset.source);
+  let remaining = maxBytes;
+  let read: (path: string) => Promise<Uint8Array | undefined>;
+
+  async function archiveReader(bytes: Uint8Array) {
+    const {files} = await extractDsl4PoseArchive(
+      {
+        assetId: id,
+        bytes,
+        maxArchiveBytes: maxBytes,
+        maxFileBytes: maxBytes,
+        maxTotalBytes: maxBytes,
+      },
+      {signal},
+    );
+    return async (path: string) => files.find((file) => file.path === path)?.bytes;
+  }
+
+  if (asset.delivery === 'remote') {
+    if (isDsl4RemotePoseArchiveUrl(source.url)) {
+      const {bytes} = await loadRemoteAsset(vm, bundle, id, source, maxBytes, signal);
+      read = await archiveReader(bytes);
+    } else {
+      if (
+        typeof source.url !== 'string' ||
+        ['size', 'contentType', 'integrity'].some((key) => Object.hasOwn(source, key))
+      )
+        throw new Error('公開済みモデルのフォルダー URL、またはモデル ZIP を指定してください。');
+      const url = new URL(source.url);
+      if (url.protocol !== 'https:' || url.username || url.password || url.hash)
+        throw new Error('公開済みモデルの HTTPS フォルダー URL を指定してください。');
+      read = async (path) => {
+        const load = createDsl4BrowserRemoteAssetLoader({maxBytes: remaining});
+        const file = await load({url: dsl4RemotePoseFileUrl(url.href, path)}, {signal});
+        return file.bytes;
+      };
+    }
+  } else {
+    const row =
+      typeof asset.file === 'string'
+        ? findBundleAsset(bundle, id, 'recognitionModel', asset.file)
+        : undefined;
+    const files = record(row?.source).files;
+    const rowId = row?.id;
+    if (typeof rowId !== 'string' || !Array.isArray(files))
+      throw new Error('指定されたモデルの実体が作品に埋め込まれていません。');
+    let entries: Promise<Record<string, unknown>> | undefined;
+    const readEntries = () =>
+      (entries ??= Promise.resolve(
+        typeof vm.saveProjectSb3DontZip === 'function' ? vm.saveProjectSb3DontZip() : undefined,
+      ).then(record));
+    read = (path) =>
+      files.some((file) => record(file).path === path)
+        ? readBundleFile(vm, bundle, rowId, path, remaining, signal, undefined, readEntries)
+        : Promise.resolve(undefined);
+    const archive = files.length === 1 ? record(files[0]).path : undefined;
+    if (typeof archive === 'string' && isDsl4PoseArchivePath(archive)) {
+      const bytes = await read(archive);
+      if (!bytes) throw new Error('指定されたモデルの ZIP が作品に埋め込まれていません。');
+      read = await archiveReader(bytes);
+    }
+  }
+
+  async function requireFile(path: string) {
+    signal.throwIfAborted();
+    if (remaining <= 0) throw new Error('プレビュー用モデルのサイズが上限を超えています。');
+    const bytes = await read(path);
+    signal.throwIfAborted();
+    if (!bytes?.byteLength) throw new Error(`モデルのファイルが見つかりません (${path})。`);
+    remaining -= bytes.byteLength;
+    return bytes;
+  }
+
+  const metadata = await requireFile('metadata.json');
+  const model = await requireFile('model.json');
+  const weightsPath = resolveDsl4RemotePoseWeightsPath(
+    parseDsl4RemotePoseJson(model, 'model.json'),
+  );
+  return {metadata, model, weightsPath, weights: await requireFile(weightsPath)};
 }
 
 export function mountDsl4BlockIconAssetPreview(
@@ -289,7 +408,14 @@ export function mountDsl4BlockIconAssetPreview(
     const [compactKind, target] = typeof data === 'string' ? data.split(':') : [];
     const asset = typeof data === 'string' ? {kind: compactKind, target, name: id} : record(data);
     const kind = typeof asset.kind === 'string' ? asset.kind : '';
-    if (kind === 'recognitionModel') throw new Error('認識モデルはプレビューに対応していません。');
+    if (kind === 'recognitionModel') {
+      status.textContent = '認識モデルを読み込んでいます…';
+      const files = await loadRecognitionModel(record(vm), id, asset, maxBytes, signal);
+      signal.throwIfAborted();
+      clearMedia = mountDsl4RecognitionModelPreview(root, files, record(vm).runtime);
+      status.textContent = '';
+      return;
+    }
     const tag = previewTags.get(kind);
     if (!tag) throw new Error('プレビューする素材の種類を選んでください。');
     if (asset.delivery === 'remote') status.textContent = 'Web 素材を取得しています…';
