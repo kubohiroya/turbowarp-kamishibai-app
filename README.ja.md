@@ -24,7 +24,7 @@ TurboWarp紙芝居はTurboWarpを基盤とする独立したプロジェクト�
 
 ## どの版を使うか
 
-|                      | 3.2.3                                | 4.0.0-rc.85                                |
+|                      | 3.2.3                                | 4.0.0-rc.86                                |
 | -------------------- | ------------------------------------ | ------------------------------------------ |
 | 状態                 | 安定版・現在の推奨                   | リリース候補                               |
 | 向いている用途       | 体験会、安定運用、既存の3.1／3.2作品 | YAML台本、ブラウザ制作、CLI／APIの先行検証 |
@@ -32,7 +32,7 @@ TurboWarp紙芝居はTurboWarpを基盤とする独立したプロジェクト�
 | 入手先               | [ダウンロードページ][downloads]      | [ダウンロードページ][downloads]（SB3）     |
 | 変更時に確認する文書 | [公開ドキュメント][docs]             | [4.0公開状況][current-release]             |
 
-迷った場合は3.2.3を使ってください。4.0.0-rc.85は正式版前の候補であり、安定運用よりも4.0の制作フローやAPIを検証したい場合に適しています。公開済みの3.1／3.2作品は、4.0へ移行しなくても引き続き利用できます。
+迷った場合は3.2.3を使ってください。4.0.0-rc.86は正式版前の候補であり、安定運用よりも4.0の制作フローやAPIを検証したい場合に適しています。公開済みの3.1／3.2作品は、4.0へ移行しなくても引き続き利用できます。
 
 ## まず体験する
 
@@ -48,7 +48,7 @@ TurboWarp紙芝居はTurboWarpを基盤とする独立したプロジェクト�
 
 ### YAML projectには4.0を使う
 
-現在の候補は4.0.0-rc.85です。編集用SB3のassetブロックから、画像、音声、動画のプレビューを既定で開けます。素材の保持形態、寸法とサイズ、画像の透過を確認できます。Standard SB3 は圧縮済みの SIMD 版 WASM を2本同梱し、SIMD 非対応時に WASM を指定すると JavaScript CPU に切り替わります。[rc.85リリースノート][rc85]に検証と切り戻しをまとめています。Standard SB3・Player・npmパッケージの利用可否は[現在の公開状況][current-release]で確認してください。
+現在の候補は4.0.0-rc.86です。編集用SB3のAssetブロックのアイコンから、JSON SchemaのフォームとTeachable MachineのImage・Audio・Poseプレビューを開けます。カメラまたはマイクを開始すると、各クラスの予測確率をリアルタイムに確認できます。[rc.86リリースノート][rc86]に変更と切り戻しをまとめています。Standard SB3・Player・npmパッケージの利用可否は[現在の公開状況][current-release]で確認してください。
 
 ```yaml
 kamishibai: '4.0'
@@ -69,12 +69,12 @@ scenes:
 
 ## CLI quick start
 
-rc.64では認識の計算方式画面の初期言語を修正し、TurboWarpの表示言語、未指定ならブラウザ言語を使用します。タイトル・説明・操作ボタン・読み上げ用の名前は英語・日本語に対応し、アプリ内の言語切り替えにも追従します。Teachable Machine 4.0.2と計算方式選択はrc.63で追加しました。以前のrc.58ではpreview終了時の自己abort処理を修正しました。rc.51からrc.55でsealed保存した作品は引き続き利用できないため、元の台本からsourceまたはcompiled配布として再生成してください。以下のnpm例はrc.85のリリースジョブ完了後に実行し、事前に[公開状況][current-release]を確認してください。
+rc.64では認識の計算方式画面の初期言語を修正し、TurboWarpの表示言語、未指定ならブラウザ言語を使用します。タイトル・説明・操作ボタン・読み上げ用の名前は英語・日本語に対応し、アプリ内の言語切り替えにも追従します。Teachable Machine 4.0.2と計算方式選択はrc.63で追加しました。以前のrc.58ではpreview終了時の自己abort処理を修正しました。rc.51からrc.55でsealed保存した作品は引き続き利用できないため、元の台本からsourceまたはcompiled配布として再生成してください。以下のnpm例はrc.86のリリースジョブ完了後に実行し、事前に[公開状況][current-release]を確認してください。
 
-[`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.0-rc.85)のCLIは、CI、再現可能なbuild、大規模project、配布profileの管理に向いています。Node.js 24.0.0以上とpnpm 11を使用し、検証するversionを固定して導入します。CLIコマンド名は`turbowarp-kamishibai`です。`tm-kamishibai`は非推奨の互換aliasとして残ります。
+[`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.0-rc.86)のCLIは、CI、再現可能なbuild、大規模project、配布profileの管理に向いています。Node.js 24.0.0以上とpnpm 11を使用し、検証するversionを固定して導入します。CLIコマンド名は`turbowarp-kamishibai`です。`tm-kamishibai`は非推奨の互換aliasとして残ります。
 
 ```bash
-pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.0-rc.85
+pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.0-rc.86
 pnpm exec turbowarp-kamishibai --help
 pnpm exec turbowarp-kamishibai validate-dsl4 --input opening.k4.yml --format pretty
 pnpm exec turbowarp-kamishibai preview-dsl4 --watch --base kamishibai-4-base.sb3 --project-root .
@@ -160,6 +160,7 @@ pnpm verify:quick
 
 - [公開ドキュメント](https://kubohiroya.github.io/turbowarp-kamishibai-docs/): 操作、作者ガイド、コマンドリファレンス、トラブルシューティング、移行ノート、ワークショップ資料
 - [ドキュメントsource](https://github.com/kubohiroya/turbowarp-kamishibai-docs): 公開文書の原稿とissue
+- [v4.0.0-rc.86リリースノート][rc86]: Asset ブロックの Teachable Machine モデルプレビュー
 - [v4.0.0-rc.85リリースノート][rc85]: WASM の同梱サイズ削減と SIMD 非対応時の CPU 切り替え
 - [v4.0.0-rc.82リリースノート][rc82]: 上流パッケージの最新公開版とdocument-source 0.2の共通契約
 - [v4.0.0-rc.81リリースノート][rc81]: 保存形式の指定とremoteアセットの検証済み保持コピー
@@ -186,4 +187,5 @@ pnpm verify:quick
 [rc81]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.81.md
 [rc82]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.82.md
 [rc85]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.85.md
-[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.0-rc.85
+[rc86]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.86.md
+[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.0-rc.86
