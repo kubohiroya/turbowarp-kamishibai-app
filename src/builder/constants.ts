@@ -1,5 +1,5 @@
 export const packageName = '@kubohiroya/turbowarp-kamishibai-app';
-export const packageVersion = '4.0.0-rc.86';
+export const packageVersion = '4.0.0-rc.87';
 export const bundleManifestFormatVersion = 2;
 export const assetManifestFormatVersion = 1;
 export const fixedZipTimestamp = new Date(1980, 0, 1, 0, 0, 0, 0);

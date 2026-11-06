@@ -1101,7 +1101,7 @@ console.warn = (...values) => {
       await waitForEvaluation(client, 'Boolean(globalThis.Scratch?.vm)', 'packaged TurboWarp VM');
       await waitForEvaluation(
         client,
-        'Boolean(globalThis[Symbol.for("@kubohiroya/turbowarp-teachable-machine/runtime")]?.version === "4.1.0" && document.querySelector("[data-runtime-dock-control=kamishibai-recognition-compute]"))',
+        'Boolean(globalThis[Symbol.for("@kubohiroya/turbowarp-teachable-machine/runtime")]?.version === "4.2.0" && document.querySelector("[data-runtime-dock-control=kamishibai-recognition-compute]"))',
         'Teachable Machine settings entry in shared controls Dock',
       );
       await waitForEvaluation(

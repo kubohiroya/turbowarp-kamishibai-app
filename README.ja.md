@@ -24,7 +24,7 @@ TurboWarp紙芝居はTurboWarpを基盤とする独立したプロジェクト�
 
 ## どの版を使うか
 
-|                      | 3.2.3                                | 4.0.0-rc.86                                |
+|                      | 3.2.3                                | 4.0.0-rc.87                                |
 | -------------------- | ------------------------------------ | ------------------------------------------ |
 | 状態                 | 安定版・現在の推奨                   | リリース候補                               |
 | 向いている用途       | 体験会、安定運用、既存の3.1／3.2作品 | YAML台本、ブラウザ制作、CLI／APIの先行検証 |
@@ -32,7 +32,7 @@ TurboWarp紙芝居はTurboWarpを基盤とする独立したプロジェクト�
 | 入手先               | [ダウンロードページ][downloads]      | [ダウンロードページ][downloads]（SB3）     |
 | 変更時に確認する文書 | [公開ドキュメント][docs]             | [4.0公開状況][current-release]             |
 
-迷った場合は3.2.3を使ってください。4.0.0-rc.86は正式版前の候補であり、安定運用よりも4.0の制作フローやAPIを検証したい場合に適しています。公開済みの3.1／3.2作品は、4.0へ移行しなくても引き続き利用できます。
+迷った場合は3.2.3を使ってください。4.0.0-rc.87は正式版前の候補であり、安定運用よりも4.0の制作フローやAPIを検証したい場合に適しています。公開済みの3.1／3.2作品は、4.0へ移行しなくても引き続き利用できます。
 
 ## まず体験する
 
@@ -48,7 +48,7 @@ TurboWarp紙芝居はTurboWarpを基盤とする独立したプロジェクト�
 
 ### YAML projectには4.0を使う
 
-現在の候補は4.0.0-rc.86です。編集用SB3のAssetブロックのアイコンから、JSON SchemaのフォームとTeachable MachineのImage・Audio・Poseプレビューを開けます。カメラまたはマイクを開始すると、各クラスの予測確率をリアルタイムに確認できます。[rc.86リリースノート][rc86]に変更と切り戻しをまとめています。Standard SB3・Player・npmパッケージの利用可否は[現在の公開状況][current-release]で確認してください。
+現在の候補4.0.0-rc.87では、[rc.86][rc86]のAssetブロックの変更を引き継ぎ、TurboWarp Plus依存を更新しました。編集用SB3のAssetブロックのアイコンから、JSON SchemaのフォームとTeachable MachineのImage・Audio・Poseプレビューを開けます。カメラまたはマイクを開始すると、各クラスの予測確率をリアルタイムに確認できます。[rc.87リリースノート][rc87]に変更と切り戻しをまとめています。Standard SB3・Player・npmパッケージの利用可否は[現在の公開状況][current-release]で確認してください。
 
 ```yaml
 kamishibai: '4.0'
@@ -69,12 +69,12 @@ scenes:
 
 ## CLI quick start
 
-rc.64では認識の計算方式画面の初期言語を修正し、TurboWarpの表示言語、未指定ならブラウザ言語を使用します。タイトル・説明・操作ボタン・読み上げ用の名前は英語・日本語に対応し、アプリ内の言語切り替えにも追従します。Teachable Machine 4.0.2と計算方式選択はrc.63で追加しました。以前のrc.58ではpreview終了時の自己abort処理を修正しました。rc.51からrc.55でsealed保存した作品は引き続き利用できないため、元の台本からsourceまたはcompiled配布として再生成してください。以下のnpm例はrc.86のリリースジョブ完了後に実行し、事前に[公開状況][current-release]を確認してください。
+rc.64では認識の計算方式画面の初期言語を修正し、TurboWarpの表示言語、未指定ならブラウザ言語を使用します。タイトル・説明・操作ボタン・読み上げ用の名前は英語・日本語に対応し、アプリ内の言語切り替えにも追従します。Teachable Machine 4.0.2と計算方式選択はrc.63で追加しました。以前のrc.58ではpreview終了時の自己abort処理を修正しました。rc.51からrc.55でsealed保存した作品は引き続き利用できないため、元の台本からsourceまたはcompiled配布として再生成してください。以下のnpm例はrc.87のリリースジョブ完了後に実行し、事前に[公開状況][current-release]を確認してください。
 
-[`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.0-rc.86)のCLIは、CI、再現可能なbuild、大規模project、配布profileの管理に向いています。Node.js 24.0.0以上とpnpm 11を使用し、検証するversionを固定して導入します。CLIコマンド名は`turbowarp-kamishibai`です。`tm-kamishibai`は非推奨の互換aliasとして残ります。
+[`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.0-rc.87)のCLIは、CI、再現可能なbuild、大規模project、配布profileの管理に向いています。Node.js 24.0.0以上とpnpm 11を使用し、検証するversionを固定して導入します。CLIコマンド名は`turbowarp-kamishibai`です。`tm-kamishibai`は非推奨の互換aliasとして残ります。
 
 ```bash
-pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.0-rc.86
+pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.0-rc.87
 pnpm exec turbowarp-kamishibai --help
 pnpm exec turbowarp-kamishibai validate-dsl4 --input opening.k4.yml --format pretty
 pnpm exec turbowarp-kamishibai preview-dsl4 --watch --base kamishibai-4-base.sb3 --project-root .
@@ -119,7 +119,7 @@ preview、validator、builder、runtime loaderは同じStoryDocumentと診断を
 - [Capability bundle and release contract](https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/design/dsl-4-capability-bundle-release.md): 固定extension package、embedded ID、artifact provenance、rollback policy
 - [DSL 3.1/3.2 to 4.0 migration](https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/design/dsl-4-migration.md): 変換分類、warning、legacy artifact policy
 
-現行4.0 candidateは`@kubohiroya/turbowarp-teachable-machine@4.1.0`と`kubohiroyatm` embedded Teachable Machine extension IDを使います。旧package名、CLI名、URL、SB3 IDは過去releaseとmigration noteにだけ残します。認識の計算方式は初回Autoです。単独HTMLでは縁の「ツール」にホバー／タップすると共通Dockが現れ、カメラと並ぶ「Teachable Machine」から設定を開けます。Dockの設定で上・下・左・右を選べます。緑の旗・停止ボタンと同じ操作列の設定ボタンからJavaScript（CPU）・WASM・WebGPUを選択できます。開発者APIと適用時のモデル解放については[認識の計算方式](https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/recognition-compute.ja.md)を参照してください。
+現行4.0 candidateは`@kubohiroya/turbowarp-teachable-machine@4.2.0`と`kubohiroyatm` embedded Teachable Machine extension IDを使います。旧package名、CLI名、URL、SB3 IDは過去releaseとmigration noteにだけ残します。認識の計算方式は初回Autoです。単独HTMLでは縁の「ツール」にホバー／タップすると共通Dockが現れ、カメラと並ぶ「Teachable Machine」から設定を開けます。Dockの設定で上・下・左・右を選べます。緑の旗・停止ボタンと同じ操作列の設定ボタンからJavaScript（CPU）・WASM・WebGPUを選択できます。開発者APIと適用時のモデル解放については[認識の計算方式](https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/recognition-compute.ja.md)を参照してください。
 
 ## このリポジトリを開発する
 
@@ -160,7 +160,6 @@ pnpm verify:quick
 
 - [公開ドキュメント](https://kubohiroya.github.io/turbowarp-kamishibai-docs/): 操作、作者ガイド、コマンドリファレンス、トラブルシューティング、移行ノート、ワークショップ資料
 - [ドキュメントsource](https://github.com/kubohiroya/turbowarp-kamishibai-docs): 公開文書の原稿とissue
-- [v4.0.0-rc.86リリースノート][rc86]: Asset ブロックの Teachable Machine モデルプレビュー
 - [v4.0.0-rc.82リリースノート][rc82]: 上流パッケージの最新公開版とdocument-source 0.2の共通契約
 - [v4.0.0-rc.81リリースノート][rc81]: 保存形式の指定とremoteアセットの検証済み保持コピー
 - [v4.0.0-rc.71リリースノート][rc71]: 実行エラーの案内と元ブロックの位置対応を改善
@@ -186,4 +185,5 @@ pnpm verify:quick
 [rc81]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.81.md
 [rc82]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.82.md
 [rc86]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.86.md
-[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.0-rc.86
+[rc87]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.87.md
+[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.0-rc.87
