@@ -6,6 +6,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {test} from 'vitest';
 import {chromium, type Browser} from 'playwright-core';
+import {build} from 'vite';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 async function chromeExecutable() {
@@ -32,8 +33,26 @@ async function chromeExecutable() {
 }
 
 test('separates scene materialization from native IndexedDB lifetime and enforces byte LRU/prune', async () => {
+  const lifecyclePath = '/dist/dsl4/embedded-asset-lifecycle.js';
+  // Resolve the compiled module's npm imports before serving it to Chromium.
+  const bundled = await build({
+    configFile: false,
+    logLevel: 'error',
+    build: {
+      write: false,
+      minify: false,
+      lib: {entry: path.join(root, lifecyclePath), formats: ['es']},
+    },
+  });
+  const bundle = Array.isArray(bundled) ? bundled[0] : bundled;
+  const lifecycle = bundle && 'output' in bundle ? bundle.output[0] : undefined;
+  assert(lifecycle?.type === 'chunk', 'The browser lifecycle fixture must be bundled.');
   const server = createServer(async (request, response) => {
     const pathname = new URL(request.url ?? '/', 'http://localhost').pathname;
+    if (pathname === lifecyclePath) {
+      response.writeHead(200, {'content-type': 'text/javascript'}).end(lifecycle.code);
+      return;
+    }
     const file = path.resolve(root, '.' + pathname);
     if (
       !file.startsWith(root) ||

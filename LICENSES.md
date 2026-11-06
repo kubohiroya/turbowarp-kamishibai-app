@@ -24,21 +24,22 @@ license表示とsource repositoryを正本とします。
 | package                                      | version／revision | license      | source repository                              |
 | -------------------------------------------- | ----------------- | ------------ | ---------------------------------------------- |
 | @kubohiroya/turbowarp-app-shell              | 0.6.0             | MPL-2.0      | `kubohiroya/turbowarp-app-shell`               |
-| @kubohiroya/turbowarp-asset-cache            | 0.6.0             | MPL-2.0      | `kubohiroya/turbowarp-asset-cache`             |
-| @kubohiroya/turbowarp-kvs                    | 0.5.1             | MPL-2.0      | `kubohiroya/turbowarp-kvs`                     |
-| @kubohiroya/turbowarp-async-input            | 0.11.0            | MPL-2.0      | `kubohiroya/turbowarp-async-input`             |
-| @kubohiroya/turbowarp-bubble                 | 0.16.0            | MPL-2.0      | `kubohiroya/turbowarp-bubble`                  |
-| @kubohiroya/turbowarp-camera-source          | 0.22.1            | MPL-2.0      | `kubohiroya/turbowarp-camera-source`           |
+| @kubohiroya/turbowarp-asset-cache            | 0.7.0             | MPL-2.0      | `kubohiroya/turbowarp-asset-cache`             |
+| @kubohiroya/turbowarp-kvs                    | 0.6.0             | MPL-2.0      | `kubohiroya/turbowarp-kvs`                     |
+| @kubohiroya/turbowarp-async-input            | 0.12.0            | MPL-2.0      | `kubohiroya/turbowarp-async-input`             |
+| @kubohiroya/turbowarp-bubble                 | 0.17.0            | MPL-2.0      | `kubohiroya/turbowarp-bubble`                  |
+| @kubohiroya/turbowarp-camera-source          | 0.23.0            | MPL-2.0      | `kubohiroya/turbowarp-camera-source`           |
 | @kubohiroya/turbowarp-extension-manifest     | 0.5.0             | MPL-2.0      | `kubohiroya/turbowarp-extension-manifest`      |
 | @kubohiroya/turbowarp-local-preview          | 0.3.0             | MPL-2.0      | `kubohiroya/turbowarp-local-preview`           |
 | @kubohiroya/turbowarp-live-reload-controller | 0.4.0             | MPL-2.0      | `kubohiroya/turbowarp-live-reload-controller`  |
-| @kubohiroya/turbowarp-runtime-expression     | 0.9.0             | MPL-2.0      | `kubohiroya/turbowarp-runtime-expression`      |
+| @kubohiroya/turbowarp-runtime-expression     | 0.10.0            | MPL-2.0      | `kubohiroya/turbowarp-runtime-expression`      |
 | @kubohiroya/turbowarp-runtime-adapter        | 0.5.0             | MPL-2.0      | `kubohiroya/turbowarp-runtime-adapter`         |
-| @kubohiroya/turbowarp-svg-text               | 0.13.0            | MPL-2.0      | `kubohiroya/turbowarp-svg-text`                |
-| @kubohiroya/turbowarp-teachable-machine      | 4.1.0             | MPL-2.0      | `kubohiroya/turbowarp-teachable-machine`       |
-| @kubohiroya/turbowarp-document-data          | 0.5.0-rc.1        | MPL-2.0      | `kubohiroya/turbowarp-document-data`           |
-| @kubohiroya/turbowarp-document-source        | 0.1.0-rc.0        | MPL-2.0      | `kubohiroya/turbowarp-document-source`         |
-| @kubohiroya/turbowarp-yaml-json              | 0.8.0-rc.0        | MPL-2.0      | `kubohiroya/turbowarp-yaml-json`               |
+| @kubohiroya/turbowarp-svg-text               | 0.14.0            | MPL-2.0      | `kubohiroya/turbowarp-svg-text`                |
+| @kubohiroya/turbowarp-teachable-machine      | 4.2.0             | MPL-2.0      | `kubohiroya/turbowarp-teachable-machine`       |
+| @kubohiroya/turbowarp-document-data          | 0.6.0-rc.1        | MPL-2.0      | `kubohiroya/turbowarp-document-data`           |
+| @kubohiroya/turbowarp-named-data             | 0.8.0-rc.1        | MPL-2.0      | `kubohiroya/turbowarp-named-data`              |
+| @kubohiroya/turbowarp-document-source        | 0.2.0-rc.0        | MPL-2.0      | `kubohiroya/turbowarp-document-source`         |
+| @kubohiroya/turbowarp-yaml-json              | 0.9.0-rc.1        | MPL-2.0      | `kubohiroya/turbowarp-yaml-json`               |
 | @teachablemachine/pose                       | 0.8.6             | Apache-2.0   | `googlecreativelab/teachablemachine-libraries` |
 | @tensorflow/tfjs                             | 4.22.0            | Apache-2.0   | `tensorflow/tfjs`                              |
 | @turbowarp/scratch-storage                   | 2.0.0             | BSD-3-Clause | `TurboWarp/scratch-storage`                    |
@@ -62,7 +63,7 @@ npm runtime packageへ直接組み込みません。Packagerが成果物へ含�
 
 | package                                     | version | license      | source repository                            |
 | ------------------------------------------- | ------- | ------------ | -------------------------------------------- |
-| @kubohiroya/sb3-toolchain                   | 0.20.0  | MPL-2.0      | `kubohiroya/sb3-toolchain`                   |
+| @kubohiroya/sb3-toolchain                   | 0.21.0  | MPL-2.0      | `kubohiroya/sb3-toolchain`                   |
 | @kubohiroya/vite-plugin-turbowarp-extension | 0.10.0  | MPL-2.0      | `kubohiroya/vite-plugin-turbowarp-extension` |
 | @turbowarp/packager                         | 3.14.0  | MPL-2.0      | `TurboWarp/packager`                         |
 | @turbowarp/sbdl                             | 7.0.0   | MIT          | `forkphorus/sb-downloader`                   |
@@ -76,7 +77,7 @@ The DSL 4.0 runtime embeds the Apache-2.0 Teachable Machine Pose 0.8.6 browser r
 its TensorFlow.js 4.22.0 runtime, instead of loading either library from a CDN. The SB3 runtime
 component stores the PoseNet MobileNetV1 0.75 / stride16 checkpoint supplied by
 `tensorflow/tfjs-models` v2.2.2 as explicit model data, outside the runtime JavaScript. The model
-JSON and weight shards are Apache-2.0 material. `@kubohiroya/turbowarp-teachable-machine@4.1.0` publishes the
+JSON and weight shards are Apache-2.0 material. `@kubohiroya/turbowarp-teachable-machine@4.2.0` publishes the
 canonical `./posenet` manifest, upstream URLs, package assets, and SHA-256 values; the local
 [`src/dsl4/platform/posenet-bundle.js`](src/dsl4/platform/posenet-bundle.js) adapter only selects
 the SB3 storage channel.
