@@ -1,0 +1,200 @@
+/* The runtime owns its anchors and visibility. The embedding stage supplies the toolbar geometry. */
+[data-gui-stage] #dsl4-preview-reload-overlay {
+  position: relative;
+  z-index: var(--stage-overlay-z-index);
+}
+
+[data-gui-stage] #dsl4-preview-reload-overlay[hidden],
+[data-gui-stage] :is(#dsl4-preview-reload-position-step, #dsl4-preview-reload-scope-step, #dsl4-preview-reload-anchor-selector)[hidden] {
+  display: none;
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-button {
+  display: flex;
+  flex-direction: column;
+  place-content: center;
+  align-items: center;
+  font: 9px/1.2 sans-serif;
+  cursor: pointer;
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-icon { font-size: 16px; }
+[data-gui-stage] #dsl4-preview-reload-overlay[lang="ja"] #dsl4-preview-reload-status-badge { font-size: 10px; }
+
+[data-gui-stage] #dsl4-preview-reload-status-button[data-resolved-anchor^="top-"] {
+  translate: 0 var(--stage-toolbar-inset);
+}
+
+/* Legacy overlays need to leave room for the story's close button. */
+[data-gui-stage]:has(#dsl4-preview-reload-status-dialog:not([data-layout="editor"]))
+  #dsl4-preview-reload-status-button[data-resolved-anchor="top-right"] {
+  translate: calc(-44px - 2 * var(--stage-overlay-gap)) var(--stage-toolbar-inset);
+}
+
+[data-gui-stage] #dsl4-preview-reload-overlay[data-dialog-open="true"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-color: var(--ui-modal-overlay);
+  z-index: 25;
+}
+
+[data-gui-stage] :is(#dsl4-preview-reload-live-status, #dsl4-preview-reload-live-diagnostic) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog {
+  position: fixed;
+  inset: calc(var(--stage-toolbar-inset) + var(--stage-overlay-gap)) var(--stage-overlay-gap) auto auto;
+  width: min(32rem, 100vw - 2 * var(--stage-overlay-gap));
+  max-height: calc(100vh - var(--stage-toolbar-inset) - 2 * var(--stage-overlay-gap));
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--ui-black-transparent);
+  border-radius: var(--stage-overlay-gap);
+  background-color: var(--ui-primary);
+  color: var(--text-primary);
+  box-shadow: 0 0.25rem 1rem var(--ui-black-transparent);
+  font: 0.875rem/1.5 sans-serif;
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog button {
+  min-height: 2rem;
+  margin: 0.125rem;
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog button[aria-checked="true"] {
+  outline: 2px solid var(--looks-secondary);
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog[data-layout="editor"] {
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 0;
+  border: 4px solid var(--ui-white-transparent);
+  background-color: var(--ui-modal-background);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog[data-layout="editor"]:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog[data-layout="editor"] * { box-sizing: border-box; }
+
+[data-gui-stage] :is(#dsl4-preview-reload-dialog-header, #dsl4-preview-reload-dialog-footer) {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 1rem;
+}
+
+[data-gui-stage] #dsl4-preview-reload-dialog-header {
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background-color: var(--ui-modal-header-background);
+  color: var(--ui-modal-header-foreground);
+}
+
+[data-gui-stage] #dsl4-preview-reload-dialog-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+[data-gui-stage] #dsl4-preview-reload-dialog-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+[data-gui-stage] #dsl4-preview-reload-dialog-body p { margin: 0 0 0.75rem; }
+[data-gui-stage] #dsl4-preview-reload-dialog-body h3 {
+  margin: 1.5rem 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+[data-gui-stage] #dsl4-preview-reload-dialog-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--ui-black-transparent);
+}
+
+[data-gui-stage] #dsl4-preview-reload-dialog-footer p {
+  flex: 1;
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog[data-layout="editor"] button {
+  min-height: 44px;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--ui-black-transparent);
+  border-radius: 0.25rem;
+  background-color: var(--input-background);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog[data-layout="editor"] button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog[data-layout="editor"] button[aria-checked="true"] {
+  outline: none;
+  border-color: var(--looks-secondary);
+  background-color: var(--looks-transparent);
+  box-shadow: inset 0 0 0 1px var(--looks-secondary);
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog[data-layout="editor"] button:focus-visible {
+  outline: 2px solid var(--looks-secondary);
+  outline-offset: 2px;
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog[data-layout="editor"] #dsl4-preview-reload-dialog-close {
+  flex-shrink: 0;
+  width: 44px;
+  padding: 0;
+  border: 2px solid var(--ui-white-transparent);
+  border-radius: 50%;
+  background-color: var(--ui-black-transparent);
+  color: var(--ui-modal-header-foreground);
+  font-size: 1.5rem;
+}
+
+[data-gui-stage] #dsl4-preview-reload-status-dialog[data-layout="editor"] #dsl4-preview-reload-dialog-done {
+  flex-shrink: 0;
+  border-color: var(--looks-secondary);
+  background-color: var(--looks-secondary);
+  color: white;
+}
+
+[data-gui-stage] :is(#dsl4-preview-reload-position-step, #dsl4-preview-reload-scope-step, #dsl4-preview-debug-mode-selector) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+[data-gui-stage] #dsl4-preview-reload-anchor-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+[data-gui-stage] #dsl4-preview-reload-anchor-bottom-left { grid-area: 3 / 1; }
+[data-gui-stage] #dsl4-preview-reload-anchor-left-center { grid-area: 2 / 1; }
+[data-gui-stage] #dsl4-preview-reload-anchor-right-center { grid-area: 2 / 3; }
+[data-gui-stage] #dsl4-preview-reload-anchor-bottom-center { grid-area: 3 / 2; }
+[data-gui-stage] #dsl4-preview-reload-anchor-bottom-right { grid-area: 3 / 3; }
