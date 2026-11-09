@@ -202,6 +202,29 @@ function parseJson(value: unknown, blockId?: string): unknown {
   return parsed;
 }
 
+type PoseStep = {pose: string; skin?: string; sound?: string};
+
+/** Only plain `{steps}` pose actions fit the C-block; anything else keeps the JSON STEPS block. */
+function isPoseStepList(value: unknown): value is {steps: PoseStep[]} {
+  if (!isRecord(value) || Object.keys(value).some((key) => key !== 'steps')) return false;
+  const {steps} = value;
+  return (
+    Array.isArray(steps) &&
+    steps.length > 0 &&
+    steps.every(
+      (step) =>
+        isRecord(step) &&
+        typeof step.pose === 'string' &&
+        Object.entries(step).every(
+          ([key, field]) =>
+            ['pose', 'skin', 'sound'].includes(key) &&
+            typeof field === 'string' &&
+            (key === 'pose' || field.trim() !== ''),
+        ),
+    )
+  );
+}
+
 export function isDsl4StructuredSourceOpcode(opcode: unknown): boolean {
   return typeof opcode === 'string' && opcode.startsWith(prefix);
 }
@@ -283,6 +306,23 @@ export function createDsl4BlockAuthoringInfo({
       branchCount: 1,
       text: 'action options JSON [PROPERTIES]',
       arguments: {PROPERTIES: stringArgument('{"arguments":{}}')},
+    },
+    {
+      opcode: 'poseSteps',
+      blockType: 'command',
+      branchCount: 1,
+      text: 'recognize actor [TARGET] pose steps',
+      arguments: {TARGET: stringArgument('Actor')},
+    },
+    {
+      opcode: 'poseStep',
+      blockType: 'command',
+      text: 'pose [POSE] skin [SKIN] sound [SOUND]',
+      arguments: {
+        POSE: stringArgument('pose'),
+        SKIN: stringArgument(''),
+        SOUND: stringArgument(''),
+      },
     },
     ...createDsl4NarrativeBlockDefinitions(narrativeControlEnabled).map((block) =>
       ['narrativeForEach', 'narrativeLogicList'].includes(block.opcode)
@@ -438,6 +478,20 @@ export function createDsl4StructuredBlockSourceDeclaration({
       Object.keys(value).every((key) => key === 'text' || key === 'seconds')
         ? `${command}Text`
         : command;
+    if (command === 'pose' && target !== null && isPoseStepList(value)) {
+      const id = add(`${prefix}poseSteps`, {TARGET: target});
+      let previous = id;
+      for (const step of value.steps) {
+        const next = add(`${prefix}poseStep`, {
+          POSE: step.pose,
+          SKIN: step.skin ?? '',
+          SOUND: step.sound ?? '',
+        });
+        connect(previous, next, previous === id);
+        previous = next;
+      }
+      return id;
+    }
     const spec = specs.get(blockCommand);
     if (!spec) {
       if (!isRecord(value)) fail(`Invalid custom action ${sourceCommand}`);
@@ -851,6 +905,8 @@ export function readDsl4StructuredBlockSource(
       [`${prefix}scene`]: ['SCENE', 'PROPERTIES', 'SUBSTACK'],
       [`${prefix}actionOptions`]: ['PROPERTIES', 'SUBSTACK'],
       [`${prefix}useSection`]: ['SUBSTACK'],
+      [`${prefix}poseSteps`]: ['TARGET', 'SUBSTACK'],
+      [`${prefix}poseStep`]: ['POSE', 'SKIN', 'SOUND'],
       [`${prefix}customAction`]: ['TARGET', 'COMMAND', 'ARGUMENTS', 'STABLEID'],
       [dsl4IncludeBlocksOpcode]: ['LABEL'],
       ...Object.fromEntries(
@@ -888,6 +944,29 @@ export function readDsl4StructuredBlockSource(
         fail('Action options must contain exactly one core action');
       return coreAction(child, options.arguments, options.textFormat === 'json');
     }
+    if (block.opcode === `${prefix}poseSteps`) {
+      const steps: PoseStep[] = [];
+      let parent = blockId;
+      let stepId = substack(block);
+      while (stepId !== null) {
+        const step = readBlock(stepId, parent);
+        if (step.opcode !== `${prefix}poseStep`)
+          fail('Pose steps may contain only pose step blocks', stepId);
+        const skin = String(input(step, 'SKIN'));
+        const sound = String(input(step, 'SOUND'));
+        steps.push({
+          pose: String(input(step, 'POSE')),
+          ...(skin.trim() === '' ? {} : {skin}),
+          ...(sound.trim() === '' ? {} : {sound}),
+        });
+        parent = stepId;
+        stepId = step.next;
+      }
+      if (!steps.length) fail('Pose steps must contain at least one pose step', blockId);
+      return {[`${String(input(block, 'TARGET'))}.pose`]: {steps}};
+    }
+    if (block.opcode === `${prefix}poseStep`)
+      fail('Pose step blocks must be placed inside recognize actor pose steps', blockId);
     if (block.opcode === `${prefix}customAction`) {
       const command = String(input(block, 'COMMAND'));
       if (specs.has(command)) fail('Core actions must use their own runtime blocks');

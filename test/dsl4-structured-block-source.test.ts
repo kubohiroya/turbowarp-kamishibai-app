@@ -546,6 +546,44 @@ test('preserves custom action arguments as editable blocks', () => {
   assert.deepEqual(yaml.scenes.opening, [{'Hero.wave': {arguments: {count: 4}, stableId: 'wave'}}]);
 });
 
+test('authors pose steps as a C-block of pose/skin/sound step blocks and reads edits back', () => {
+  const steps = [{pose: 'Wave', skin: 'HeroWave', sound: 'Chime'}, {pose: 'Bow'}];
+  const blocks = createDsl4StructuredBlockSourceDeclaration({
+    source: {kamishibai: '4.0', scenes: {opening: [{'Hero.pose': {steps}}]}},
+    form: 'runtime',
+    hatId: 'hat',
+  });
+  assert.ok(!Object.values(blocks).some(({opcode}) => opcode.endsWith('_pose')));
+  const [outerId, outer] = blockWith(blocks, `${helperPrefix}poseSteps`);
+  const stepBlocks = Object.entries(blocks).filter(
+    ([, block]) => block.opcode === `${helperPrefix}poseStep`,
+  );
+  assert.equal(stepBlocks.length, 2);
+  assert.deepEqual(outer.inputs.SUBSTACK, [2, stepBlocks[0]![0]]);
+  assert.equal(stepBlocks[0]![1].parent, outerId);
+  assert.equal(stepBlocks[0]![1].next, stepBlocks[1]![0]);
+  const project = {targets: [{isStage: true, name: 'Stage', blocks}]};
+  const read = () => parse(extractDsl4BlockSourcesFromProject(project).sources['Stage.k4.yml']!);
+  assert.deepEqual(read().scenes.opening, [{'Hero.pose': {steps}}]);
+
+  setInput(stepBlocks[1]![1], 'SKIN', 'HeroBow');
+  setInput(stepBlocks[0]![1], 'SOUND', '');
+  assert.deepEqual(read().scenes.opening, [
+    {
+      'Hero.pose': {
+        steps: [
+          {pose: 'Wave', skin: 'HeroWave'},
+          {pose: 'Bow', skin: 'HeroBow'},
+        ],
+      },
+    },
+  ]);
+
+  delete outer.inputs.SUBSTACK;
+  for (const [id] of stepBlocks) delete blocks[id];
+  assert.throws(read, /at least one pose step/u);
+});
+
 test('ships editor definitions for scenes and option substacks without relying on a newer base', () => {
   const project = authored();
   assert.ok(project.extensions.includes(dsl4BlockAuthoringExtensionId));
