@@ -66,6 +66,25 @@ const labels = {
   },
 } as const;
 
+const panel = '[data-dsl4-compute-settings][data-dsl4-compute-settings]';
+/** Theme rules for the compute settings panel, keyed to the TurboWarp Editor theme variables. */
+export const dsl4ComputeSettingsThemeCss = [
+  `${panel}{--dsl4-cs-bg:#fff;--dsl4-cs-fg:#25354a;--dsl4-cs-muted:#4b5b6e;--dsl4-cs-border:#9aa8b8;--dsl4-cs-input:#fff;--dsl4-cs-button:#f5f8fc;--dsl4-cs-accent:#2864bd;--dsl4-cs-scheme:light}`,
+  `@media (prefers-color-scheme:dark){${panel}{--dsl4-cs-bg:#1f2329;--dsl4-cs-fg:#e6eaf0;--dsl4-cs-muted:#b4bdc8;--dsl4-cs-border:#4a5563;--dsl4-cs-input:#2a2f37;--dsl4-cs-button:#2f3540;--dsl4-cs-accent:#7aa7ff;--dsl4-cs-scheme:dark}}`,
+  `${panel}{color-scheme:var(--color-scheme,var(--dsl4-cs-scheme));background:var(--ui-modal-background,var(--ui-primary,var(--dsl4-cs-bg)));color:var(--ui-modal-foreground,var(--text-primary,var(--dsl4-cs-fg)));border:1px solid var(--ui-black-transparent,var(--dsl4-cs-border))}`,
+  `${panel} > *{border-color:var(--ui-black-transparent,var(--dsl4-cs-border))}`,
+  `${panel} h2{color:inherit}`,
+  `${panel} p{color:var(--text-primary,var(--dsl4-cs-muted));opacity:.9}`,
+  `${panel} select{color-scheme:inherit;background:var(--input-background,var(--dsl4-cs-input));color:var(--text-primary,var(--dsl4-cs-fg));border:1px solid var(--ui-black-transparent,var(--dsl4-cs-border));border-radius:6px}`,
+  `${panel} option{background:var(--popover-background,var(--input-background,var(--dsl4-cs-input)));color:var(--text-primary,var(--dsl4-cs-fg))}`,
+  `${panel} [data-dsl4-compute-apply]{background:var(--ui-secondary,var(--dsl4-cs-button));color:var(--text-primary,var(--dsl4-cs-fg));border:1px solid var(--ui-black-transparent,var(--dsl4-cs-border));border-radius:6px;cursor:pointer}`,
+  `${panel} [data-dsl4-compute-apply]:hover:not(:disabled){background:var(--ui-tertiary,var(--dsl4-cs-button));border-color:var(--looks-secondary,var(--dsl4-cs-accent))}`,
+  `${panel} [data-dsl4-compute-close]{background:transparent;color:inherit;border:0;min-height:0}`,
+  `${panel} [data-dsl4-compute-close]:hover:not(:disabled){background:color-mix(in srgb,currentColor 12%,transparent)}`,
+  `${panel} :is(button,select):focus-visible{outline:2px solid var(--looks-secondary,var(--dsl4-cs-accent));outline-offset:2px}`,
+  `${panel} :is(button,select):disabled{opacity:.5;cursor:not-allowed}`,
+].join('\n');
+
 /** Register an entry with the same host API as the editor stage controls. */
 export function createDsl4ComputeSettings(options: {
   document: Document;
@@ -82,7 +101,7 @@ export function createDsl4ComputeSettings(options: {
   element.setAttribute('role', 'dialog');
   element.setAttribute('aria-modal', 'false');
   element.style.cssText =
-    'position:fixed;right:16px;top:64px;width:360px;max-width:calc(100vw - 32px);max-height:calc(100vh - 96px);z-index:2147483001;background:#fff;color:#004d40;padding:16px;border:1px solid #617184;border-radius:8px;box-sizing:border-box;display:none;font:16px sans-serif;overflow:auto;box-shadow:0 4px 16px #0004;';
+    'position:fixed;right:16px;top:64px;width:360px;max-width:calc(100vw - 32px);max-height:calc(100vh - 96px);z-index:2147483001;padding:16px;border-radius:8px;box-sizing:border-box;display:none;font:16px sans-serif;overflow:auto;box-shadow:0 4px 16px #0004;';
   const title = document.createElement('h2');
   title.style.cssText = 'min-width:0;overflow-wrap:anywhere;';
   const selectLabel = document.createElement('label');
@@ -107,11 +126,35 @@ export function createDsl4ComputeSettings(options: {
   const close = document.createElement('button');
   close.type = 'button';
   close.dataset.dsl4ComputeClose = 'true';
-  for (const button of [apply, close])
-    button.style.cssText = 'font:inherit;padding:.6em;margin:.5em;';
-  close.style.flexShrink = '0';
+  apply.style.cssText = 'font:inherit;padding:.6em;margin:.5em;';
+  // Close is an X icon; its localized name lives in aria-label and title, never as visible text.
+  close.style.cssText =
+    'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;margin:.5em;flex-shrink:0;border:0;border-radius:4px;background:transparent;color:inherit;cursor:pointer;';
+  const svgNamespace = 'http://www.w3.org/2000/svg';
+  const closeIcon = document.createElementNS(svgNamespace, 'svg');
+  closeIcon.setAttribute('viewBox', '0 0 16 16');
+  closeIcon.setAttribute('width', '18');
+  closeIcon.setAttribute('height', '18');
+  closeIcon.setAttribute('aria-hidden', 'true');
+  closeIcon.setAttribute('focusable', 'false');
+  const closePath = document.createElementNS(svgNamespace, 'path');
+  closePath.setAttribute('d', 'M4 4l8 8M12 4l-8 8');
+  closePath.setAttribute('stroke', 'currentColor');
+  closePath.setAttribute('stroke-width', '1.6');
+  closePath.setAttribute('stroke-linecap', 'round');
+  closePath.setAttribute('fill', 'none');
+  closeIcon.appendChild(closePath);
+  close.appendChild(closeIcon);
+  // Follow the Editor theme: TurboWarp resolves light / dark / auto into custom properties on
+  // <html>. Without them (standalone player) fall back to prefers-color-scheme defaults. The
+  // doubled attribute outranks app-shell's hard-coded `[data-runtime-dock-panel]` colors.
+  const themeStyle = document.createElement('style');
+  themeStyle.dataset.dsl4ComputeTheme = 'true';
+  themeStyle.textContent = dsl4ComputeSettingsThemeCss;
   const header = document.createElement('header');
-  header.append(title, close);
+  header.style.cssText =
+    'display:flex;align-items:flex-start;justify-content:space-between;gap:8px;';
+  header.append(title, close, themeStyle);
   const body = document.createElement('div');
   body.append(selectLabel, status, note);
   const footer = document.createElement('footer');
@@ -230,7 +273,8 @@ export function createDsl4ComputeSettings(options: {
     status.textContent = `${text.actual}: ${selection?.backend ?? text.pending}${selection?.fallback ? ` (${text.fallback})` : ''}`;
     note.textContent = text.note;
     apply.textContent = text.apply;
-    close.textContent = text.close;
+    close.setAttribute('aria-label', text.close);
+    close.setAttribute('title', text.close);
     element.style.display = 'block';
     toolbar.update({label: controlLabel(locale)});
     placePanel();
