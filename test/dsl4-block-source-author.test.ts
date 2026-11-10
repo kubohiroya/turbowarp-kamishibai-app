@@ -193,6 +193,7 @@ scenes:
       - Hero.say: {text: Hello, seconds: 1}
       - Hero.think: {text: Hmm, seconds: 2}
       - Hero.pose:
+          stableId: poseId
           steps:
             - {pose: Ready, skin: HeroIdle, sound: SuccessSound}
 `,
@@ -308,7 +309,12 @@ scenes:
     assert.deepEqual(actions, [
       {'Hero.say': {text: 'Hello', seconds: 1}},
       {'Hero.think': {text: 'Hmm', seconds: 2}},
-      {'Hero.pose': {steps: [{pose: 'Ready', skin: 'HeroIdle', sound: 'SuccessSound'}]}},
+      {
+        'Hero.pose': {
+          stableId: 'poseId',
+          steps: [{pose: 'Ready', skin: 'HeroIdle', sound: 'SuccessSound'}],
+        },
+      },
     ]);
   });
 }
