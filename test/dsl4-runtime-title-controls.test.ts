@@ -76,3 +76,45 @@ test('centers the title close icon without relying on font metrics', () => {
   close.click();
   assert.equal(closeCount, 1);
 });
+
+test('splits the title into a prominent start action and a quieter website action', () => {
+  const document = createFakeDocument();
+  const mount = document.createElement('div');
+  document.body.appendChild(mount);
+  const calls: string[] = [];
+  const controls = createDsl4RuntimeTitleControls({
+    document,
+    mount,
+    locales: {
+      en: {website: 'Open Official Website', close: 'Close', start: 'Start Kamishibai'},
+      ja: {website: '公式Webサイトを開く', close: '閉じる', start: '紙芝居を始める'},
+    },
+    onWebsite() {
+      calls.push('website');
+    },
+    onClose() {
+      calls.push('close');
+    },
+  });
+
+  const root = controlsRoot(controls);
+  const start = requireByAttribute(root, 'data-dsl4-title-action', 'start');
+  const website = requireByAttribute(root, 'data-dsl4-title-action', 'website');
+  const startCss = requireString(start.style.cssText, 'the start button cssText');
+  const websiteCss = requireString(website.style.cssText, 'the website button cssText');
+  assert.match(startCss, /width:40%;height:20%/u);
+  assert.match(startCss, /background:#007d66/u);
+  assert.match(websiteCss, /width:32%;height:13\.3333%/u);
+  assert.match(websiteCss, /background:#c6eadf/u);
+  assert.equal(start.textContent, 'Start Kamishibai');
+
+  controls.show('ja');
+  assert.equal(start.textContent, '紙芝居を始める');
+  assert.equal(start.getAttribute('aria-label'), '紙芝居を始める');
+  start.click();
+  website.click();
+  assert.deepEqual(calls, ['close', 'website']);
+
+  controls.dispose();
+  assert.equal(findByAttribute(mount, 'data-dsl4-title-action', 'start').length, 0);
+});

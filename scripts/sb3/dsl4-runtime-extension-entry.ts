@@ -1354,12 +1354,14 @@ class KamishibaiDsl4RuntimeExtension {
         mount: resolveRuntimeMount(this.Scratch),
         locales: {
           en: {
-            website: appShellLocales.en.about.officialWebsite.name,
+            website: 'Open Official Website',
             close: appShellLocales.en.ui.close,
+            start: 'Start Kamishibai',
           },
           ja: {
-            website: appShellLocales.ja.about.officialWebsite.name,
+            website: '公式Webサイトを開く',
             close: appShellLocales.ja.ui.close,
+            start: '紙芝居を始める',
           },
         },
         websiteIconUrl: officialWebsiteIcon,

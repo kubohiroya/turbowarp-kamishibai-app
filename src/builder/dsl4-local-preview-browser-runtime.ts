@@ -492,8 +492,8 @@ export function createDsl4LocalPreviewBrowserRuntime(optionsInput: object) {
           document: options.document,
           mount: presentationMount,
           locales: {
-            en: {website: 'Official Website', close: 'Close'},
-            ja: {website: '公式Webサイト', close: '閉じる'},
+            en: {website: 'Open Official Website', close: 'Close', start: 'Start Kamishibai'},
+            ja: {website: '公式Webサイトを開く', close: '閉じる', start: '紙芝居を始める'},
           },
           onWebsite() {
             globalObject.open?.(
