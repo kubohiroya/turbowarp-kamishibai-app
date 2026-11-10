@@ -107,11 +107,33 @@ export function createDsl4ComputeSettings(options: {
   const close = document.createElement('button');
   close.type = 'button';
   close.dataset.dsl4ComputeClose = 'true';
-  for (const button of [apply, close])
-    button.style.cssText = 'font:inherit;padding:.6em;margin:.5em;';
-  close.style.flexShrink = '0';
+  apply.style.cssText = 'font:inherit;padding:.6em;margin:.5em;';
+  // Close is an X icon; its localized name lives in aria-label and title, never as visible text.
+  close.style.cssText =
+    'display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;margin:.5em;flex-shrink:0;border:0;border-radius:4px;background:transparent;color:inherit;cursor:pointer;';
+  const svgNamespace = 'http://www.w3.org/2000/svg';
+  const closeIcon = document.createElementNS(svgNamespace, 'svg');
+  closeIcon.setAttribute('viewBox', '0 0 16 16');
+  closeIcon.setAttribute('width', '18');
+  closeIcon.setAttribute('height', '18');
+  closeIcon.setAttribute('aria-hidden', 'true');
+  closeIcon.setAttribute('focusable', 'false');
+  const closePath = document.createElementNS(svgNamespace, 'path');
+  closePath.setAttribute('d', 'M4 4l8 8M12 4l-8 8');
+  closePath.setAttribute('stroke', 'currentColor');
+  closePath.setAttribute('stroke-width', '1.6');
+  closePath.setAttribute('stroke-linecap', 'round');
+  closePath.setAttribute('fill', 'none');
+  closeIcon.appendChild(closePath);
+  close.appendChild(closeIcon);
+  const closeStyle = document.createElement('style');
+  closeStyle.textContent =
+    '[data-dsl4-compute-close]:hover:not(:disabled){background:color-mix(in srgb,currentColor 12%,transparent)}' +
+    '[data-dsl4-compute-close]:focus-visible{outline:2px solid currentColor;outline-offset:2px}';
   const header = document.createElement('header');
-  header.append(title, close);
+  header.style.cssText =
+    'display:flex;align-items:flex-start;justify-content:space-between;gap:8px;';
+  header.append(title, close, closeStyle);
   const body = document.createElement('div');
   body.append(selectLabel, status, note);
   const footer = document.createElement('footer');
@@ -230,7 +252,8 @@ export function createDsl4ComputeSettings(options: {
     status.textContent = `${text.actual}: ${selection?.backend ?? text.pending}${selection?.fallback ? ` (${text.fallback})` : ''}`;
     note.textContent = text.note;
     apply.textContent = text.apply;
-    close.textContent = text.close;
+    close.setAttribute('aria-label', text.close);
+    close.setAttribute('title', text.close);
     element.style.display = 'block';
     toolbar.update({label: controlLabel(locale)});
     placePanel();

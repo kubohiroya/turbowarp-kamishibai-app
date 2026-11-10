@@ -181,13 +181,19 @@ test.each(['en', 'ja'] as const)(
       select.children.map((option) => option.textContent),
       text[locale].choices,
     );
-    for (const expected of [
-      text[locale].title,
-      text[locale].status,
-      text[locale].note,
-      text[locale].close,
-    ])
+    for (const expected of [text[locale].title, text[locale].status, text[locale].note])
       assert(descendants(root).some((element) => element.textContent === expected));
+    const close = descendants(root).find((element) => element.dataset.dsl4ComputeClose === 'true');
+    assert(close);
+    assert.equal(close.tagName, 'BUTTON');
+    assert.equal(close.textContent, '');
+    assert.equal(close.getAttribute('aria-label'), text[locale].close);
+    assert.equal(close.getAttribute('title'), text[locale].close);
+    const icon = close.children.find((element) => element.tagName.toLowerCase() === 'svg');
+    assert(icon);
+    assert.equal(icon.getAttribute('aria-hidden'), 'true');
+    assert(icon.children.some((element) => element.tagName.toLowerCase() === 'path'));
+    assert(!descendants(root).some((element) => element.textContent === text[locale].close));
     select.value = 'wasm';
     const apply = descendants(root).find((element) => element.dataset.dsl4ComputeApply === 'true');
     assert(apply);
@@ -213,6 +219,9 @@ test.each(['en', 'ja'] as const)(
       descendants(root).some((element) => element.textContent === text[currentLocale].pending),
     );
     assert.equal(apply.textContent, text[currentLocale].apply);
+    assert.equal(close.textContent, '');
+    assert.equal(close.getAttribute('aria-label'), text[currentLocale].close);
+    assert.equal(close.getAttribute('title'), text[currentLocale].close);
     assert(String(state.label).includes(text[currentLocale].title));
     settings.dispose();
     assert.equal(disposed, true);
