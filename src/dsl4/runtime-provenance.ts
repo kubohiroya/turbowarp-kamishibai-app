@@ -107,6 +107,21 @@ export const dsl4RuntimeProvenance = Object.freeze([
 ]);
 
 /**
+ * The published package that owns every extension this App embeds in an SB3.
+ *
+ * Extension headers read their By, Version, Repository and Docs URL lines from this record, and a
+ * test keeps it equal to package.json, so a header cannot advertise another release.
+ */
+export const dsl4PackageMetadata = Object.freeze({
+  name: '@kubohiroya/turbowarp-kamishibai-app',
+  version: dsl4RuntimeProvenance[0]!.version,
+  author: 'Hiroya Kubo',
+  authorURL: 'https://github.com/kubohiroya',
+  repository: 'https://github.com/kubohiroya/turbowarp-kamishibai-app',
+  homepage: 'https://kubohiroya.github.io/turbowarp-kamishibai-app/',
+});
+
+/**
  * Produce a legal comment that survives minification and is shown by hosts
  * which display the source of an embedded extension.
  *
