@@ -6,7 +6,7 @@
     "assetBundleIntegrity": "sha256-i/cp/+B0yu5iLAKSgXNGfmWOGeKCM8/4pEWBnjyuTVA=",
     "appShell": {
       "id": "standard",
-      "templateVersion": "4.0.0-rc.88",
+      "templateVersion": "4.0.0-rc.89",
       "integrity": "sha256-tO2WMkUv0S/WKX+7O3SAizXztOWoM99FnkmtFtCKQao="
     },
     "extensionBundle": {
@@ -16,7 +16,7 @@
     },
     "builder": {
       "package": "@kubohiroya/turbowarp-kamishibai-app",
-      "version": "4.0.0-rc.88",
+      "version": "4.0.0-rc.89",
       "settings": {
         "channel": "bundled",
         "maxSourceBytes": 1048576,
