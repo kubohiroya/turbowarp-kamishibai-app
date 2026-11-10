@@ -5,6 +5,7 @@ import {
   createDsl4BlockAuthoringInfo,
   dsl4BlockAuthoringDefaultFeatureFlags,
 } from './structured-block-source-codec.js';
+import {dsl4PackageMetadata} from './runtime-provenance.js';
 
 /** Compatibility surface: pure codecs never import the editor extension factory below. */
 export * from './structured-block-source-codec.js';
@@ -18,6 +19,39 @@ function json(value: unknown): string {
       {},
     );
   return result;
+}
+
+/**
+ * The TurboWarp-style header every embedded copy of the authoring extension starts with.
+ *
+ * Security dialogs read only this leading comment block, never getInfo(), so its Name and banner
+ * follow the extension's own getInfo() and the package lines follow the owning release. The
+ * extension reads `Scratch.gui` and the block workspace, so it asks for an unsandboxed host.
+ */
+export function formatDsl4BlockAuthoringExtensionHeader(
+  info: {
+    readonly id: string;
+    readonly name: string;
+    readonly blockIconURI: string;
+  } = createDsl4BlockAuthoringInfo(),
+): string {
+  const {name, version, author, authorURL, repository, homepage} = dsl4PackageMetadata;
+  return [
+    `// Name: ${info.name}`,
+    `// ID: ${info.id}`,
+    '// Description: Inert editor-only declarations for Kamishibai block scripts and embedded YAML views.',
+    '// Description[ja]: 紙芝居のブロックスクリプトと組込YAMLの表示に使う、実行しない宣言用の機能拡張です。',
+    `// By: ${author}`,
+    `// Author URL: ${authorURL}`,
+    `// Version: ${version}`,
+    `// Repository: ${repository}`,
+    `// Docs URL: ${homepage}`,
+    `// Banner: ${info.blockIconURI}`,
+    `// Package: ${name}`,
+    '// License: MPL-2.0',
+    '// Unsandboxed: required',
+    '',
+  ].join('\n');
 }
 
 /** Small, inert editor-only extension, included in each authored SB3 for older runtime bases too. */
@@ -36,6 +70,7 @@ export function createDsl4BlockAuthoringExtensionSource(
   });
   const definitions = info.blocks;
   return (
+    formatDsl4BlockAuthoringExtensionHeader(info) +
     `// SPDX-License-Identifier: MPL-2.0\n` +
     `// Kamishibai block script declarations are inert; the builder reads their block graph.\n` +
     `(function(Scratch){"use strict";const extension={getInfo(){return ${json(info)};}};` +
