@@ -76,7 +76,7 @@ test('title controls render injected Kamishibai copy, icon, and stage-relative c
   const icon = requireFirst(website.children, 'website icon');
   assert.equal(icon.style.backgroundImage, 'url("https://example.test/site.png")');
   assert.equal(icon.style.backgroundSize, 'contain');
-  assert.match(String(icon.style.cssText), /width:10cqw;height:10cqw/u);
+  assert.match(String(icon.style.cssText), /width:5.8333cqw;height:5.8333cqw/u);
 
   // The stage scales with its container, so the close glyph must stay in container units.
   const lines = findByAttribute(root, 'data-dsl4-close-icon-line', 'true');

@@ -259,13 +259,12 @@ function titleAssets(): readonly [
   <rect width="480" height="360" fill="#f4fffb"/>
   <text x="240" y="40" text-anchor="middle" font-family="sans-serif" font-size="30" fill="#007d66">{{ABOUT_TITLE}}</text>
   <text x="240" y="68" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#006b58">Version {{VERSION}} ({{BUILD_DATE}})</text>
-  <text x="240" y="194" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_LICENSE_APP_LINE_1}}</text>
-  <text x="240" y="210" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_LICENSE_APP_LINE_2}}</text>
-  <text x="240" y="234" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_LICENSE_STORY_LINE_1}}</text>
-  <text x="240" y="250" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_LICENSE_STORY_LINE_2}}</text>
-  <text x="240" y="282" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_AUTHOR_ORGANIZATION_LINE_1}}</text>
-  <text x="240" y="298" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_AUTHOR_ORGANIZATION_LINE_2}}</text>
-  <text x="240" y="326" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_AUTHOR_NAME}} &lt;{{ABOUT_AUTHOR_EMAIL}}&gt;</text>
+  <text x="240" y="214" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#333">{{ABOUT_LICENSE_APP_LINE_1}}</text>
+  <text x="240" y="230" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#333">{{ABOUT_LICENSE_APP_LINE_2}}</text>
+  <text x="240" y="254" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#333">{{ABOUT_LICENSE_STORY_LINE_1}}</text>
+  <text x="240" y="270" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#333">{{ABOUT_LICENSE_STORY_LINE_2}}</text>
+  <line x1="40" y1="312" x2="440" y2="312" stroke="#b9ddd2" stroke-width="1"/>
+  <text x="240" y="336" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#4d6b64">{{ABOUT_AUTHOR_ORGANIZATION_LINE_1}} {{ABOUT_AUTHOR_ORGANIZATION_LINE_2}} · {{ABOUT_AUTHOR_NAME}} &lt;{{ABOUT_AUTHOR_EMAIL}}&gt;</text>
 </svg>`,
     240,
     180,
@@ -277,13 +276,12 @@ function titleAssets(): readonly [
   <rect width="480" height="360" fill="#f4fffb"/>
   <text x="240" y="40" text-anchor="middle" font-family="sans-serif" font-size="30" fill="#007d66">{{ABOUT_TITLE}}</text>
   <text x="240" y="68" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#006b58">Version {{VERSION}} ({{BUILD_DATE}})</text>
-  <text x="240" y="194" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_LICENSE_APP_LINE_1}}</text>
-  <text x="240" y="210" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_LICENSE_APP_LINE_2}}</text>
-  <text x="240" y="234" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_LICENSE_STORY_LINE_1}}</text>
-  <text x="240" y="250" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_LICENSE_STORY_LINE_2}}</text>
-  <text x="240" y="282" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_AUTHOR_ORGANIZATION_LINE_1}}</text>
-  <text x="240" y="298" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_AUTHOR_ORGANIZATION_LINE_2}}</text>
-  <text x="240" y="326" text-anchor="middle" font-family="sans-serif" font-size="12">{{ABOUT_AUTHOR_NAME}} &lt;{{ABOUT_AUTHOR_EMAIL}}&gt;</text>
+  <text x="240" y="214" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#333">{{ABOUT_LICENSE_APP_LINE_1}}</text>
+  <text x="240" y="230" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#333">{{ABOUT_LICENSE_APP_LINE_2}}</text>
+  <text x="240" y="254" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#333">{{ABOUT_LICENSE_STORY_LINE_1}}</text>
+  <text x="240" y="270" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#333">{{ABOUT_LICENSE_STORY_LINE_2}}</text>
+  <line x1="40" y1="312" x2="440" y2="312" stroke="#b9ddd2" stroke-width="1"/>
+  <text x="240" y="336" text-anchor="middle" font-family="sans-serif" font-size="10.5" fill="#4d6b64">{{ABOUT_AUTHOR_ORGANIZATION_LINE_1}} {{ABOUT_AUTHOR_ORGANIZATION_LINE_2}}　{{ABOUT_AUTHOR_NAME}} &lt;{{ABOUT_AUTHOR_EMAIL}}&gt;</text>
 </svg>`,
     240,
     180,

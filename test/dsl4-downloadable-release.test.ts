@@ -1025,8 +1025,15 @@ test('builds one self-contained DSL 4.0 release with a pinned runtime extension'
   const localizedTitleSvg = strFromU8(entryOf(archive, localizedTitle.md5ext));
   assert.match(localizedTitleSvg, />TurboWarp紙芝居</u);
   assert.match(localizedTitleSvg, /Mozilla Public License 2\.0/u);
-  assert.match(localizedTitleSvg, />千葉商科大学　総合政策学部</u);
-  assert.match(localizedTitleSvg, />久保 裕也 &lt;hiroya@cuc\.ac\.jp&gt;</u);
+  // The affiliation and the author share one footer line at the bottom of the title.
+  assert.match(
+    localizedTitleSvg,
+    /y="336"[^>]*>千葉商科大学　総合政策学部 　久保 裕也 &lt;hiroya@cuc\.ac\.jp&gt;<\/text>/u,
+  );
+  assert.match(
+    titleSvg,
+    /y="336"[^>]*>Faculty of Policy Informatics, Chiba University of Commerce · Hiroya Kubo &lt;hiroya@cuc\.ac\.jp&gt;<\/text>/u,
+  );
   assert.doesNotMatch(localizedTitleSvg, />千葉商科大学<\/text>\s*<text[^>]*>総合政策学部</u);
   assert.doesNotMatch(localizedTitleSvg, /\{\{/u);
   const menuSvg = strFromU8(entryOf(archive, costumeOf(stage, 'Menu').md5ext));
@@ -1864,7 +1871,7 @@ test('opens the non-embedded title and menu without validating a packaged story 
         findByAttribute(titleControls, 'data-dsl4-title-action', 'website'),
         'the queried element',
       ).getAttribute('aria-label'),
-      'Official Website',
+      'Open Official Website',
     );
     const initialCloseButton = requireFirst(
       findByAttribute(titleControls, 'data-dsl4-title-action', 'close'),
@@ -2888,11 +2895,16 @@ test('localizes the Stage title using the host language ahead of the browser lan
       findByAttribute(titleControls, 'data-dsl4-title-action', 'close'),
       'the queried element',
     );
-    assert.equal(website.getAttribute('aria-label'), '公式Webサイト');
+    assert.equal(website.getAttribute('aria-label'), '公式Webサイトを開く');
     assert.equal(
-      requireString(website.style.cssText, 'its inline style').includes('top:25.5556%'),
+      requireString(website.style.cssText, 'its inline style').includes('top:30.5556%'),
       true,
     );
+    const start = requireFirst(
+      findByAttribute(titleControls, 'data-dsl4-title-action', 'start'),
+      'the queried element',
+    );
+    assert.equal(start.getAttribute('aria-label'), '紙芝居を始める');
     const websiteIcon = requireDefined(website.children[0], 'its icon');
     const websiteLabel = requireDefined(website.children[1], 'its label');
     assert.equal(websiteIcon.tagName, 'SPAN');
@@ -2902,11 +2914,11 @@ test('localizes the Stage title using the host language ahead of the browser lan
     );
     assert.match(
       requireString(websiteIcon.style.cssText, 'its inline style'),
-      /width:10cqw;height:10cqw/u,
+      /width:5\.8333cqw;height:5\.8333cqw/u,
     );
     assert.match(
       requireString(websiteLabel.style.cssText, 'its inline style'),
-      /font-size:2\.5cqw/u,
+      /font-size:2\.0833cqw/u,
     );
     assert.doesNotMatch(requireString(websiteIcon.style.cssText, 'its inline style'), /clamp|px/u);
     assert.doesNotMatch(requireString(websiteLabel.style.cssText, 'its inline style'), /clamp|px/u);
