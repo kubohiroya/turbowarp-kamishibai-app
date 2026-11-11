@@ -24,7 +24,7 @@ This repository contains the runtime, DSL, CLI and JavaScript APIs, distributabl
 
 ## Choose a Version
 
-|                 | 3.2.3                                           | 4.0.0-rc.89                                                   |
+|                 | 3.2.3                                           | 4.0.0-rc.90                                                   |
 | --------------- | ----------------------------------------------- | ------------------------------------------------------------- |
 | Status          | Stable and currently recommended                | Release candidate                                             |
 | Best for        | Workshops, stable use, existing 3.1/3.2 stories | Evaluating YAML authoring, browser workflows, and the CLI/API |
@@ -32,7 +32,7 @@ This repository contains the runtime, DSL, CLI and JavaScript APIs, distributabl
 | Get it          | [Downloads][downloads]                          | [Downloads][downloads] (SB3)                                  |
 | Read on updates | [Published documentation][docs]                 | [4.0 release status][current-release]                         |
 
-If you are unsure, use 3.2.3. Version 4.0.0-rc.89 is a candidate for evaluating the 4.0 authoring workflow and APIs before the stable release. Published 3.1 and 3.2 stories continue to work without migrating to 4.0.
+If you are unsure, use 3.2.3. Version 4.0.0-rc.90 is a candidate for evaluating the 4.0 authoring workflow and APIs before the stable release. Published 3.1 and 3.2 stories continue to work without migrating to 4.0.
 
 ## Try It First
 
@@ -48,7 +48,7 @@ Use 3.2.3 when you need the stable path for an event or an existing 3.1/3.2 stor
 
 ### Use 4.0 for YAML projects
 
-The current candidate, 4.0.0-rc.89, splits the title screen into a prominent “Start Kamishibai” button and a quieter “Open Official Website” button, and moves the affiliation and author to a single footer line. The pose-step C-blocks from [rc.88][rc88] stay available. See the [rc.89 release notes][rc89] and check the [current release status][current-release] before installing a versioned Standard SB3, Player, or npm package.
+The current candidate, 4.0.0-rc.90, adds the Kamishibai Block Script extension name and author to the extension confirmation dialog in TurboWarp Plus Editor. See the [rc.90 release notes][rc90] and check the [current release status][current-release] before installing a versioned Standard SB3, Player, or npm package.
 
 ```yaml
 kamishibai: '4.0'
@@ -71,10 +71,10 @@ For practical scripts, asset references, pose models, branches, speech bubbles, 
 
 rc.64 fixes the initial language of the recognition backend settings, following the TurboWarp language or the browser language when the host has no preference. The panel supports English and Japanese, including its accessible labels; the app’s language switch also updates it. Teachable Machine 4.0.2 and backend selection were added in rc.63. The earlier rc.58 fixed preview cleanup for the client’s own stream abort. Stories sealed with rc.51 through rc.55 remain unsupported; rebuild them as source or compiled distributions. The following examples target rc.89 and should be run after its release job completes; confirm the [release status][current-release] first.
 
-The [`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.0-rc.89) CLI is intended for CI, reproducible builds, larger projects, and distribution-profile management. Use Node.js 24.0.0 or later and pnpm 11, and install the exact version you have validated. The CLI command is `turbowarp-kamishibai`, and `tm-kamishibai` stays as a deprecated alias.
+The [`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.0-rc.90) CLI is intended for CI, reproducible builds, larger projects, and distribution-profile management. Use Node.js 24.0.0 or later and pnpm 11, and install the exact version you have validated. The CLI command is `turbowarp-kamishibai`, and `tm-kamishibai` stays as a deprecated alias.
 
 ```bash
-pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.0-rc.89
+pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.0-rc.90
 pnpm exec turbowarp-kamishibai --help
 pnpm exec turbowarp-kamishibai validate-dsl4 --input opening.k4.yml --format pretty
 pnpm exec turbowarp-kamishibai preview-dsl4 --watch --base kamishibai-4-base.sb3 --project-root .
@@ -184,5 +184,5 @@ Software and assets copyrighted by this project are licensed under MPL-2.0 unles
 [rc81]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.81.md
 [rc82]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.82.md
 [rc88]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.88.md
-[rc89]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.89.md
-[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.0-rc.89
+[rc90]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.90.md
+[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.0-rc.90
