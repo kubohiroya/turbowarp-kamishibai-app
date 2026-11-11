@@ -38,7 +38,7 @@ export interface Dsl4ReleaseMetadata {
 }
 
 export const dsl4ReleaseVersion = releasePins.release.version;
-export const dsl4NextReleaseVersion = '4.0.0-rc.91';
+export const dsl4NextReleaseVersion = '4.0.0-rc.92';
 // Reproduce the frozen rc.84 artifact; subsequent candidates use the compact SIMD build.
 export const dsl4ReleaseCompactWasm = dsl4ReleaseVersion !== '4.0.0-rc.84';
 export const dsl4ReleaseSeries = releasePins.release.series;

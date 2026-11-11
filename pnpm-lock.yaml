@@ -14,8 +14,8 @@ importers:
   .:
     dependencies:
       '@kubohiroya/turbowarp-app-shell':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1
       '@kubohiroya/turbowarp-asset-cache':
         specifier: ^0.8.0
         version: 0.8.0(@kubohiroya/turbowarp-named-data@0.8.0)
@@ -26,8 +26,8 @@ importers:
         specifier: ^0.18.0
         version: 0.18.0(@kubohiroya/turbowarp-asset-cache@0.8.0(@kubohiroya/turbowarp-named-data@0.8.0))(@kubohiroya/turbowarp-async-input@0.12.0)(@kubohiroya/turbowarp-runtime-expression@0.10.0)
       '@kubohiroya/turbowarp-camera-source':
-        specifier: ^0.23.0
-        version: 0.23.0
+        specifier: ^0.23.1
+        version: 0.23.1
       '@kubohiroya/turbowarp-document-data':
         specifier: 0.6.0
         version: 0.6.0(@kubohiroya/turbowarp-named-data@0.8.0)(supports-color@7.2.0)
@@ -441,8 +441,8 @@ packages:
     engines: {node: '>=24'}
     hasBin: true
 
-  '@kubohiroya/turbowarp-app-shell@0.6.0':
-    resolution: {integrity: sha512-+A3tVBy5s7/1s5bxLDd6LNVyEbWotXaF1bFEttIX1Wh5E80Yz4q0G5otphOAPMUPSsKJ023QZDfiLKrtG5U+4g==}
+  '@kubohiroya/turbowarp-app-shell@0.6.1':
+    resolution: {integrity: sha512-IHJWp9QGjQfGyS/et3YFQgsKwaHqEEFMPJw/yXY6mmcaLiscPdfI9BF1uFEeVzjuQU1aq7EiiaGu2UBDEWoFvQ==}
     engines: {node: '>=24'}
 
   '@kubohiroya/turbowarp-asset-cache@0.8.0':
@@ -478,8 +478,8 @@ packages:
       '@kubohiroya/turbowarp-runtime-expression':
         optional: true
 
-  '@kubohiroya/turbowarp-camera-source@0.23.0':
-    resolution: {integrity: sha512-Xg7z7k/KZGUlozAxCmUjrKVeFDLdmtaikt9Rc5e7DQ3in8xqHcRCFdSzn+XgK7bBlx6ODrfdzj3j1575KElh7A==}
+  '@kubohiroya/turbowarp-camera-source@0.23.1':
+    resolution: {integrity: sha512-SVhbtDyh4/bf1oLYoyU4wQ2TD5Z6s9DCk0khhsTRbidP9VEdU00198biI29nZAdmI0BJnmF5cnKHuNF2nkFUZg==}
     engines: {node: '>=24'}
 
   '@kubohiroya/turbowarp-document-data@0.6.0':
@@ -3951,7 +3951,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@kubohiroya/turbowarp-app-shell@0.6.0': {}
+  '@kubohiroya/turbowarp-app-shell@0.6.1': {}
 
   '@kubohiroya/turbowarp-asset-cache@0.8.0(@kubohiroya/turbowarp-named-data@0.8.0)':
     dependencies:
@@ -3968,7 +3968,7 @@ snapshots:
       '@kubohiroya/turbowarp-async-input': 0.12.0
       '@kubohiroya/turbowarp-runtime-expression': 0.10.0
 
-  '@kubohiroya/turbowarp-camera-source@0.23.0': {}
+  '@kubohiroya/turbowarp-camera-source@0.23.1': {}
 
   '@kubohiroya/turbowarp-document-data@0.6.0(@kubohiroya/turbowarp-named-data@0.8.0)(supports-color@7.2.0)':
     dependencies:
