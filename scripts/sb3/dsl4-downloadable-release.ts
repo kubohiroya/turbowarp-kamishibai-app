@@ -108,7 +108,7 @@ const externalExtensionMembers = Object.freeze(
       id: 'kubohiroyacamerasource',
       name: 'Camera Source',
       package: '@kubohiroya/turbowarp-camera-source',
-      version: '0.23.0',
+      version: '0.23.1',
       artifact: 'dist/camera-source.js',
       // The only member without a `./composition` export: nothing here imports its code. It is
       // bundled so that the Teachable Machine extension finds a camera owner to lease from, which

@@ -1267,7 +1267,15 @@ console.warn = (...values) => {
             accessibleName: panel.getAttribute('aria-label'),
             options: [...panel.querySelectorAll('option')].map(option => option.textContent),
             apply: panel.querySelector('[data-dsl4-compute-apply]').textContent,
-            close: panel.querySelector('[data-dsl4-compute-close]').textContent,
+            close: (() => {
+              const button = panel.querySelector('[data-dsl4-compute-close]');
+              return {
+                text: button.textContent,
+                ariaLabel: button.getAttribute('aria-label'),
+                title: button.getAttribute('title'),
+                icon: Boolean(button.querySelector('svg')),
+              };
+            })(),
           };
         })()`,
         );
@@ -1281,7 +1289,12 @@ console.warn = (...values) => {
               ? ['Auto（自動・推奨）', 'WebGPU', 'WASM', 'JavaScript（CPU）']
               : ['Auto (recommended)', 'WebGPU', 'WASM', 'JavaScript (CPU)'],
           apply: locale === 'ja' ? '保存して最初から再生' : 'Save and restart story',
-          close: locale === 'ja' ? '閉じる' : 'Close',
+          close: {
+            text: '',
+            ariaLabel: locale === 'ja' ? '閉じる' : 'Close',
+            title: locale === 'ja' ? '閉じる' : 'Close',
+            icon: true,
+          },
         });
         const screenshot = requireRecord(
           await dockClient.send('Page.captureScreenshot', {format: 'png'}),
