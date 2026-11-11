@@ -9,7 +9,7 @@ export const dsl4RuntimeProvenance = Object.freeze([
   {
     title: 'Kamishibai DSL 4.0 Runtime',
     source: 'turbowarp-kamishibai-app',
-    version: '4.0.0-rc.89',
+    version: '4.0.0-rc.90',
     copyright: 'Hiroya Kubo',
     license: 'MPL-2.0',
   },
@@ -105,6 +105,21 @@ export const dsl4RuntimeProvenance = Object.freeze([
     license: 'Apache-2.0',
   },
 ]);
+
+/**
+ * The published package that owns every extension this App embeds in an SB3.
+ *
+ * Extension headers read their By, Version, Repository and Docs URL lines from this record, and a
+ * test keeps it equal to package.json, so a header cannot advertise another release.
+ */
+export const dsl4PackageMetadata = Object.freeze({
+  name: '@kubohiroya/turbowarp-kamishibai-app',
+  version: dsl4RuntimeProvenance[0]!.version,
+  author: 'Hiroya Kubo',
+  authorURL: 'https://github.com/kubohiroya',
+  repository: 'https://github.com/kubohiroya/turbowarp-kamishibai-app',
+  homepage: 'https://kubohiroya.github.io/turbowarp-kamishibai-app/',
+});
 
 /**
  * Produce a legal comment that survives minification and is shown by hosts
