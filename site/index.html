@@ -107,6 +107,36 @@
         font-size: 0.92rem;
         font-weight: 700;
       }
+      .turbowarp-plus-family {
+        margin: 1.25rem 0 0;
+      }
+      .turbowarp-plus-family__link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.55rem 1rem 0.55rem 0.6rem;
+        border: 1px solid #c7cdf3;
+        border-radius: 16px;
+        background: #f4f5ff;
+        color: #2c2f6b;
+        line-height: 1.5;
+        text-decoration: none;
+      }
+      .turbowarp-plus-family__link:hover {
+        border-color: #3b55e0;
+      }
+      .turbowarp-plus-family__link:focus-visible {
+        outline: 3px solid #3b55e0;
+        outline-offset: 3px;
+      }
+      .turbowarp-plus-family__icon {
+        flex: none;
+        width: 40px;
+        height: 40px;
+      }
+      .turbowarp-plus-family__text strong {
+        color: #3b55e0;
+      }
       @media (max-width: 680px) {
         .cards {
           grid-template-columns: 1fr;
@@ -174,6 +204,24 @@
       <p>
         TurboWarpとTeachable
         Machineを利用し、参加者がカメラの前でポーズを取ることで物語を進める紙芝居システムです。
+      </p>
+      <p class="turbowarp-plus-family">
+        <a
+          class="turbowarp-plus-family__link"
+          href="https://kubohiroya.github.io/turbowarp-plus-packages/"
+        >
+          <img
+            class="turbowarp-plus-family__icon"
+            src="turbowarp-plus-icon.svg"
+            width="40"
+            height="40"
+            alt=""
+          />
+          <span class="turbowarp-plus-family__text"
+            >TurboWarp紙芝居は、<strong>TurboWarp Plus</strong
+            >ファミリーのプロジェクトの一つです。</span
+          >
+        </a>
       </p>
 
       <img

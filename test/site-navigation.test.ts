@@ -223,3 +223,15 @@ test('records the Urashima source used for the site symbol', async () => {
   assert.equal(metadata.license, 'MPL-2.0');
   assert.equal(metadata.derivedAsset, 'favicon.png');
 });
+
+test('states TurboWarp Plus family membership with its icon on the top page', async () => {
+  const [html, icon] = await Promise.all([
+    readFile(path.join(projectRoot, 'site/index.html'), 'utf8'),
+    readFile(path.join(projectRoot, 'site/turbowarp-plus-icon.svg'), 'utf8'),
+  ]);
+  assert.match(icon, /aria-label="TurboWarp Plus"/u);
+  assert.match(html, /<p class="turbowarp-plus-family">/u);
+  assert.match(html, /src="turbowarp-plus-icon\.svg"/u);
+  assert.match(html, /<strong>TurboWarp Plus<\/strong\s*>ファミリーのプロジェクトの一つです/u);
+  assert.match(html, /href="https:\/\/kubohiroya\.github\.io\/turbowarp-plus-packages\/"/u);
+});
