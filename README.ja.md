@@ -6,7 +6,7 @@
 
 TurboWarp紙芝居は、カメラの前で取ったポーズをきっかけに、登場人物、背景、音声、セリフ、分岐を進める参加型の紙芝居システムです。ポーズ認識にはTeachable Machine、作品の編集と実行にはTurboWarpを使い、台本とアセットからWeb／SB3形式の作品を作れます。
 
-TurboWarp紙芝居はTurboWarpを基盤とする独立したプロジェクトであり、TurboWarp公式のプロジェクトではありません。
+<img src="site/turbowarp-plus-icon.svg" width="24" height="24" alt="TurboWarp Plus" align="top"> TurboWarp紙芝居は、[TurboWarp Plus](https://kubohiroya.github.io/turbowarp-plus-packages/)ファミリーのプロジェクトの一つです。TurboWarp Plusは、[TurboWarp](https://turbowarp.org/)に機能を足す拡張・ツールチェーン・アプリケーション・ドキュメントサイト群で、ファミリーのパッケージは[TurboWarp Plusダッシュボード](https://kubohiroya.github.io/turbowarp-plus-packages/)で確認できます。TurboWarp紙芝居とTurboWarp PlusはTurboWarpを基盤とする独立したプロジェクトであり、TurboWarpプロジェクトおよびScratch財団の公式プロジェクトではありません。
 
 このリポジトリでは、紙芝居ランタイム、DSL、CLI／JavaScript API、配布用SB3、公開サイトを開発しています。操作方法、作者ガイド、コマンドリファレンス、トラブルシューティング、移行ノートの正本は[ドキュメントサイト](https://kubohiroya.github.io/turbowarp-kamishibai-docs/)です。
 

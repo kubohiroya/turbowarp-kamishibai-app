@@ -223,3 +223,28 @@ test('records the Urashima source used for the site symbol', async () => {
   assert.equal(metadata.license, 'MPL-2.0');
   assert.equal(metadata.derivedAsset, 'favicon.png');
 });
+
+test('states TurboWarp Plus family membership with its icon on the top page', async () => {
+  const [html, icon] = await Promise.all([
+    readFile(path.join(projectRoot, 'site/index.html'), 'utf8'),
+    readFile(path.join(projectRoot, 'site/turbowarp-plus-icon.svg'), 'utf8'),
+  ]);
+  assert.match(icon, /aria-label="TurboWarp Plus"/u);
+  assert.match(html, /<p class="turbowarp-plus-family">/u);
+  assert.match(html, /src="turbowarp-plus-icon\.svg"/u);
+  assert.match(html, /<strong>TurboWarp Plus<\/strong\s*>ファミリーのプロジェクトの一つです/u);
+  assert.match(html, /href="https:\/\/kubohiroya\.github\.io\/turbowarp-plus-packages\/"/u);
+  assert.match(
+    html,
+    /TurboWarpに機能を足す拡張・ツールチェーン・アプリケーション・ドキュメントサイト群です/u,
+  );
+  for (const readme of ['README.md', 'README.ja.md']) {
+    const text = await readFile(path.join(projectRoot, readme), 'utf8');
+    assert.match(text, /<img src="site\/turbowarp-plus-icon\.svg"/u);
+    assert.match(text, /\]\(https:\/\/kubohiroya\.github\.io\/turbowarp-plus-packages\/\)/u);
+  }
+  assert.match(
+    await readFile(path.join(projectRoot, 'README.ja.md'), 'utf8'),
+    /TurboWarp紙芝居は、\[TurboWarp Plus\]\([^)]+\)ファミリーのプロジェクトの一つです/u,
+  );
+});
