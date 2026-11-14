@@ -14,6 +14,10 @@ TurboWarp紙芝居はTurboWarpを基盤とする独立したプロジェクト�
 
 [公式サイト](https://kubohiroya.github.io/turbowarp-kamishibai-app/) · [Web版を体験する](https://sqs.prof.cuc.ac.jp/kamishibai/) · [SB3をダウンロードする](https://kubohiroya.github.io/turbowarp-kamishibai-app/downloads/) · [作り方を読む](https://kubohiroya.github.io/turbowarp-kamishibai-docs/) · [サンプルを見る](https://kubohiroya.github.io/turbowarp-kamishibai-samples/)
 
+## <img src="site/turbowarp-plus-icon.svg" width="32" height="32" alt=""> TurboWarp Plusファミリー
+
+TurboWarp紙芝居は、[TurboWarp Plus](https://kubohiroya.github.io/turbowarp-plus-packages/)ファミリーのプロジェクトの一つです。TurboWarp Plusは、[TurboWarp](https://turbowarp.org/)に機能を足す拡張・ツールチェーン・アプリケーション・ドキュメントサイト群です。ファミリーに属するパッケージと依存関係は[TurboWarp Plusダッシュボード](https://kubohiroya.github.io/turbowarp-plus-packages/)で確認できます。TurboWarp PlusもTurboWarpプロジェクトおよびScratch財団とは提携しておらず、承認も受けていない非公式のプロジェクトです。
+
 ## このプロジェクトでできること
 
 - 参加者のポーズ、キー入力、画面タッチで物語を進める

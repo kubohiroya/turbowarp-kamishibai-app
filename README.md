@@ -14,6 +14,10 @@ This repository contains the runtime, DSL, CLI and JavaScript APIs, distributabl
 
 [Project website](https://kubohiroya.github.io/turbowarp-kamishibai-app/) · [Try the Web app](https://sqs.prof.cuc.ac.jp/kamishibai/) · [Download an SB3](https://kubohiroya.github.io/turbowarp-kamishibai-app/downloads/) · [Read the documentation](https://kubohiroya.github.io/turbowarp-kamishibai-docs/) · [Explore samples](https://kubohiroya.github.io/turbowarp-kamishibai-samples/)
 
+## <img src="site/turbowarp-plus-icon.svg" width="32" height="32" alt=""> Part of the TurboWarp Plus family
+
+TurboWarp Kamishibai is one of the projects in the [TurboWarp Plus](https://kubohiroya.github.io/turbowarp-plus-packages/) family. TurboWarp Plus is a set of extensions, toolchains, applications and documentation sites that add features to [TurboWarp](https://turbowarp.org/). The packages in the family and their dependencies are listed on the [TurboWarp Plus dashboard](https://kubohiroya.github.io/turbowarp-plus-packages/). TurboWarp Plus is likewise unofficial: it is not affiliated with or endorsed by the TurboWarp project or the Scratch Foundation.
+
 ## What You Can Build
 
 - Advance a story through participant poses, keyboard input, and stage touches
