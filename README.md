@@ -6,17 +6,13 @@ English | [日本語](README.ja.md)
 
 TurboWarp-Kamishibai is an interactive storytelling system in which participants move a story forward by posing in front of a camera. It uses Teachable Machine for pose recognition and TurboWarp for authoring and playback, turning scripts and assets into stories that run on the Web or as SB3 projects.
 
-TurboWarp-Kamishibai is an independent project built on TurboWarp and is not affiliated with or endorsed by the TurboWarp project.
+<img src="site/turbowarp-plus-icon.svg" width="24" height="24" alt="TurboWarp Plus" align="top"> TurboWarp-Kamishibai is one of the projects in the [TurboWarp Plus](https://kubohiroya.github.io/turbowarp-plus-packages/) family: a set of extensions, toolchains, applications and documentation sites that add features to [TurboWarp](https://turbowarp.org/). The family's packages are listed on the [TurboWarp Plus dashboard](https://kubohiroya.github.io/turbowarp-plus-packages/). TurboWarp-Kamishibai and TurboWarp Plus are independent projects built on TurboWarp and are not affiliated with or endorsed by the TurboWarp project or the Scratch Foundation.
 
 This repository contains the runtime, DSL, CLI and JavaScript APIs, distributable SB3 projects, and the public website. The [documentation site](https://kubohiroya.github.io/turbowarp-kamishibai-docs/) is the source of truth for operating instructions, author guides, command references, troubleshooting, and migration notes.
 
 ![TurboWarp-Kamishibai showing Urashima Taro and a turtle over a camera feed while pose recognition advances the story](site/images/image01.png)
 
 [Project website](https://kubohiroya.github.io/turbowarp-kamishibai-app/) · [Try the Web app](https://sqs.prof.cuc.ac.jp/kamishibai/) · [Download an SB3](https://kubohiroya.github.io/turbowarp-kamishibai-app/downloads/) · [Read the documentation](https://kubohiroya.github.io/turbowarp-kamishibai-docs/) · [Explore samples](https://kubohiroya.github.io/turbowarp-kamishibai-samples/)
-
-## <img src="site/turbowarp-plus-icon.svg" width="32" height="32" alt=""> Part of the TurboWarp Plus family
-
-TurboWarp Kamishibai is one of the projects in the [TurboWarp Plus](https://kubohiroya.github.io/turbowarp-plus-packages/) family. TurboWarp Plus is a set of extensions, toolchains, applications and documentation sites that add features to [TurboWarp](https://turbowarp.org/). The packages in the family and their dependencies are listed on the [TurboWarp Plus dashboard](https://kubohiroya.github.io/turbowarp-plus-packages/). TurboWarp Plus is likewise unofficial: it is not affiliated with or endorsed by the TurboWarp project or the Scratch Foundation.
 
 ## What You Can Build
 
