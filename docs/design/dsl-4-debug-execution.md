@@ -12,6 +12,10 @@ Copyright © 2026 Hiroya Kubo.
 `dsl4WebPreviewAdapter`、`dsl4PreviewReloadOverlay`を同時に要求します。埋め込み作品SB3と
 `dsl4StandardProductionFeatureFlags`はOFFのままです。
 
+エディタ（TurboWarp-Plus-Editor など）で埋め込み作品を実行する authoring runtime も、§7 の
+`dsl4EditorDebugger`で同じ`debugger`境界に停止します。配布用の playback runtime、packager、
+Web Playerでは従来どおり no-op です。
+
 ## 2. YAML action
 
 `debugger`はglobal core actionです。canonical syntaxはYAML nullを値にする引数なし形式だけです。
@@ -27,6 +31,9 @@ scenes:
 `debugger: true`、`debugger: {}`、scalar、actor prefix、`stableId`はschema errorです。frontendは
 `{command: "debugger", target: null, args: {}}`へ正規化します。debug executionが接続されていない
 production runtimeではruntime portを呼ばず、副作用なしでcommitして次へ進みます。
+
+ブロックで台本を書く場合は、場面の中に実行ランタイム拡張の`debugger`ブロックを置きます。
+ブロックからYAMLへの変換で`debugger:`になり、YAMLからブロックへの変換でも同じブロックに戻ります。
 
 ## 3. 実行mode
 
@@ -70,3 +77,38 @@ catalog hashを再生成し、embedded productionからdebug UIが到達不能�
 rollbackは非埋め込みentrypointの`dsl4Debugger=false`、または
 `dsl4NonEmbeddedDevelopmentFeatureFlags`から同flagを外して再生成します。YAML上の`debugger`はno-opとして
 安全に残せるため、project data migrationはありません。
+
+## 7. エディタ上の埋め込み作品（`dsl4EditorDebugger`）
+
+### 7.1 有効になる範囲
+
+`dsl4EditorDebugger`は起動時固定・既定OFFで、どのprofileにも含めません。runtime拡張の
+`restart()`が、`DSL4_AUTHORING_PROFILE`のbuildで、packaged binary runtimeでないときだけ
+`dsl4StandardProductionFeatureFlags`へ足します。条件は`dsl4Runtime`と`dsl4AppShell`だけで、
+preview overlayを要求しません。coordinatorと橋渡しはauthoring profile
+（`scripts/sb3/dsl4-runtime-authoring-profile.ts`の`createEditorDebugExecution`）が作るため、
+playback runtimeのbundleには含まれません。
+
+### 7.2 TurboWarpデバッガーとの橋渡し
+
+story actionはScratch threadではなくruntime controllerのpromiseとして進むため、Scratch VMを
+止めるだけでは台本は止まりません。`src/dsl4/platform/turbowarp-debugger-bridge.ts`は次を行います。
+
+1. coordinatorが`debugger`の直前で停止したら、TurboWarpデバッガーアドオンが拡張機能向けに
+   登録する隠しブロック`sa-pause`を呼び、作品を一時停止させます。デバッガーのウィンドウが開き、
+   時計が止まり、`RUNTIME_PAUSED`が出ます。
+2. 停止位置（場面IDと1始まりのaction番号）と、その時点の物語変数を、デバッガーの「ログ」タブへ
+   `log`ブロックで書き出します。
+3. デバッガーで再開すると出る`RUNTIME_UNPAUSED`で、coordinatorを`resume()`します。
+
+`sa-pause`が無い（アドオンが無効、またはplayer onlyで停止を拒んだ）場合は、再開する手段が無い
+ため、停止せずにそのまま次へ進みます。runtime stop／disposeでは従来どおり`AbortSignal`で停止を
+cancelし、橋渡しも破棄します。
+
+### 7.3 変数ペインでの確認
+
+runtime拡張のinstance（`runtime.ext_kubohiroyakamishibairuntime4`）は、authoring buildだけ
+`getInspectorVariables()`を持ちます。TurboWarp-Plus-Editorの変数ペイン
+（`@kubohiroya/turbowarp-plus-editor-sprite-panes`の`readTemporaryVariables`）はこれを読み、
+背景の変数ペインに「台本の変数」の表を出し、デバッガーで一時停止している間だけ値を表示します。
+物語変数はScratchの変数へ書き写さないため、作品の保存内容は変わりません。

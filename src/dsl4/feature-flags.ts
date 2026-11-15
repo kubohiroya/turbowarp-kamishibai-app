@@ -14,6 +14,7 @@ const featureFlagKeys = new Set([
   'dsl4WebPreviewAssetLiveReload',
   'dsl4PreviewReloadOverlay',
   'dsl4Debugger',
+  'dsl4EditorDebugger',
   'dsl4PoseFeedbackModes',
   'dsl4PosePreviewMirroring',
   'dsl4CameraPreviewControls',
@@ -40,6 +41,7 @@ export const dsl4DefaultFeatureFlags = deepFreeze({
   dsl4WebPreviewAssetLiveReload: false,
   dsl4PreviewReloadOverlay: false,
   dsl4Debugger: false,
+  dsl4EditorDebugger: false,
   dsl4PoseFeedbackModes: false,
   dsl4PosePreviewMirroring: false,
   dsl4CameraPreviewControls: false,
@@ -175,6 +177,11 @@ export function resolveDsl4FeatureFlags(input: unknown = {}) {
     throw new TypeError(
       'dsl4Debugger requires dsl4Runtime, dsl4AppShell, dsl4WebPreviewAdapter, and dsl4PreviewReloadOverlay',
     );
+  }
+  // The editor's authoring runtime pauses at `debugger` actions through the TurboWarp debugger, so
+  // it needs no preview overlay. Only that runtime turns it on; packaged and published works never do.
+  if (resolved.dsl4EditorDebugger && (!resolved.dsl4Runtime || !resolved.dsl4AppShell)) {
+    throw new TypeError('dsl4EditorDebugger requires dsl4Runtime and dsl4AppShell');
   }
   if (resolved.dsl4SpeechAdvanceTypewriter && !resolved.dsl4Runtime) {
     throw new TypeError('dsl4SpeechAdvanceTypewriter requires dsl4Runtime');

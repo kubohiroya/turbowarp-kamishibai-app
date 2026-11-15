@@ -60,6 +60,7 @@ export type RuntimeStartupContext = Readonly<{
     dsl4WebPreviewAssetLiveReload: boolean;
     dsl4PreviewReloadOverlay: boolean;
     dsl4Debugger: boolean;
+    dsl4EditorDebugger?: boolean;
     dsl4PoseFeedbackModes: boolean;
     dsl4PosePreviewMirroring: boolean;
     dsl4CameraPreviewControls: boolean;
@@ -195,13 +196,16 @@ export async function createDsl4RuntimeStartup(
       diagnostics: [],
     });
   }
+  const debuggerEnabled = featureFlags.dsl4Debugger || featureFlags.dsl4EditorDebugger;
   if (
-    featureFlags.dsl4Debugger &&
+    debuggerEnabled &&
     (!isRecord(options.debugExecution) ||
       typeof options.debugExecution.beforeAction !== 'function' ||
       typeof options.debugExecution.getState !== 'function')
   ) {
-    throw new TypeError('debugExecution is required when dsl4Debugger is enabled');
+    throw new TypeError(
+      'debugExecution is required when dsl4Debugger or dsl4EditorDebugger is enabled',
+    );
   }
   if (options.assetLifecycle !== undefined && options.createAssetLifecycle !== undefined) {
     throw new TypeError('Provide either assetLifecycle or createAssetLifecycle, not both');
@@ -397,7 +401,7 @@ export async function createDsl4RuntimeStartup(
       ...(options.historyLimits === undefined ? {} : {historyLimits: options.historyLimits}),
       port: runtimeEnvironment?.port ?? (options.port as Dsl4RuntimePort),
       ...(resolvedAssetLifecycle === undefined ? {} : {assetLifecycle: resolvedAssetLifecycle}),
-      ...(featureFlags.dsl4Debugger && options.debugExecution !== undefined
+      ...(debuggerEnabled && options.debugExecution !== undefined
         ? {debugExecution: options.debugExecution}
         : {}),
       ...(createAssetLifecycle

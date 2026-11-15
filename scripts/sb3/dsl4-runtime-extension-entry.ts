@@ -544,6 +544,14 @@ class KamishibaiDsl4RuntimeExtension {
   declare openWatchedProjectDirectory: () => unknown;
   declare openWatchedStoryFile: () => Promise<unknown>;
   declare startNewWatchedSource: (projectRoot: unknown) => Promise<unknown>;
+  declare createEditorDebugExecution: () => Readonly<{
+    coordinator: Readonly<{getState(): Readonly<Record<string, unknown>>}>;
+    dispose(): unknown;
+  }> | null;
+  declare getInspectorVariables: () => unknown;
+  /** The coordinator of the editor run, which `getInspectorVariables` reads the pause from. */
+  editorDebugExecution: Readonly<{getState(): Readonly<Record<string, unknown>>}> | null = null;
+  editorDebugSession: RuntimeEntryDisposable | null = null;
   coreActionBlockAdapter: ReturnType<typeof createDsl4TurboWarpCoreActionBlockAdapter>;
   frontend: ReturnType<typeof createDsl4ProductionSourceFrontend>;
   declare installDropTarget: () => unknown;
@@ -1772,6 +1780,9 @@ class KamishibaiDsl4RuntimeExtension {
     const previewShell = this.previewShell;
     const previewLiveReload = this.previewLiveReload;
     const previewDebugExecution = this.previewDebugExecution;
+    const editorDebugSession = this.editorDebugSession;
+    this.editorDebugSession = null;
+    this.editorDebugExecution = null;
     this.previewShell = null;
     this.previewLiveReload = null;
     this.previewDebugExecution = null;
@@ -1784,6 +1795,7 @@ class KamishibaiDsl4RuntimeExtension {
       previewShell ? () => previewShell.dispose() : null,
       previewLiveReload ? () => previewLiveReload.dispose() : null,
       previewDebugExecution ? () => previewDebugExecution.dispose() : null,
+      editorDebugSession ? () => editorDebugSession.dispose() : null,
     ]) {
       if (!dispose) continue;
       try {
@@ -1923,6 +1935,10 @@ class KamishibaiDsl4RuntimeExtension {
         if (this.status !== 'error') this.reportFailure(error, 'story-runtime');
       }
     };
+    // Only the editor's authoring runtime pauses at `debugger`; a packaged run passes over it.
+    const editorDebug =
+      DSL4_AUTHORING_PROFILE && !binaryRuntime ? this.createEditorDebugExecution() : null;
+    this.editorDebugSession = editorDebug;
     try {
       const shellCandidate = await createDsl4StandardAppShell({
         featureFlags: binaryRuntime
@@ -1930,12 +1946,15 @@ class KamishibaiDsl4RuntimeExtension {
               ...productionFeatureFlags,
               dsl4IndexedDBAssetSessionStore: binaryRuntime.sessionBackingEnabled,
             }
-          : productionFeatureFlags,
+          : editorDebug
+            ? {...productionFeatureFlags, dsl4EditorDebugger: true}
+            : productionFeatureFlags,
         surface: binaryRuntime ? 'packager' : 'regularEditor',
         document: globalThis.document,
         mount: resolveRuntimeMount(Scratch),
         runtimeHostOptions: {
           runtimeVersion: extensionVersion,
+          ...(editorDebug ? {debugExecution: editorDebug.coordinator} : {}),
           ...(publicationStageFactory
             ? {
                 createPublicationStage: publicationStageFactory,

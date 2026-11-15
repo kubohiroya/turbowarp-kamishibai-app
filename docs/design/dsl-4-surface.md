@@ -928,7 +928,8 @@ publicationの章移動はシナリオ内の`gotoSegment: chapter2`で指定し�
 現章保持、残務は[publication設計](dsl-4-standard-publication.md)を参照してください。
 
 `debugger`はdevelopment debug executionの停止境界です。`dsl4Debugger`が有効な非埋め込み
-Standard SB3ではaction実行直前に停止し、production／埋め込み作品では副作用なしのno-opとして
+Standard SB3と、`dsl4EditorDebugger`が有効なエディタ上の埋め込み作品（authoring runtime）では
+action実行直前に停止し、配布用のplayback runtime・packager・Web Playerでは副作用なしのno-opとして
 直ちに完了します。引数、`stableId`、actor prefixは受理しません。実行modeとUI契約は
 [`DSL 4.0 debug execution`](dsl-4-debug-execution.md)を正本とします。
 Standard TurboWarp surfaceは3.2互換の`fadeOut`、`fadeUp`、`fadeToWhite`、`fadeFromWhite`、`reset`を
