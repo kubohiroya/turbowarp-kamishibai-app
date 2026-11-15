@@ -468,6 +468,16 @@ function normalizeAction(
     // Both the plain string and the authored run list reach the runtime as one typed run list.
     args.text = normalizeDsl4ContentRuns(args.text);
   }
+  if (
+    !customAction &&
+    (command === 'say' || command === 'think') &&
+    Object.hasOwn(args, 'text') &&
+    Array.isArray(args.text)
+  ) {
+    // A speech keeps its plain string, so stories without ruby reach the runtime as before. Only an
+    // authored run list is normalized, to the same typed runs setText uses.
+    args.text = normalizeDsl4ContentRuns(args.text);
+  }
   if (!customAction && Object.hasOwn(args, 'transition')) {
     args.transition =
       command === 'bgm'

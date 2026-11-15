@@ -1013,18 +1013,18 @@ scene切替・終了・素材解放では即時停止と回収を行い、フェ
 
 ### 7.2 Actor action
 
-| action                     | 引数                                                                                                                                                                                        |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Actor.show`               | `{skin, x, y, scale, transition?, stableId?}`                                                                                                                                               |
-| `Actor.hide`               | `{transition?, stableId?}`                                                                                                                                                                  |
-| `Actor.setTransparency`    | 0〜100、`{transparency, stableId?}`、または`{from, to, seconds, background?, stableId?}`                                                                                                    |
-| `Actor.moveTo`             | `{x, y, seconds, easing?, stableId?}`                                                                                                                                                       |
-| `Actor.say`／`Actor.think` | `{text, closePolicy?, seconds?, waitFor?, styles?, characterIntervalSeconds?, startSound?, characterSound?, noSoundCharacters?, restCharacters?, restCharacterIntervalSeconds?, stableId?}` |
-| `Actor.setSkin`            | skin ID、または`{skin, scale?, transition?, stableId?}`                                                                                                                                     |
-| `Actor.setLayer`           | `front`／`back`／相対layer数、または`{layer, stableId?}`                                                                                                                                    |
-| `Actor.loop`               | `{steps: [{skin, seconds}, ...], stableId?}`                                                                                                                                                |
-| `Actor.setText`            | `{text, style, stableId?}`。`text`は文字列またはcontent runの並び                                                                                                                           |
-| `Actor.pose`               | `{steps, stableId?}`                                                                                                                                                                        |
+| action                     | 引数                                                                                                                                                                                                                               |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Actor.show`               | `{skin, x, y, scale, transition?, stableId?}`                                                                                                                                                                                      |
+| `Actor.hide`               | `{transition?, stableId?}`                                                                                                                                                                                                         |
+| `Actor.setTransparency`    | 0〜100、`{transparency, stableId?}`、または`{from, to, seconds, background?, stableId?}`                                                                                                                                           |
+| `Actor.moveTo`             | `{x, y, seconds, easing?, stableId?}`                                                                                                                                                                                              |
+| `Actor.say`／`Actor.think` | `{text, closePolicy?, seconds?, waitFor?, styles?, characterIntervalSeconds?, startSound?, characterSound?, noSoundCharacters?, restCharacters?, restCharacterIntervalSeconds?, stableId?}`。`text`は文字列またはcontent runの並び |
+| `Actor.setSkin`            | skin ID、または`{skin, scale?, transition?, stableId?}`                                                                                                                                                                            |
+| `Actor.setLayer`           | `front`／`back`／相対layer数、または`{layer, stableId?}`                                                                                                                                                                           |
+| `Actor.loop`               | `{steps: [{skin, seconds}, ...], stableId?}`                                                                                                                                                                                       |
+| `Actor.setText`            | `{text, style, stableId?}`。`text`は文字列またはcontent runの並び                                                                                                                                                                  |
+| `Actor.pose`               | `{steps, stableId?}`                                                                                                                                                                                                               |
 
 ### content runとruby
 
@@ -1052,10 +1052,27 @@ frontendはどちらの形も同じ**型付きrun列**へ正規化します。�
 rubyを含むrun列は`@kubohiroya/turbowarp-svg-text`の`setRichText`へ渡し、含まないものは従来の`setText`の
 まま既存のlayoutを使います。
 
-**`Actor.say`と`Actor.think`はまだcontent runを受け取りません。** `@kubohiroya/turbowarp-bubble`の
-`BubbleTextCapability`は`text: string`しか受け取らず、bubbleのreveal自体も文字列を分割する実装
-（`splitBubbleText(text: string, ...)`）だからです。schemaも吹き出しの`text`は文字列のままにしてあり、
-書けるのに効かない記法を作っていません。吹き出しのrubyはbubble側がrich runへ対応してから繋ぎます。
+**`Actor.say`と`Actor.think`の`text`も、文字列かcontent runの並びで書けます。**
+
+```yaml
+- Hero.say:
+    text:
+      - 昔、
+      - ruby: {base: 浦島, reading: うらしま}
+      - 太郎がいました。
+    waitFor: advance
+```
+
+吹き出しでは、文字列はこれまでどおり文字列のまま渡し、並びだけを型付きrun列へ正規化します。rubyを
+含まないrun列は文字列へ射影して、従来の吹き出しの経路で表示します。rubyを含むrun列は
+`@kubohiroya/turbowarp-bubble`（0.18以降）へrun列のまま渡し、bubbleはtext capabilityの`setRichText`で
+描きます。
+
+**1文字ずつ表示（`characterIntervalSeconds`）では、ruby 1件を1単位として表示します。** 地の文は書記素
+クラスタ（grapheme cluster）ごとに出し、rubyは`base`と`reading`を同時に出すので、読みだけが先に見えたり
+`base`の途中で止まったりしません。無音文字・休止文字の判定には、rubyの単位では`base`を使います。
+bubble自身のreveal（`bubbleReveal`）でも、rubyを含むときは`splitBubbleContent`でrun列を分け、ruby 1件を
+分割しません。
 
 `Actor.say`と`Actor.think`は、`closePolicy`を1件指定するか、action内で`seconds`または
 `waitFor: advance`の少なくとも一方を指定します。`closePolicy`はトップレベルの`bubbleClosePolicies`に

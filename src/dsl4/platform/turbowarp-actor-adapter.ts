@@ -1,4 +1,14 @@
-import {normalizeBubbleReveal, splitBubbleText} from '@kubohiroya/turbowarp-bubble/reveal';
+import {
+  normalizeBubbleReveal,
+  splitBubbleContent,
+  splitBubbleText,
+} from '@kubohiroya/turbowarp-bubble/reveal';
+import {
+  dsl4ContentRunsNeedRichText,
+  dsl4PlainTextFromContentRuns,
+  normalizeDsl4ContentRuns,
+  type Dsl4ContentRun,
+} from '../content-run.js';
 import {normalizeDsl4BubbleMotions} from '../bubble-motion.js';
 import {applyDsl4MoveEasing, dsl4MoveEasingNames, isDsl4MoveEasing} from '../move-easing.js';
 
@@ -346,10 +356,26 @@ export function createDsl4TurboWarpActorPlatform(options: {
     }
     const actor = validateActor(target);
     const value = validateSpeechSpec(speech, kind, speechAdvanceTypewriterEnabled);
+    // Plain text keeps the string path. Content runs with ruby go to the bubble as runs, and the
+    // typewriter reveals each ruby run as one unit so a reading is never shown without its base.
+    let content: readonly Dsl4ContentRun[] | null = null;
     if (typeof value.text !== 'string') {
-      throw adapterError('K4-TW-ACTOR-002', `${kind}.text must be a string`);
+      try {
+        content = normalizeDsl4ContentRuns(value.text);
+      } catch (error) {
+        const normalizedError = adapterError(
+          'K4-TW-ACTOR-002',
+          `${kind}.text must be a string or content runs`,
+        );
+        Object.defineProperty(normalizedError, 'cause', {value: error});
+        throw normalizedError;
+      }
+      if (!dsl4ContentRunsNeedRichText(content)) content = null;
     }
-    const text = value.text;
+    const text =
+      typeof value.text === 'string'
+        ? value.text
+        : dsl4PlainTextFromContentRuns(normalizeDsl4ContentRuns(value.text));
     const bubbleStyle = Object.hasOwn(value, 'bubbleStyle')
       ? requireNonEmptyString(value.bubbleStyle, `${kind}.bubbleStyle`)
       : '__dsl4_default__';
@@ -431,8 +457,41 @@ export function createDsl4TurboWarpActorPlatform(options: {
       }
       return result;
     };
-    const segments = text.length === 0 ? [] : segmentGraphemes(text, 'text');
-    const bubbleRevealChunks = bubbleReveal ? splitBubbleText(text, bubbleReveal) : [];
+    // One unit per grapheme of plain text, and one per ruby run. `segments` keeps each unit's plain
+    // text for the sound and rest-character rules; `units` keeps the run the bubble shows.
+    const units: Dsl4ContentRun[] = [];
+    if (content === null) {
+      if (text.length > 0) {
+        for (const segment of segmentGraphemes(text, 'text'))
+          units.push({type: 'text', text: segment});
+      }
+    } else {
+      for (const run of content) {
+        if (run.type === 'ruby') units.push(run);
+        else if (run.text.length > 0) {
+          for (const segment of segmentGraphemes(run.text, 'text')) {
+            units.push({type: 'text', text: segment});
+          }
+        }
+      }
+    }
+    const segments = units.map((unit) => (unit.type === 'ruby' ? unit.base : unit.text));
+    const visibleContent = (count: number): string | readonly Dsl4ContentRun[] => {
+      if (content === null || count <= 0) return segments.slice(0, count).join('');
+      const runs: Dsl4ContentRun[] = [];
+      for (const unit of units.slice(0, count)) {
+        const last = runs.at(-1);
+        if (unit.type === 'text' && last?.type === 'text') {
+          runs[runs.length - 1] = {type: 'text', text: last.text + unit.text};
+        } else runs.push(unit);
+      }
+      return Object.freeze(runs);
+    };
+    const bubbleRevealChunks = bubbleReveal
+      ? content === null
+        ? splitBubbleText(text, bubbleReveal)
+        : splitBubbleContent(content, bubbleReveal)
+      : [];
     const noSoundSegments = new Set(
       Object.hasOwn(value, 'noSoundCharacters')
         ? segmentGraphemes(value.noSoundCharacters, 'noSoundCharacters')
@@ -489,7 +548,10 @@ export function createDsl4TurboWarpActorPlatform(options: {
       if (noSoundSegments.has(segment) || restSegments.has(segment)) return;
       playSound(characterSound);
     };
-    const queueBubbleText = (visibleText: string, fullyRevealed: boolean) => {
+    const queueBubbleText = (
+      visibleText: string | readonly Dsl4ContentRun[],
+      fullyRevealed: boolean,
+    ) => {
       presentationTail = presentationTail.then(async () => {
         if (!bubbleHandle) {
           const createdHandle = await (
@@ -524,7 +586,7 @@ export function createDsl4TurboWarpActorPlatform(options: {
     };
     const reveal = (count: number, withSound: boolean) => {
       visibleCount = Math.min(count, segments.length);
-      queueBubbleText(segments.slice(0, visibleCount).join(''), visibleCount >= segments.length);
+      queueBubbleText(visibleContent(visibleCount), visibleCount >= segments.length);
       // visibleCount is clamped to the segment count above.
       if (withSound && visibleCount > 0) playCharacterSound(segments[visibleCount - 1] ?? '');
     };
@@ -633,7 +695,7 @@ export function createDsl4TurboWarpActorPlatform(options: {
           rejectOperation = (error) => reject(error);
           try {
             if (bubbleReveal !== null) {
-              queueBubbleText(text, false);
+              queueBubbleText(content ?? text, false);
               playSound(startSound);
               presentationTail = presentationTail.then(async () => {
                 if (state !== 'running') return;

@@ -3863,7 +3863,7 @@ function assertRenderedSpeechBubble(
 }
 
 test(
-  'renders and clears say and think speech bubbles through the Bubble composition in real Chromium',
+  'renders and clears say, think, and ruby speech bubbles through the Bubble composition in real Chromium',
   {timeout: 60_000},
   async () => {
     const chromeExecutable = await resolveChromeExecutable();
@@ -3899,6 +3899,13 @@ scenes:
     - Hero.think:
         text: ${thinkText}
         waitFor: advance
+    - Hero.say:
+        text:
+          - 昔
+          - ruby: {base: 浦島, reading: うらしま}
+          - がいた
+        waitFor: advance
+        characterIntervalSeconds: 0.25
 `;
     await Promise.all([
       writeFile(sourceManifestPath, `${JSON.stringify(manifest)}\n`),
@@ -4108,6 +4115,40 @@ scenes:
         const think = await evaluateRecord(client, speechBubbleSnapshotExpression);
         assertRenderedSpeechBubble(think, {text: thinkText, label: 'The think bubble'});
 
+        // The ruby speech types one unit at a time. A ruby run is one unit, so no sample may show the
+        // reading without the whole base, nor part of the base on its own.
+        await pressKey(client, {key: ' ', code: 'Space', windowsVirtualKeyCode: 32});
+        const rubySamples: string[] = [];
+        const rubyDeadline = Date.now() + 15_000;
+        for (;;) {
+          const sample = await evaluateRecord(client, speechBubbleSnapshotExpression);
+          const joined = requireArray(sample.bubbleTexts, 'the ruby speech texts').join('|');
+          rubySamples.push(joined);
+          if (joined.includes('がいた')) break;
+          assert.ok(
+            Date.now() < rubyDeadline,
+            `ruby speech never finished: ${rubySamples.join(' / ')}`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, 40));
+        }
+        const finalRuby = rubySamples.at(-1) ?? '';
+        assert.ok(
+          finalRuby.includes('浦島') && finalRuby.includes('うらしま') && finalRuby.includes('昔'),
+          `the ruby speech must show its base and reading, got ${finalRuby}`,
+        );
+        for (const sample of rubySamples) {
+          if (/[うらしま]/u.test(sample)) {
+            assert.ok(sample.includes('浦島'), `a reading appeared without its base: ${sample}`);
+          }
+          if (sample.includes('浦')) {
+            assert.ok(sample.includes('浦島'), `part of a ruby base appeared alone: ${sample}`);
+          }
+        }
+        assert.ok(
+          rubySamples.some((sample) => sample.includes('昔') && !sample.includes('浦')),
+          `the typewriter must show the text before the ruby first: ${rubySamples.join(' / ')}`,
+        );
+
         await pressKey(client, {key: ' ', code: 'Space', windowsVirtualKeyCode: 32});
         await waitForEvaluation(
           client,
@@ -4141,6 +4182,7 @@ scenes:
           '/scenes/opening/actions/0',
           '/scenes/opening/actions/1',
           '/scenes/opening/actions/2',
+          '/scenes/opening/actions/3',
         ]);
         assert.deepEqual(observed.errors, []);
       } catch (error) {
