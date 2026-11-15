@@ -1,3 +1,4 @@
+import type {TurboWarpDebuggerLog} from '@kubohiroya/turbowarp-runtime-adapter';
 import {bindDsl4ProjectSourceFrontend} from '../../dist/dsl4/source-frontend.js';
 import {getRuntimeControlsDock} from '@kubohiroya/turbowarp-app-shell';
 import type {KamishibaiDsl4RuntimeExtension} from './dsl4-runtime-extension-entry.js';
@@ -102,6 +103,7 @@ export function installDsl4RuntimeAuthoringProfile(
     resolveRuntimeMount,
     resolveBundledTMRuntime,
     loggedError,
+    log,
     createRemoteAssetLoader,
     createProjectTMRuntime,
     createTransitionPort,
@@ -122,6 +124,8 @@ export function installDsl4RuntimeAuthoringProfile(
     ) => AuthoringRuntimeMount | null | undefined;
     resolveBundledTMRuntime: () => unknown;
     loggedError: (failure: unknown) => Error;
+    /** The entry's log: the console, and the editor debugger's Logs tab when it is on. */
+    log: Pick<TurboWarpDebuggerLog, 'warn' | 'error'>;
     createRemoteAssetLoader: (options: object) => unknown;
     createProjectTMRuntime: (options: object) => unknown;
     createTransitionPort: (options: object) => Promise<unknown>;
@@ -157,7 +161,7 @@ export function installDsl4RuntimeAuthoringProfile(
           onError: (error) => this.reportFailure(error, 'source-chooser'),
         });
       } catch (error) {
-        console.error('[Kamishibai DSL 4.0] source chooser failed.', loggedError(error));
+        log.error('source chooser failed.', loggedError(error));
         return null;
       }
       return this.sourceChooser;
@@ -703,8 +707,8 @@ export function installDsl4RuntimeAuthoringProfile(
       try {
         await this.initializeNonEmbeddedPreview(project);
       } catch (error) {
-        console.warn(
-          '[Kamishibai DSL 4.0] development preview is unavailable; using one-shot file loading.',
+        log.warn(
+          'development preview is unavailable; using one-shot file loading.',
           loggedError(error),
         );
       }

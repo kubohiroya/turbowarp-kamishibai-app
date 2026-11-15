@@ -53,8 +53,8 @@ importers:
         specifier: 0.8.0
         version: 0.8.0
       '@kubohiroya/turbowarp-runtime-adapter':
-        specifier: ^0.5.0
-        version: 0.5.0
+        specifier: ^0.6.0
+        version: 0.6.0
       '@kubohiroya/turbowarp-runtime-expression':
         specifier: ^0.10.0
         version: 0.10.0
@@ -524,8 +524,8 @@ packages:
     resolution: {integrity: sha512-Y73wcm9V6ldihtMME9lJic3eambqHWlLhTXQ78jfzS2EpeECZe1aXnOQeKXkOV2OKIdnowKGGdIdEiAc/Ss3vg==}
     engines: {node: '>=24'}
 
-  '@kubohiroya/turbowarp-runtime-adapter@0.5.0':
-    resolution: {integrity: sha512-4xfL/R3mfJxmoSK89J3ug74hBjX8UzB2WCCw8iZE0yJc4zL83T3FQ0n+cw5oxGSoJWk+876BbI5x6F/WJwuZwA==}
+  '@kubohiroya/turbowarp-runtime-adapter@0.6.0':
+    resolution: {integrity: sha512-J3S+rpBPtj6lKQeeucmifpSJT7pczK9WZYLyXKwVyLunp61TnnZNOfwsWOAWQGqkzssgWr4QwpUe71iWvRIgoA==}
     engines: {node: '>=24'}
 
   '@kubohiroya/turbowarp-runtime-expression@0.10.0':
@@ -3999,7 +3999,7 @@ snapshots:
 
   '@kubohiroya/turbowarp-named-data@0.8.0': {}
 
-  '@kubohiroya/turbowarp-runtime-adapter@0.5.0': {}
+  '@kubohiroya/turbowarp-runtime-adapter@0.6.0': {}
 
   '@kubohiroya/turbowarp-runtime-expression@0.10.0': {}
 

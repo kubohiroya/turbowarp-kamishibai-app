@@ -31,7 +31,10 @@ import {
   readDsl4CameraControlsSource,
 } from '../../dist/dsl4/platform/camera-controls-connection.js';
 import type {Dsl4PreviewStageControls} from '../../dist/builder/dsl4-preview-reload-overlay.js';
-import {createTurboWarpRuntimeHost} from '@kubohiroya/turbowarp-runtime-adapter';
+import {
+  createTurboWarpDebuggerLog,
+  createTurboWarpRuntimeHost,
+} from '@kubohiroya/turbowarp-runtime-adapter';
 
 import schema from '../../schema/dsl-4.schema.json' with {type: 'json'};
 
@@ -107,7 +110,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.0-rc.92';
+const extensionVersion = '4.0.0-rc.93';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -479,6 +482,26 @@ function isSourceDiagnostic(code: string) {
   return sourceDiagnosticPrefixes.some((prefix) => code.startsWith(prefix));
 }
 
+/**
+ * Warnings and errors of this extension. They go to the console as before and, in an editor with the
+ * debugger add-on on, also to its Logs tab next to the other extensions' entries.
+ */
+const kamishibaiLog = createKamishibaiLog();
+
+function createKamishibaiLog() {
+  const source = 'Kamishibai DSL 4.0';
+  try {
+    // The runtime the runtime host reads from `Scratch`, resolved and checked the same way.
+    return createTurboWarpDebuggerLog({
+      ...(typeof Scratch === 'undefined' ? {} : {Scratch}),
+      source,
+    });
+  } catch {
+    // A host without a usable runtime still gets the console, and bootstrap reports its own error.
+    return createTurboWarpDebuggerLog({source});
+  }
+}
+
 function loggedError(failure: unknown) {
   if (failure instanceof Error) return failure;
   const failureRecord = failure as RuntimeEntryFailureRecord | null | undefined;
@@ -666,7 +689,7 @@ class KamishibaiDsl4RuntimeExtension {
         try {
           dispose();
         } catch (error) {
-          console.warn('[Kamishibai DSL 4.0] camera controls cleanup failed.', loggedError(error));
+          kamishibaiLog.warn('camera controls cleanup failed.', loggedError(error));
         }
       }
       queueMicrotask(() => {
@@ -1278,7 +1301,7 @@ class KamishibaiDsl4RuntimeExtension {
         buildEnabled: false,
       });
     } catch (error) {
-      console.error('[Kamishibai DSL 4.0] application-menu failed.', loggedError(error));
+      kamishibaiLog.error('application-menu failed.', loggedError(error));
       return null;
     }
     return this.applicationMenu;
@@ -1378,7 +1401,7 @@ class KamishibaiDsl4RuntimeExtension {
         onError: (error) => this.reportFailure(error, 'title-controls'),
       });
     } catch (error) {
-      console.error('[Kamishibai DSL 4.0] title-controls failed.', loggedError(error));
+      kamishibaiLog.error('title-controls failed.', loggedError(error));
       return null;
     }
     return this.titleControls;
@@ -1499,7 +1522,7 @@ class KamishibaiDsl4RuntimeExtension {
       try {
         this.ensureCameraPermissionGate(this.titleLocale);
       } catch (error) {
-        console.warn('[Kamishibai DSL 4.0] camera controls unavailable.', loggedError(error));
+        kamishibaiLog.warn('camera controls unavailable.', loggedError(error));
       }
     });
   }
@@ -1531,8 +1554,8 @@ class KamishibaiDsl4RuntimeExtension {
           }
         : {}),
       onError: (error: unknown, context: Readonly<Record<string, string>>) => {
-        console.warn(
-          `[Kamishibai DSL 4.0] camera preview control ${context.operation} failed.`,
+        kamishibaiLog.warn(
+          `camera preview control ${context.operation} failed.`,
           loggedError(error),
         );
       },
@@ -1561,7 +1584,7 @@ class KamishibaiDsl4RuntimeExtension {
         locale: this.Scratch.translate?.language || locale,
         disposeFallback: () => this.disposeCameraPermissionGate(),
         onError: (error) => {
-          console.warn('[Kamishibai DSL 4.0] camera controls unavailable.', loggedError(error));
+          kamishibaiLog.warn('camera controls unavailable.', loggedError(error));
         },
       });
       if (this.cameraControls) return;
@@ -1578,9 +1601,11 @@ class KamishibaiDsl4RuntimeExtension {
         if (outcome === 'granted') return;
         // Declining is a choice, not a fault: the story runs, and recognition opens a camera for
         // itself when it needs one.
-        console.warn(
-          `[Kamishibai DSL 4.0] camera permission ${outcome}.`,
-          detail === undefined ? '' : loggedError(detail),
+        // A cancel goes in as a plain entry, and only an error as a warning.
+        const write = outcome === 'cancelled' ? kamishibaiLog.log : kamishibaiLog.warn;
+        write(
+          `camera permission ${outcome}.`,
+          detail === undefined ? undefined : loggedError(detail),
         );
       },
     });
@@ -1651,7 +1676,7 @@ class KamishibaiDsl4RuntimeExtension {
 
   reportFailure(failure: unknown, phase: string) {
     this.showFailure(failure, {phase});
-    console.error(`[Kamishibai DSL 4.0] ${phase} failed.`, loggedError(failure));
+    kamishibaiLog.error(`${phase} failed.`, loggedError(failure));
   }
 
   showSessionBackingWarning(warning: unknown) {
@@ -1663,9 +1688,9 @@ class KamishibaiDsl4RuntimeExtension {
       });
       this.warningIndicator.show(diagnostic);
     } catch (indicatorError) {
-      console.error('Kamishibai DSL 4.0 warning indicator failed.', indicatorError);
+      kamishibaiLog.error('warning indicator failed.', indicatorError);
     }
-    console.warn('[Kamishibai DSL 4.0] session-binary-backing warning.', warning);
+    kamishibaiLog.warn('session-binary-backing warning.', warning);
   }
 
   showSessionBackingFatal(failure: unknown) {
@@ -1748,7 +1773,7 @@ class KamishibaiDsl4RuntimeExtension {
           });
       }
     } catch (indicatorError) {
-      console.error('Kamishibai DSL 4.0 error indicator failed.', indicatorError);
+      kamishibaiLog.error('error indicator failed.', indicatorError);
     }
   }
 
@@ -2076,6 +2101,7 @@ if (DSL4_AUTHORING_PROFILE) {
     resolveRuntimeMount,
     resolveBundledTMRuntime,
     loggedError,
+    log: kamishibaiLog,
     createRemoteAssetLoader: createDsl4BrowserRemoteAssetLoader as (options: object) => unknown,
     createProjectTMRuntime: createDsl4ProjectTMRuntime as unknown as (options: object) => unknown,
     createTransitionPort: createDsl4TurboWarpTransitionPort as unknown as (
@@ -2090,6 +2116,6 @@ try {
   }
   Scratch.extensions.register(new KamishibaiDsl4RuntimeExtension(Scratch));
 } catch (error) {
-  console.error('[Kamishibai DSL 4.0] extension-bootstrap failed.', loggedError(error));
+  kamishibaiLog.error('extension-bootstrap failed.', loggedError(error));
   throw error;
 }
