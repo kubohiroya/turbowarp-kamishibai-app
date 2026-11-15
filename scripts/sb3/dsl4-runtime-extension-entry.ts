@@ -486,10 +486,21 @@ function isSourceDiagnostic(code: string) {
  * Warnings and errors of this extension. They go to the console as before and, in an editor with the
  * debugger add-on on, also to its Logs tab next to the other extensions' entries.
  */
-const kamishibaiLog = createTurboWarpDebuggerLog(
-  typeof Scratch === 'undefined' ? undefined : Scratch?.vm?.runtime,
-  {source: 'Kamishibai DSL 4.0'},
-);
+const kamishibaiLog = createKamishibaiLog();
+
+function createKamishibaiLog() {
+  const source = 'Kamishibai DSL 4.0';
+  try {
+    // The runtime the runtime host reads from `Scratch`, resolved and checked the same way.
+    return createTurboWarpDebuggerLog({
+      ...(typeof Scratch === 'undefined' ? {} : {Scratch}),
+      source,
+    });
+  } catch {
+    // A host without a usable runtime still gets the console, and bootstrap reports its own error.
+    return createTurboWarpDebuggerLog({source});
+  }
+}
 
 function loggedError(failure: unknown) {
   if (failure instanceof Error) return failure;
@@ -1590,7 +1601,9 @@ class KamishibaiDsl4RuntimeExtension {
         if (outcome === 'granted') return;
         // Declining is a choice, not a fault: the story runs, and recognition opens a camera for
         // itself when it needs one.
-        kamishibaiLog.warn(
+        // A cancel goes in as a plain entry, and only an error as a warning.
+        const write = outcome === 'cancelled' ? kamishibaiLog.log : kamishibaiLog.warn;
+        write(
           `camera permission ${outcome}.`,
           detail === undefined ? undefined : loggedError(detail),
         );
@@ -2088,6 +2101,7 @@ if (DSL4_AUTHORING_PROFILE) {
     resolveRuntimeMount,
     resolveBundledTMRuntime,
     loggedError,
+    log: kamishibaiLog,
     createRemoteAssetLoader: createDsl4BrowserRemoteAssetLoader as (options: object) => unknown,
     createProjectTMRuntime: createDsl4ProjectTMRuntime as unknown as (options: object) => unknown,
     createTransitionPort: createDsl4TurboWarpTransitionPort as unknown as (
