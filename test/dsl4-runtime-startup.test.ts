@@ -209,6 +209,7 @@ test('defaults OFF and does not inspect runtime inputs or adapters', async () =>
     dsl4WebPreviewAssetLiveReload: false,
     dsl4PreviewReloadOverlay: false,
     dsl4Debugger: false,
+    dsl4EditorDebugger: false,
     dsl4PoseFeedbackModes: false,
     dsl4PosePreviewMirroring: false,
     dsl4CameraPreviewControls: false,
@@ -375,6 +376,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4WebPreviewAssetLiveReload: false,
     dsl4PreviewReloadOverlay: false,
     dsl4Debugger: false,
+    dsl4EditorDebugger: false,
     dsl4PoseFeedbackModes: false,
     dsl4PosePreviewMirroring: false,
     dsl4CameraPreviewControls: false,
@@ -401,6 +403,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4WebPreviewAssetLiveReload: false,
     dsl4PreviewReloadOverlay: false,
     dsl4Debugger: false,
+    dsl4EditorDebugger: false,
     dsl4PoseFeedbackModes: false,
     dsl4PosePreviewMirroring: false,
     dsl4CameraPreviewControls: false,
@@ -426,6 +429,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4WebPreviewAssetLiveReload: false,
     dsl4PreviewReloadOverlay: false,
     dsl4Debugger: false,
+    dsl4EditorDebugger: false,
     dsl4PoseFeedbackModes: true,
     dsl4PosePreviewMirroring: false,
     dsl4CameraPreviewControls: false,
@@ -451,6 +455,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4WebPreviewAssetLiveReload: false,
     dsl4PreviewReloadOverlay: false,
     dsl4Debugger: false,
+    dsl4EditorDebugger: false,
     dsl4PoseFeedbackModes: false,
     dsl4PosePreviewMirroring: true,
     dsl4CameraPreviewControls: false,
@@ -476,6 +481,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4WebPreviewAssetLiveReload: false,
     dsl4PreviewReloadOverlay: false,
     dsl4Debugger: false,
+    dsl4EditorDebugger: false,
     dsl4PoseFeedbackModes: false,
     dsl4PosePreviewMirroring: false,
     dsl4CameraPreviewControls: false,
@@ -507,6 +513,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
       dsl4WebPreviewAssetLiveReload: false,
       dsl4PreviewReloadOverlay: false,
       dsl4Debugger: false,
+      dsl4EditorDebugger: false,
       dsl4PoseFeedbackModes: false,
       dsl4PosePreviewMirroring: false,
       dsl4CameraPreviewControls: false,
@@ -625,6 +632,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
       dsl4WebPreviewAssetLiveReload: false,
       dsl4PreviewReloadOverlay: false,
       dsl4Debugger: false,
+      dsl4EditorDebugger: false,
       dsl4PoseFeedbackModes: false,
       dsl4PosePreviewMirroring: false,
       dsl4CameraPreviewControls: false,
@@ -679,6 +687,19 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     }).dsl4Debugger,
     true,
   );
+  assert.throws(
+    () => resolveDsl4FeatureFlags({dsl4EditorDebugger: true}),
+    /dsl4EditorDebugger requires dsl4Runtime and dsl4AppShell/u,
+  );
+  assert.equal(
+    resolveDsl4FeatureFlags({dsl4Runtime: true, dsl4AppShell: true, dsl4EditorDebugger: true})
+      .dsl4EditorDebugger,
+    true,
+    'the editor debugger needs no preview overlay',
+  );
+  // Only the editor's authoring runtime turns it on, at the call site; no preset carries it.
+  assert.equal(Object.hasOwn(dsl4StandardProductionFeatureFlags, 'dsl4EditorDebugger'), false);
+  assert.equal(Object.hasOwn(dsl4NonEmbeddedDevelopmentFeatureFlags, 'dsl4EditorDebugger'), false);
   assert.throws(() => resolveDsl4FeatureFlags({dsl4Runtime: false, extra: true}), TypeError);
 
   const component = await packagedProject('production');
@@ -704,6 +725,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4WebPreviewAssetLiveReload: false,
     dsl4PreviewReloadOverlay: false,
     dsl4Debugger: false,
+    dsl4EditorDebugger: false,
     dsl4PoseFeedbackModes: false,
     dsl4PosePreviewMirroring: false,
     dsl4CameraPreviewControls: false,
@@ -882,6 +904,7 @@ test('enables internal Structured Data independently without exposing a generic 
     dsl4WebPreviewAssetLiveReload: false,
     dsl4PreviewReloadOverlay: false,
     dsl4Debugger: false,
+    dsl4EditorDebugger: false,
     dsl4PoseFeedbackModes: false,
     dsl4PosePreviewMirroring: false,
     dsl4CameraPreviewControls: false,
@@ -968,6 +991,7 @@ test('creates a component-aware asset lifecycle after validation and releases it
       dsl4WebPreviewAssetLiveReload: false,
       dsl4PreviewReloadOverlay: false,
       dsl4Debugger: false,
+      dsl4EditorDebugger: false,
       dsl4PoseFeedbackModes: false,
       dsl4PosePreviewMirroring: false,
       dsl4CameraPreviewControls: false,
@@ -1115,6 +1139,7 @@ test('creates an atomic runtime environment only after component validation', as
       dsl4WebPreviewAssetLiveReload: false,
       dsl4PreviewReloadOverlay: false,
       dsl4Debugger: false,
+      dsl4EditorDebugger: false,
       dsl4PoseFeedbackModes: false,
       dsl4PosePreviewMirroring: false,
       dsl4CameraPreviewControls: false,

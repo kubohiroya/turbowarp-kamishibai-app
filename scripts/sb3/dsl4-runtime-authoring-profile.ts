@@ -23,6 +23,10 @@ import {
 } from '../../dist/dsl4/platform/browser-story-file-loader.js';
 import {createDsl4RuntimeSourceChooser} from '../../dist/dsl4/platform/runtime-source-chooser.js';
 import {createDsl4TurboWarpPreviewSessionFactory} from '../../dist/dsl4/platform/turbowarp-preview-session.js';
+import {
+  createDsl4TurboWarpDebuggerBridge,
+  type Dsl4TurboWarpDebuggerRuntime,
+} from '../../dist/dsl4/platform/turbowarp-debugger-bridge.js';
 import {createDsl4PreviewProtocolSession} from '../../dist/dsl4/preview-protocol.js';
 import {loadDsl4RuntimeComponent} from '../../dist/dsl4/runtime-artifact-loader.js';
 import {appShellLocales} from './app-shell-locales.ts';
@@ -722,6 +726,58 @@ export function installDsl4RuntimeAuthoringProfile(
       } else {
         await showMenu();
       }
+    },
+
+    /**
+     * Pause the embedded story at its `debugger` actions while it runs in the editor. The TurboWarp
+     * debugger holds the pause, so its window shows where the story stopped, and the variable pane
+     * shows the story variables through `getInspectorVariables`. Packaged runs get no coordinator.
+     */
+    createEditorDebugExecution() {
+      const runtime = this.turboWarpHost.runtime as unknown as Dsl4TurboWarpDebuggerRuntime;
+      if (typeof runtime?.on !== 'function' || typeof runtime.removeListener !== 'function') {
+        return null;
+      }
+      const coordinator = createDsl4DebugExecutionCoordinator({enabled: true});
+      const bridge = createDsl4TurboWarpDebuggerBridge({
+        runtime,
+        coordinator,
+        locale: this.titleLocale,
+        getStoryVariables: () => this.runtimeVariableSnapshot()?.storyVariables ?? null,
+      });
+      this.editorDebugExecution = coordinator;
+      return {
+        coordinator,
+        dispose() {
+          bridge.dispose();
+          coordinator.dispose();
+        },
+      };
+    },
+
+    /** The story variables for the editor's variable pane, which reads them while paused. */
+    getInspectorVariables() {
+      const ja = this.titleLocale === 'ja';
+      const snapshot = this.runtimeVariableSnapshot();
+      const debug = this.editorDebugExecution?.getState();
+      const where =
+        debug?.paused === true && typeof debug.sceneId === 'string'
+          ? ja
+            ? `場面「${debug.sceneId}」の ${Number(debug.actionIndex) + 1} 番目のアクションの直前で一時停止中です。`
+            : `Paused before action ${Number(debug.actionIndex) + 1} of scene "${debug.sceneId}".`
+          : '';
+      return {
+        title: ja ? '台本の変数' : 'Story Variables',
+        description: [
+          ja
+            ? 'TurboWarp紙芝居の台本の変数（setVariable などで変わる物語変数）です。'
+            : 'Story variables of TurboWarp Kamishibai, which actions such as setVariable change.',
+          where,
+        ]
+          .filter(Boolean)
+          .join(' '),
+        variables: snapshot?.storyVariables ?? null,
+      };
     },
   };
   Object.assign(RuntimeExtension.prototype, authoringProfile);

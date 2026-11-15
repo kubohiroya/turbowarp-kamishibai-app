@@ -43,6 +43,14 @@ flag を ON にするかどうかは次の 1 点だけで決めている。
 | `dsl4PreviewReloadOverlay`     | reload 状態の overlay 表示           |
 | `dsl4Debugger`                 | debugger。作者向け runner だけが持つ |
 
+## 2.1 呼び出し側だけで ON — 1 個
+
+どの profile にも含めず、エディタで埋め込み作品を実行する authoring runtime（`DSL4_AUTHORING_PROFILE`、packager 以外）だけが、起動時に `dsl4StandardProductionFeatureFlags` へ足す。playback runtime の bundle からは、ON にするコードごと tree-shake される。
+
+| flag                 | 根拠                                                                                                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------- |
+| `dsl4EditorDebugger` | 台本の `debugger` action でエディタの TurboWarp デバッガーを一時停止させる。preview overlay を要求しない |
+
 ## 3. 今回 ON にした 7 個の根拠
 
 `dsl4TurboWarpStateSurface` と `dsl4ExpressionRuntimeState` は **どちらも読み取り専用** で、台本の意味を変えない。story variable への**書き込み**は core action（`setVariable`／`changeVariable`／`toggleVariable`）が持つ（§3.3）。

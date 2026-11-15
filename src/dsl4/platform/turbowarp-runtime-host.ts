@@ -25,6 +25,7 @@ import {createDsl4InputArbitration} from '../input-arbitration.js';
 import {
   createDsl4RuntimeStartup,
   resolveDsl4FeatureFlags,
+  type RuntimeDebugExecution,
   type RuntimeStartupContext,
 } from '../runtime-startup.js';
 import {
@@ -1694,6 +1695,9 @@ export async function createDsl4TurboWarpRuntimeHost(options: TurboWarpRuntimeHo
       options.onEvent?.(event);
     },
     ...(options.onInputError === undefined ? {} : {onInputError: options.onInputError}),
+    ...(options.debugExecution === undefined
+      ? {}
+      : {debugExecution: options.debugExecution as RuntimeDebugExecution}),
     subtleCrypto: options.subtleCrypto,
     async createRuntimeEnvironment(
       runtimeComponent: Readonly<Record<string, unknown>>,
