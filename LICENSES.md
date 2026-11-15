@@ -33,7 +33,7 @@ license表示とsource repositoryを正本とします。
 | @kubohiroya/turbowarp-local-preview          | 0.3.0             | MPL-2.0      | `kubohiroya/turbowarp-local-preview`           |
 | @kubohiroya/turbowarp-live-reload-controller | 0.4.0             | MPL-2.0      | `kubohiroya/turbowarp-live-reload-controller`  |
 | @kubohiroya/turbowarp-runtime-expression     | 0.10.0            | MPL-2.0      | `kubohiroya/turbowarp-runtime-expression`      |
-| @kubohiroya/turbowarp-runtime-adapter        | 0.5.0             | MPL-2.0      | `kubohiroya/turbowarp-runtime-adapter`         |
+| @kubohiroya/turbowarp-runtime-adapter        | 0.6.0             | MPL-2.0      | `kubohiroya/turbowarp-runtime-adapter`         |
 | @kubohiroya/turbowarp-svg-text               | 0.14.0            | MPL-2.0      | `kubohiroya/turbowarp-svg-text`                |
 | @kubohiroya/turbowarp-teachable-machine      | 4.2.0             | MPL-2.0      | `kubohiroya/turbowarp-teachable-machine`       |
 | @kubohiroya/turbowarp-document-data          | 0.6.0             | MPL-2.0      | `kubohiroya/turbowarp-document-data`           |
