@@ -11,9 +11,20 @@
 /** A display name per language. */
 export type Dsl4LocalizedName = Readonly<Record<string, string>>;
 
+/** A mark on the group's icon: a circle in `color` with a white glyph drawn on a 24-unit grid. */
+export interface Dsl4GroupBadge {
+  readonly color: string;
+  /** SVG path data of the glyph. */
+  readonly glyph: string;
+  /** Fills the glyph instead of stroking it. */
+  readonly filled?: boolean;
+}
+
 export interface Dsl4PaletteGroup {
   readonly id: string;
   readonly name: Dsl4LocalizedName;
+  /** Tells the group's icon apart from the extension's: the extension's icon with this badge. */
+  readonly badge?: Dsl4GroupBadge;
   readonly color1?: string;
   readonly color2?: string;
   readonly color3?: string;
@@ -86,17 +97,49 @@ export function localizeDsl4ExtensionInfo<T>(
   return localized as T;
 }
 
-/** The info with its groups declared and each block of a group marked with `paletteGroup`. */
+/**
+ * An icon for a group: the extension's icon (SVG markup) with the badge at its lower right, as a data URL. The
+ * extension's icon is drawn in a 64-unit square whatever its own size.
+ */
+export function dsl4BadgedIconURI(baseSvg: string, badge: Dsl4GroupBadge): string {
+  const base = baseSvg.replace(/^<svg\b[^>]*>/, (tag) =>
+    tag.replace(/\s(?:width|height)="[^"]*"/g, '').replace('<svg', '<svg width="64" height="64"'),
+  );
+  const paint = badge.filled
+    ? 'fill="#fff"'
+    : 'fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"';
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+    base +
+    `<circle cx="47" cy="47" r="16" fill="${badge.color}" stroke="#fff" stroke-width="3"/>` +
+    `<path transform="translate(37 37) scale(0.833)" ${paint} d="${badge.glyph}"/>` +
+    '</svg>';
+  // Scratch Blocks puts the icon in an unquoted CSS url(), where parentheses and quotes must be escaped too.
+  const encoded = encodeURIComponent(svg).replace(
+    /[()'!*]/g,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+  return `data:image/svg+xml,${encoded}`;
+}
+
+/**
+ * The info with its groups declared and each block of a group marked with `paletteGroup`. Given the extension's
+ * icon, each group with a badge gets that icon with its badge.
+ */
 export function withDsl4PaletteGroups<T extends {blocks: readonly unknown[]}>(
   info: T,
   groups: readonly Dsl4PaletteGroup[],
-): T & {groups: Omit<Dsl4PaletteGroup, 'opcodes'>[]} {
+  iconSvg?: string,
+): T & {groups: (Omit<Dsl4PaletteGroup, 'opcodes' | 'badge'> & {menuIconURI?: string})[]} {
   const groupOf = new Map(
     groups.flatMap((group) => group.opcodes.map((opcode) => [opcode, group.id])),
   );
   return {
     ...info,
-    groups: groups.map(({opcodes: _opcodes, ...group}) => ({...group})),
+    groups: groups.map(({opcodes: _opcodes, badge, ...group}) => ({
+      ...group,
+      ...(badge && iconSvg ? {menuIconURI: dsl4BadgedIconURI(iconSvg, badge)} : {}),
+    })),
     blocks: info.blocks.map((block) => {
       const opcode =
         block && typeof block === 'object' ? (block as {opcode?: unknown}).opcode : undefined;
@@ -112,28 +155,44 @@ const narrativeColors = {color1: '#98683d', color2: '#805731', color3: '#684629'
 export const dsl4AuthoringPaletteGroups: readonly Dsl4PaletteGroup[] = Object.freeze([
   {
     id: 'structure',
+    badge: {color: '#7b4ba8', glyph: 'M4 6h16M8 12h12M8 18h12'},
     name: {en: 'Story\nstructure', ja: '台本の\n骨組み'},
     opcodes: ['kamishibai', 'kamishibaiConfig', 'includeBlocks', 'property', 'scene', 'useSection'],
   },
   {
     id: 'definitions',
+    badge: {
+      color: '#3f8fd2',
+      glyph: 'M12 4a4 4 0 1 1 0 8a4 4 0 1 1 0-8M4 21c0-5 3.5-7 8-7s8 2 8 7',
+    },
     name: {en: 'Assets and\nactors', ja: '素材と\n登場人物'},
     opcodes: ['asset', 'actor', 'control', 'textStyle', 'variable'],
   },
   {
     id: 'settings',
+    badge: {color: '#5a6b80', glyph: 'M4 7h16M4 17h16M9 4v6M15 14v6'},
     name: {en: 'Story\nsettings', ja: '作品の\n設定'},
     opcodes: ['cover', 'loading', 'recognition', 'viewport'],
   },
-  {id: 'pose', name: {en: 'Pose\nsteps', ja: 'ポーズの\n手順'}, opcodes: ['poseSteps', 'poseStep']},
+  {
+    id: 'pose',
+    badge: {
+      color: '#d4566a',
+      glyph: 'M12 2a2.5 2.5 0 1 1 0 5a2.5 2.5 0 1 1 0-5M12 9v6M5 6l7 4 7-4M12 15l-5 7M12 15l5 7',
+    },
+    name: {en: 'Pose\nsteps', ja: 'ポーズの\n手順'},
+    opcodes: ['poseSteps', 'poseStep'],
+  },
   {
     id: 'flow',
+    badge: {color: '#98683d', glyph: 'M6 3v18M6 12h5l7-7M11 12l7 7'},
     name: {en: 'Story\nflow', ja: '流れの\n制御'},
     ...narrativeColors,
     opcodes: ['narrativeIf', 'narrativeRepeat', 'narrativeForEach'],
   },
   {
     id: 'values',
+    badge: {color: '#98683d', glyph: 'M5 9h14M5 15h14'},
     name: {en: 'Conditions\nand values', ja: '条件と値'},
     ...narrativeColors,
     opcodes: [
@@ -147,6 +206,7 @@ export const dsl4AuthoringPaletteGroups: readonly Dsl4PaletteGroup[] = Object.fr
   },
   {
     id: 'details',
+    badge: {color: '#6b7280', glyph: 'M5 12h.01M12 12h.01M19 12h.01'},
     name: {en: 'Details', ja: '詳しい\n指定'},
     opcodes: ['actionOptions', 'customAction'],
   },
@@ -212,6 +272,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'stage',
     name: {en: 'Stage', ja: '舞台'},
     color1: '#4c8fe0',
+    badge: {color: '#4c8fe0', glyph: 'M2 20 9 10l5 6 3-3 5 7Z', filled: true},
     color2: '#4079be',
     color3: '#35649c',
     opcodes: ['stage', 'transition'],
@@ -220,6 +281,10 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'sound',
     name: {en: 'Sound', ja: '音'},
     color1: '#bf5fc4',
+    badge: {
+      color: '#bf5fc4',
+      glyph: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0a3 3 0 1 1 6 0M20 16a3 3 0 1 1-6 0a3 3 0 1 1 6 0',
+    },
     color2: '#a250a6',
     color3: '#854289',
     opcodes: ['bgm', 'stopBgm', 'setBgmVolume', 'sound'],
@@ -228,6 +293,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'media',
     name: {en: 'Audio and\nvideo', ja: '音声・\n動画'},
     color1: '#8a63d2',
+    badge: {color: '#8a63d2', glyph: 'M3 6h18v12H3ZM3 10h18M8 6v4M13 6v4'},
     color2: '#7554b2',
     color3: '#604593',
     opcodes: ['audio', 'audioControl', 'video', 'videoControl'],
@@ -236,6 +302,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'flow',
     name: {en: 'Story\nflow', ja: '進行'},
     color1: '#e0a030',
+    badge: {color: '#e0a030', glyph: 'M3 12h15M13 6l6 6-6 6'},
     color2: '#be8828',
     color3: '#9c7021',
     opcodes: ['wait', 'goto', 'gotoSegment', 'branch', 'broadcastMessageAndWait'],
@@ -244,6 +311,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'input',
     name: {en: 'Move by\ninput', ja: '入力で\n移動'},
     color1: '#e0753a',
+    badge: {color: '#e0753a', glyph: 'M5 3l13 9-6 1.5 3.5 7-3 1.5-3.5-7L5 18Z', filled: true},
     color2: '#be6331',
     color3: '#9c5128',
     opcodes: [
@@ -257,6 +325,10 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'actor',
     name: {en: 'Show\nactors', ja: '登場人物の\n表示'},
     color1: '#2a9d96',
+    badge: {
+      color: '#2a9d96',
+      glyph: 'M12 4a4 4 0 1 1 0 8a4 4 0 1 1 0-8M4 21c0-5 3.5-7 8-7s8 2 8 7',
+    },
     color2: '#23857f',
     color3: '#1d6d69',
     opcodes: ['show', 'hide', 'setTransparency', 'moveTo', 'setSkin', 'setLayer', 'loop'],
@@ -265,6 +337,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'speech',
     name: {en: 'Speech\nand text', ja: 'セリフと\n文字'},
     color1: '#36a874',
+    badge: {color: '#36a874', glyph: 'M3 4h18v12H11l-6 5v-5H3Z'},
     color2: '#2d8e62',
     color3: '#257551',
     opcodes: ['say', 'think', 'setText', 'sayText', 'thinkText'],
@@ -273,6 +346,10 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'pose',
     name: {en: 'Pose\nrecognition', ja: 'ポーズ\n認識'},
     color1: '#d4566a',
+    badge: {
+      color: '#d4566a',
+      glyph: 'M12 2a2.5 2.5 0 1 1 0 5a2.5 2.5 0 1 1 0-5M12 9v6M5 6l7 4 7-4M12 15l-5 7M12 15l5 7',
+    },
     color2: '#b4495a',
     color3: '#943c4a',
     opcodes: ['pose'],
@@ -281,6 +358,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'variables',
     name: {en: 'Story\nvariables', ja: '台本の\n変数'},
     color1: '#ec8a2e',
+    badge: {color: '#ec8a2e', glyph: 'M6 6l12 12M18 6 6 18'},
     color2: '#c87527',
     color3: '#a56020',
     opcodes: [
@@ -296,6 +374,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'status',
     name: {en: 'Story\nstatus', ja: '進行の\n状態'},
     color1: '#4ea3c4',
+    badge: {color: '#4ea3c4', glyph: 'M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18M12 11v6M12 7.5v.01'},
     color2: '#428aa6',
     color3: '#367289',
     opcodes: [
@@ -316,6 +395,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'debug',
     name: {en: 'Debugging', ja: '開発・\n診断'},
     color1: '#748091',
+    badge: {color: '#748091', glyph: 'M12 4v10M12 19v.01'},
     color2: '#626c7b',
     color3: '#515965',
     opcodes: [
@@ -339,6 +419,10 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     id: 'document',
     name: {en: 'Embedded\nYAML', ja: '組込\nYAML'},
     color1: '#6b7280',
+    badge: {
+      color: '#6b7280',
+      glyph: 'M9 4C6 4 6 6 6 8s-2 4-2 4 2 0 2 4 0 4 3 4M15 4c3 0 3 2 3 4s2 4 2 4-2 0-2 4 0 4-3 4',
+    },
     color2: '#5a606c',
     color3: '#4a4f59',
     opcodes: yamlOpcodes,

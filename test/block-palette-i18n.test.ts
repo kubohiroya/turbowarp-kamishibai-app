@@ -1,6 +1,7 @@
 import {describe, expect, test} from 'vitest';
 import {
   dsl4AuthoringPaletteGroups,
+  dsl4BadgedIconURI,
   dsl4AuthoringTranslations,
   dsl4RuntimePaletteGroups,
   dsl4RuntimeTranslations,
@@ -76,6 +77,36 @@ describe('palette groups', () => {
       expect(group.id).toMatch(/^[A-Za-z0-9_-]+$/);
       expect(Object.keys(group.name).sort()).toEqual(['en', 'ja']);
     }
+  });
+
+  test('each group has its own icon, the extension icon with a badge, safe in a CSS url()', () => {
+    const info = createDsl4BlockAuthoringInfo({
+      sourceSections: true,
+      narrativeControlEnabled: true,
+    });
+    const authoringIcons = info.groups.map((group) => group.menuIconURI);
+    const runtimeIcons = withDsl4PaletteGroups(
+      {blocks: []},
+      dsl4RuntimePaletteGroups,
+      '<svg viewBox="0 0 64 64"/>',
+    ).groups.map((group) => group.menuIconURI);
+    for (const icons of [authoringIcons, runtimeIcons]) {
+      expect(new Set(icons).size).toBe(icons.length);
+      for (const icon of icons) {
+        expect(icon).toMatch(/^data:image\/svg\+xml,%3Csvg/);
+        expect(icon).not.toMatch(/[()'"\s]/);
+      }
+    }
+    const decoded = decodeURIComponent(authoringIcons[0]!.slice('data:image/svg+xml,'.length));
+    expect(decoded).toContain('<svg width="64" height="64" xmlns=');
+    expect(decoded).toContain('<circle cx="47" cy="47" r="16" fill="#7b4ba8"');
+    expect(dsl4BadgedIconURI('<svg/>', {color: '#000', glyph: 'M0 0'})).toBe(
+      withDsl4PaletteGroups(
+        {blocks: []},
+        [{id: 'g', name: {en: 'G', ja: 'G'}, badge: {color: '#000', glyph: 'M0 0'}, opcodes: []}],
+        '<svg/>',
+      ).groups[0]!.menuIconURI,
+    );
   });
 
   test('blocks outside the groups stay unmarked', () => {

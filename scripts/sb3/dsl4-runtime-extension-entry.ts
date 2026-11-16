@@ -85,7 +85,7 @@ import {
 import {createDsl4TurboWarpRuntimeVariableBlockSurface} from '../../dist/dsl4/platform/turbowarp-runtime-variable-block.js';
 import {createDsl4TurboWarpTransitionPort} from '../../dist/dsl4/platform/turbowarp-transition-port.js';
 import {dsl4RuntimeProvenance} from '../../dist/dsl4/runtime-provenance.js';
-import {dsl4RuntimeBlockIconURI} from '../../dist/dsl4/runtime-icon.js';
+import {dsl4RuntimeBlockIconSvg, dsl4RuntimeBlockIconURI} from '../../dist/dsl4/runtime-icon.js';
 import {
   createYamlBlockDefinitions,
   createYamlBlockMenus,
@@ -865,7 +865,7 @@ class KamishibaiDsl4RuntimeExtension {
     };
     // Groups for the palette of TurboWarp Plus, and the texts in the editor's language.
     return localizeDsl4ExtensionInfo(
-      withDsl4PaletteGroups(info, dsl4RuntimePaletteGroups),
+      withDsl4PaletteGroups(info, dsl4RuntimePaletteGroups, dsl4RuntimeBlockIconSvg),
       dsl4RuntimeTranslations,
       this.Scratch.translate?.language,
     );
