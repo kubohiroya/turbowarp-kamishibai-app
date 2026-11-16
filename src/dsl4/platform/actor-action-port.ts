@@ -1,3 +1,4 @@
+import {normalizeDsl4ContentRuns, type Dsl4ContentRun} from '../content-run.js';
 import {validateCompositionMethods} from './composition-contract.js';
 
 import {normalizeDsl4BubbleMotions} from '../bubble-motion.js';
@@ -440,10 +441,16 @@ export function createDsl4ActorActionPort(options: {
   async function runSpeech(command: 'say' | 'think', payload: unknown, context: unknown) {
     const value = validateSpeechPayload(payload, command, speechAdvanceTypewriterEnabled);
     const target = requireNonEmptyString(value.target, 'target', command);
-    if (typeof value.text !== 'string') {
-      throw portError('K4-ACTOR-PORT-001', `${command}.text must be a string`);
+    let text: string | readonly Dsl4ContentRun[];
+    if (typeof value.text === 'string') {
+      text = value.text;
+    } else {
+      try {
+        text = normalizeDsl4ContentRuns(value.text);
+      } catch {
+        throw portError('K4-ACTOR-PORT-001', `${command}.text must be a string or content runs`);
+      }
     }
-    const text = value.text;
     let seconds;
     if (Object.hasOwn(value, 'seconds')) {
       seconds = requireFiniteNumber(value.seconds, 'seconds', command);

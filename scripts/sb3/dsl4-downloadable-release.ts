@@ -95,7 +95,7 @@ const externalExtensionMembers = Object.freeze(
       id: 'kubohiroyabubble',
       name: 'Bubble',
       package: '@kubohiroya/turbowarp-bubble',
-      version: '0.18.0',
+      version: '0.19.0',
       artifact: 'dist/turbowarp-bubble.js',
       sourcePath: path.join(
         path.dirname(
@@ -136,7 +136,7 @@ const externalExtensionMembers = Object.freeze(
       id: 'kubohiroyasvgtext',
       name: 'SVG Text',
       package: '@kubohiroya/turbowarp-svg-text',
-      version: '0.14.0',
+      version: '0.15.0',
       artifact: 'dist/svg-text.js',
       sourcePath: path.join(
         path.dirname(

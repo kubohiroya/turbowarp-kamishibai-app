@@ -3218,7 +3218,7 @@
           "$ref": "#/$defs/stableId"
         },
         "text": {
-          "type": "string"
+          "$ref": "#/$defs/bodyText"
         },
         "closePolicy": {
           "$ref": "#/$defs/bubbleClosePolicyName"
@@ -10015,7 +10015,7 @@
         "text": {
           "anyOf": [
             {
-              "type": "string"
+              "$ref": "#/$defs/editorAction_bodyText"
             },
             {
               "$ref": "#/$defs/editorScopedNarrative_reference"

@@ -2442,7 +2442,9 @@
       ],
       "properties": {
         "stableId": {"$ref": "#/$defs/stableId"},
-        "text": {"type": "string"},
+        "text": {
+          "$ref": "#/$defs/bodyText"
+        },
         "closePolicy": {"$ref": "#/$defs/bubbleClosePolicyName"},
         "seconds": {"type": "number", "minimum": 0},
         "waitFor": {"const": "advance"},

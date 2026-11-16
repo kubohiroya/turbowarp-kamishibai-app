@@ -27,14 +27,14 @@ license表示とsource repositoryを正本とします。
 | @kubohiroya/turbowarp-asset-cache            | 0.8.0             | MPL-2.0      | `kubohiroya/turbowarp-asset-cache`             |
 | @kubohiroya/turbowarp-kvs                    | 0.6.0             | MPL-2.0      | `kubohiroya/turbowarp-kvs`                     |
 | @kubohiroya/turbowarp-async-input            | 0.12.0            | MPL-2.0      | `kubohiroya/turbowarp-async-input`             |
-| @kubohiroya/turbowarp-bubble                 | 0.18.0            | MPL-2.0      | `kubohiroya/turbowarp-bubble`                  |
+| @kubohiroya/turbowarp-bubble                 | 0.19.0            | MPL-2.0      | `kubohiroya/turbowarp-bubble`                  |
 | @kubohiroya/turbowarp-camera-source          | 0.23.0            | MPL-2.0      | `kubohiroya/turbowarp-camera-source`           |
 | @kubohiroya/turbowarp-extension-manifest     | 0.5.0             | MPL-2.0      | `kubohiroya/turbowarp-extension-manifest`      |
 | @kubohiroya/turbowarp-local-preview          | 0.3.0             | MPL-2.0      | `kubohiroya/turbowarp-local-preview`           |
 | @kubohiroya/turbowarp-live-reload-controller | 0.4.0             | MPL-2.0      | `kubohiroya/turbowarp-live-reload-controller`  |
 | @kubohiroya/turbowarp-runtime-expression     | 0.10.0            | MPL-2.0      | `kubohiroya/turbowarp-runtime-expression`      |
 | @kubohiroya/turbowarp-runtime-adapter        | 0.6.0             | MPL-2.0      | `kubohiroya/turbowarp-runtime-adapter`         |
-| @kubohiroya/turbowarp-svg-text               | 0.14.0            | MPL-2.0      | `kubohiroya/turbowarp-svg-text`                |
+| @kubohiroya/turbowarp-svg-text               | 0.15.0            | MPL-2.0      | `kubohiroya/turbowarp-svg-text`                |
 | @kubohiroya/turbowarp-teachable-machine      | 4.2.0             | MPL-2.0      | `kubohiroya/turbowarp-teachable-machine`       |
 | @kubohiroya/turbowarp-document-data          | 0.6.0             | MPL-2.0      | `kubohiroya/turbowarp-document-data`           |
 | @kubohiroya/turbowarp-named-data             | 0.8.0             | MPL-2.0      | `kubohiroya/turbowarp-named-data`              |

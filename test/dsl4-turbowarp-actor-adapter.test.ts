@@ -750,6 +750,161 @@ test('renders typewriter speech through one Bubble handle and closes it on advan
   assert.equal(clock.pendingCount(), 0);
 });
 
+test('reveals a ruby run as one typewriter unit and hands the Bubble content runs', async () => {
+  const hero = fakeActor();
+  const clock = manualScheduler();
+  const calls: RecordedCall[] = [];
+  const handle = {
+    async setText(text: unknown) {
+      calls.push(['setText', text]);
+    },
+    async setAnimationMode(mode: unknown) {
+      calls.push(['setAnimationMode', mode]);
+    },
+    async close() {
+      calls.push(['close']);
+    },
+  };
+  const bubbleComposition = {
+    async show(input: unknown) {
+      calls.push(['show', input]);
+      return handle;
+    },
+    async releaseAll() {},
+  };
+  const platform = createDsl4TurboWarpActorPlatform({
+    runtimeHost: createTestTurboWarpRuntimeHost({targets: [hero.target]}),
+    scheduler: clock.scheduler,
+    speechAdvanceTypewriterEnabled: true,
+    bubbleComposition,
+  });
+  const operation = platform.host.createSay(hero.target, {
+    text: ['昔', {ruby: {base: '浦島', reading: 'うらしま'}}, 'が'],
+    waitFor: 'advance',
+    bubbleStyle: 'dialogue',
+    characterIntervalSeconds: 0.1,
+  });
+  const pending = operation.start();
+  const flush = async () => {
+    for (let index = 0; index < 8; index += 1) await Promise.resolve();
+  };
+  await flush();
+  const shown = requireRecord(calls[0]?.[1], 'show input');
+  assert.deepEqual(shown.text, [{type: 'text', text: '昔'}]);
+  clock.advance(100);
+  await flush();
+  clock.advance(100);
+  await flush();
+  assert.deepEqual(
+    calls.filter(([name]) => name === 'setText').map(([, text]) => text),
+    [
+      [
+        {type: 'text', text: '昔'},
+        {type: 'ruby', base: '浦島', reading: 'うらしま'},
+      ],
+      [
+        {type: 'text', text: '昔'},
+        {type: 'ruby', base: '浦島', reading: 'うらしま'},
+        {type: 'text', text: 'が'},
+      ],
+    ],
+    'the base and its reading appear together, never one character of the base at a time',
+  );
+  assert.deepEqual(calls.at(-1), ['setAnimationMode', 'awaiting-continue']);
+  operation.finish('advance');
+  await pending;
+  assert.equal(clock.pendingCount(), 0);
+});
+
+test('keeps plain text on the string path when content runs carry no ruby', async () => {
+  const hero = fakeActor();
+  const calls: RecordedCall[] = [];
+  const platform = createDsl4TurboWarpActorPlatform({
+    runtimeHost: createTestTurboWarpRuntimeHost({targets: [hero.target]}),
+    speechAdvanceTypewriterEnabled: true,
+    bubbleComposition: {
+      async show(input: unknown) {
+        calls.push(['show', input]);
+        return {async close() {}, async setAnimationMode() {}};
+      },
+      async releaseAll() {},
+    },
+  });
+  const operation = platform.host.createSay(hero.target, {
+    text: ['浦島', '太郎'],
+    waitFor: 'advance',
+    bubbleStyle: 'dialogue',
+  });
+  const pending = operation.start();
+  for (let index = 0; index < 8; index += 1) await Promise.resolve();
+  assert.equal(requireRecord(calls[0]?.[1], 'show input').text, '浦島太郎');
+  operation.finish('advance');
+  await pending;
+});
+
+test('splits Bubble native reveal chunks by content runs when the text has ruby', async () => {
+  const hero = fakeActor();
+  const calls: RecordedCall[] = [];
+  let reveals = 0;
+  const platform = createDsl4TurboWarpActorPlatform({
+    runtimeHost: createTestTurboWarpRuntimeHost({targets: [hero.target]}),
+    speechAdvanceTypewriterEnabled: true,
+    bubbleComposition: {
+      async show(input: unknown) {
+        calls.push(['show', input]);
+        return {
+          async revealNext() {
+            reveals += 1;
+            return true;
+          },
+          async revealAll() {},
+          async finish() {},
+          async setAnimationMode() {},
+          async close() {},
+        };
+      },
+      async releaseAll() {},
+    },
+  });
+  const text = [{ruby: {base: '浦島', reading: 'うらしま'}}, '太郎'];
+  const operation = platform.host.createSay(hero.target, {
+    text,
+    waitFor: 'advance',
+    bubbleStyle: 'native',
+    bubbleReveal: {unit: 'CHARACTER', layout: 'RESERVED', intervalSeconds: 0},
+  });
+  const pending = operation.start();
+  for (let index = 0; index < 8; index += 1) await Promise.resolve();
+  assert.deepEqual(requireRecord(calls[0]?.[1], 'show input').text, [
+    {type: 'ruby', base: '浦島', reading: 'うらしま'},
+    {type: 'text', text: '太郎'},
+  ]);
+  // The ruby run, 太, and 郎 are three reveal units: the first shows on start, so two advances
+  // reveal the rest and a third completes the speech.
+  assert.deepEqual(operation.finish('advance'), {consumed: true});
+  for (let index = 0; index < 8; index += 1) await Promise.resolve();
+  assert.deepEqual(operation.finish('advance'), {consumed: true});
+  for (let index = 0; index < 8; index += 1) await Promise.resolve();
+  assert.deepEqual(operation.finish('advance'), {consumed: false});
+  await pending;
+  assert.equal(reveals, 2);
+});
+
+test('rejects speech text that is neither a string nor content runs', () => {
+  const hero = fakeActor();
+  const platform = createDsl4TurboWarpActorPlatform({
+    runtimeHost: createTestTurboWarpRuntimeHost({targets: [hero.target]}),
+    speechAdvanceTypewriterEnabled: true,
+    bubbleComposition: {async show() {}, async releaseAll() {}},
+  });
+  for (const text of [[], [{ruby: {base: '浦島'}}], 3]) {
+    assert.throws(
+      () => platform.host.createSay(hero.target, {text, seconds: 1}),
+      /say\.text must be a string or content runs/u,
+    );
+  }
+});
+
 test('drives Bubble native reveal units and preserves finish audio lifecycle', async () => {
   const hero = fakeActor();
   const clock = manualScheduler();

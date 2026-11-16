@@ -189,6 +189,31 @@ test('maps show, hide, layer, transparency, move, and speech through one present
   ]);
 });
 
+test('passes speech content runs to the presentation host and rejects malformed runs', async () => {
+  const presentation = fakeHost();
+  const actor = Object.freeze({id: 'hero-target', isStage: false});
+  const port = actorPort({
+    composition: fakeComposition().composition,
+    host: presentation.host,
+    resolveActor: () => actor,
+  });
+  const runs = [
+    {type: 'text', text: '昔'},
+    {type: 'ruby', base: '浦島', reading: 'うらしま'},
+  ];
+  await port.say({target: 'Hero', text: runs, seconds: 2}, actionContext());
+  assert.deepEqual(presentation.calls[0], [
+    'createSay',
+    'hero-target',
+    {text: runs, seconds: 2},
+    'opening',
+  ]);
+  await assert.rejects(
+    port.say({target: 'Hero', text: [{ruby: {base: '浦島'}}], seconds: 2}, actionContext()),
+    /say\.text must be a string or content runs/u,
+  );
+});
+
 test('runs actor show and hide crossfades through visibility presentation operations', async () => {
   const calls: unknown[][] = [];
   const host = fakeHost({

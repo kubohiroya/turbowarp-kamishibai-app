@@ -585,6 +585,52 @@ scenes:
     - gotoSegment: chapter2
 `;
 
+test('normalizes authored speech runs and keeps a plain speech string in the StoryDocument', () => {
+  const parsed = frontend.parse(
+    `kamishibai: '4.0'
+assets:
+  HeroIdle: costume:Hero
+actors:
+  Hero: HeroIdle
+scenes:
+  opening:
+    - Hero.say:
+        text:
+          - むかし
+          - ruby: {base: 浦島, reading: うらしま}
+          - がいました
+        seconds: 1
+    - Hero.think:
+        text: ただの文
+        seconds: 1
+`,
+    {sourceId: 'speech-content-run.kamishibai.yaml'},
+  );
+  assert(parsed.ok, `expected the story to parse: ${JSON.stringify(parsed.diagnostics)}`);
+
+  const actions = requireArray(
+    requireRecord(
+      requireArray(requireRecord(parsed.storyDocument, 'the story').scenes, 'its scenes')[0],
+      'the opening scene',
+    ).actions,
+    'its actions',
+  );
+
+  assert.deepEqual(
+    requireRecord(requireRecord(actions[0], 'the ruby speech').args, 'its args').text,
+    [
+      {type: 'text', text: 'むかし'},
+      {type: 'ruby', base: '浦島', reading: 'うらしま'},
+      {type: 'text', text: 'がいました'},
+    ],
+  );
+  // A plain speech reaches the runtime as the same string as before.
+  assert.equal(
+    requireRecord(requireRecord(actions[1], 'the plain speech').args, 'its args').text,
+    'ただの文',
+  );
+});
+
 test('normalizes authored setText body text into typed runs in the StoryDocument', () => {
   const parsed = frontend.parse(
     `kamishibai: '4.0'
