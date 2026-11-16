@@ -35,8 +35,8 @@ importers:
         specifier: 0.4.0
         version: 0.4.0
       '@kubohiroya/turbowarp-extension-loader':
-        specifier: 0.11.0
-        version: 0.11.0
+        specifier: 0.11.1
+        version: 0.11.1
       '@kubohiroya/turbowarp-extension-manifest':
         specifier: ^0.5.0
         version: 0.5.0
@@ -501,8 +501,8 @@ packages:
     resolution: {integrity: sha512-rHcgB6YLMPsXTp39wrEkZboRtYMfjCeJ4qcOSJu5Ns2PblUxHPXcOGnMdV9SM/cCKRSg/7FlJg3XsXlNKH27aQ==}
     engines: {node: '>=22'}
 
-  '@kubohiroya/turbowarp-extension-loader@0.11.0':
-    resolution: {integrity: sha512-TOGJXd3elmBHi21yX6Hz9BMzFBYqM+DC4jz1BD+64DLxgfCoFnTFBFLEhedgwa5NxYeQf7LYp48zVZUzodGOMw==}
+  '@kubohiroya/turbowarp-extension-loader@0.11.1':
+    resolution: {integrity: sha512-0jgwZBPcYbVll8WX3nWvvnNsMD0cglABPVY3uuh/pGAuMkKzsMZDc74qEO47/GHblk+tLMClTMROZgm3C+BbNg==}
     engines: {node: '>=26'}
 
   '@kubohiroya/turbowarp-extension-loader@0.8.0':
@@ -4030,7 +4030,7 @@ snapshots:
 
   '@kubohiroya/turbowarp-document-source@0.4.0': {}
 
-  '@kubohiroya/turbowarp-extension-loader@0.11.0': {}
+  '@kubohiroya/turbowarp-extension-loader@0.11.1': {}
 
   '@kubohiroya/turbowarp-extension-loader@0.8.0': {}
 
