@@ -1,3 +1,4 @@
+import {dsl4AuthoringPaletteGroups, withDsl4PaletteGroups} from './block-palette-i18n.js';
 import {stringify} from 'yaml';
 import {
   appendDsl4SectionAuthoringState,
@@ -297,7 +298,7 @@ export function createDsl4BlockAuthoringInfo({
       color1: '#6b7280',
       color2: '#59616d',
       color3: '#454d59',
-      text: 'この部分を使う [ENABLED]',
+      text: 'use this part [ENABLED]',
       arguments: {ENABLED: {type: 'string', menu: 'sectionEnabled', defaultValue: 'on'}},
     },
     {
@@ -341,24 +342,27 @@ export function createDsl4BlockAuthoringInfo({
       },
     },
   ];
-  return {
-    id: dsl4BlockAuthoringExtensionId,
-    name: 'Kamishibai Block Script',
-    blockIconURI: dsl4BlockAuthoringEditorIcon,
-    menus: {
-      sectionEnabled: {
-        acceptReporters: false,
-        items: [
-          {text: '✅ オン', value: 'on'},
-          {text: '🚫 オフ', value: 'off'},
-        ],
+  return withDsl4PaletteGroups(
+    {
+      id: dsl4BlockAuthoringExtensionId,
+      name: 'Kamishibai Block Script',
+      blockIconURI: dsl4BlockAuthoringEditorIcon,
+      menus: {
+        sectionEnabled: {
+          acceptReporters: false,
+          items: [
+            {text: '✅ on', value: 'on'},
+            {text: '🚫 off', value: 'off'},
+          ],
+        },
       },
+      color1: '#7b4ba8',
+      color2: '#683f8f',
+      color3: '#563375',
+      blocks: definitions,
     },
-    color1: '#7b4ba8',
-    color2: '#683f8f',
-    color3: '#563375',
-    blocks: definitions,
-  };
+    dsl4AuthoringPaletteGroups,
+  );
 }
 
 /** Convert validated source into scene substacks containing the existing runtime action blocks. */

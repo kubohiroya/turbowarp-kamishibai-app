@@ -114,8 +114,8 @@ importers:
         version: 2.9.1
     devDependencies:
       '@kubohiroya/sb3-toolchain':
-        specifier: ^0.24.0
-        version: 0.24.0(supports-color@7.2.0)
+        specifier: ^0.28.0
+        version: 0.28.0(supports-color@7.2.0)
       '@kubohiroya/turbowarp-kamishibai-site-navigation':
         specifier: ^0.4.0
         version: 0.4.0
@@ -445,8 +445,8 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@kubohiroya/sb3-toolchain@0.24.0':
-    resolution: {integrity: sha512-pp4X1Z/xqU1YIghVyIuE4Rs78mbTPo5AlEOa9PjfUchWyOsM2YOS5eiFbu+5SGD8Jix8Q0V5Wracj0JU4Pc9wg==}
+  '@kubohiroya/sb3-toolchain@0.28.0':
+    resolution: {integrity: sha512-SC1Kc1fy+wLrxIYEIO81fYONJWuw2B/uDfd47oW2Lpy+cxcarmrw4Q2145dxjI4Gc54EXspqXNE4vRxMHrw2OQ==}
     engines: {node: '>=24'}
     hasBin: true
 
@@ -3992,7 +3992,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@kubohiroya/sb3-toolchain@0.24.0(supports-color@7.2.0)':
+  '@kubohiroya/sb3-toolchain@0.28.0(supports-color@7.2.0)':
     dependencies:
       '@noble/hashes': 2.4.0
       fflate: 0.8.3

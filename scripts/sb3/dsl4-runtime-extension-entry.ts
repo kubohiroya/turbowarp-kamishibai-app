@@ -1,3 +1,9 @@
+import {
+  dsl4RuntimePaletteGroups,
+  dsl4RuntimeTranslations,
+  localizeDsl4ExtensionInfo,
+  withDsl4PaletteGroups,
+} from '../../dist/dsl4/block-palette-i18n.js';
 import {assertKamishibaiDocumentSourceReady} from '../../dist/dsl4/embedded-yaml-view-state.js';
 import {
   createEmbeddedYamlDocumentMenu,
@@ -740,7 +746,7 @@ class KamishibaiDsl4RuntimeExtension {
       {ArgumentType, BlockType},
       {stateVisible: productionFeatureFlags.dsl4TurboWarpStateSurface === true},
     );
-    return {
+    const info = {
       id: extensionId,
       name: 'Kamishibai DSL 4.0 Runtime',
       description:
@@ -857,6 +863,12 @@ class KamishibaiDsl4RuntimeExtension {
         },
       },
     };
+    // Groups for the palette of TurboWarp Plus, and the texts in the editor's language.
+    return localizeDsl4ExtensionInfo(
+      withDsl4PaletteGroups(info, dsl4RuntimePaletteGroups),
+      dsl4RuntimeTranslations,
+      this.Scratch.translate?.language,
+    );
   }
 
   embeddedYamlDocumentsMenu() {

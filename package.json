@@ -154,7 +154,7 @@
     "yaml": "2.9.1"
   },
   "devDependencies": {
-    "@kubohiroya/sb3-toolchain": "^0.24.0",
+    "@kubohiroya/sb3-toolchain": "^0.28.0",
     "@kubohiroya/turbowarp-kamishibai-site-navigation": "^0.4.0",
     "@kubohiroya/vite-plugin-turbowarp-extension": "^0.11.0",
     "@turbowarp/packager": "3.14.0",

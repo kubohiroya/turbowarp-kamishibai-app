@@ -769,6 +769,8 @@ test('keeps the Bubble reveal entry and provenance aligned through sb3-toolchain
       ],
       recoveryCapsule: false,
       blockEditorRegistrations: true,
+      paletteGroups: 'members',
+      memberColors: 'member',
       metadata: expectedMetadata,
     },
   ]);

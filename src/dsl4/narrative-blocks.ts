@@ -1,4 +1,7 @@
-/** Inert authoring declarations; their values are read from the block graph, never executed. */
+/**
+ * Inert authoring declarations; their values are read from the block graph, never executed. Texts are English;
+ * `getInfo()` swaps in the editor's language (see block-palette-i18n.ts).
+ */
 export function createDsl4NarrativeBlockDefinitions(enabled: boolean) {
   const argument = (defaultValue: string) => ({type: 'string', defaultValue});
   const common = {
@@ -13,7 +16,7 @@ export function createDsl4NarrativeBlockDefinitions(enabled: boolean) {
       opcode: 'narrativeIf',
       blockType: 'command',
       branchCount: 2,
-      text: ['もし [CONDITION] ならば', 'でなければ'],
+      text: ['if [CONDITION] then', 'else'],
       arguments: {CONDITION: argument('true')},
     },
     {
@@ -21,7 +24,7 @@ export function createDsl4NarrativeBlockDefinitions(enabled: boolean) {
       opcode: 'narrativeRepeat',
       blockType: 'command',
       branchCount: 1,
-      text: '[TIMES] 回くりかえす 回次の名前 [AS]',
+      text: 'repeat [TIMES] times, naming each round [AS]',
       arguments: {TIMES: {type: 'number', defaultValue: 3}, AS: argument('回次')},
     },
     {
@@ -29,7 +32,7 @@ export function createDsl4NarrativeBlockDefinitions(enabled: boolean) {
       opcode: 'narrativeForEach',
       blockType: 'command',
       branchCount: 1,
-      text: '一覧 [ITEMS] を順番に それぞれ [AS] について',
+      text: 'for each [AS] in list [ITEMS]',
       arguments: {
         ITEMS: argument('[{"名前":"長兄"},{"名前":"次兄"},{"名前":"末弟"}]'),
         AS: argument('訪問'),
@@ -39,14 +42,14 @@ export function createDsl4NarrativeBlockDefinitions(enabled: boolean) {
       ...common,
       opcode: 'narrativeReference',
       blockType: 'reporter',
-      text: '[SCOPE] の [COLUMN]',
+      text: '[COLUMN] of [SCOPE]',
       arguments: {SCOPE: argument('訪問'), COLUMN: argument('名前')},
     },
     {
       ...common,
       opcode: 'narrativeVariable',
       blockType: 'reporter',
-      text: '台本の変数 [NAME]',
+      text: 'story variable [NAME]',
       arguments: {NAME: argument('score')},
     },
     {
@@ -67,14 +70,14 @@ export function createDsl4NarrativeBlockDefinitions(enabled: boolean) {
       ...common,
       opcode: 'narrativeLogicList',
       blockType: 'reporter',
-      text: '[OP] 条件の一覧 [VALUES]',
+      text: '[OP] of conditions [VALUES]',
       arguments: {OP: argument('and'), VALUES: argument('[true,true]')},
     },
     {
       ...common,
       opcode: 'narrativeNot',
       blockType: 'reporter',
-      text: '[VALUE] ではない',
+      text: 'not [VALUE]',
       arguments: {VALUE: argument('true')},
     },
   ];
