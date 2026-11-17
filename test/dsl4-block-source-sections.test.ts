@@ -99,8 +99,8 @@ test('keeps the on/off section palette opt-in and exposes one C-shaped branch', 
   assert.deepEqual(
     Array.from(extensionInfo(true).menus.sectionEnabled.items, ({text, value}) => [text, value]),
     [
-      ['✅ オン', 'on'],
-      ['🚫 オフ', 'off'],
+      ['✅ on', 'on'],
+      ['🚫 off', 'off'],
     ],
   );
 });

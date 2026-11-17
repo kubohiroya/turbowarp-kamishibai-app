@@ -22,7 +22,7 @@ const validMetadata = () => ({
   version: dsl4ReleaseVersion,
   channel: releasePins.release.channel,
   buildDate: dsl4ReleaseBuildDate,
-  state: 'candidate',
+  state: 'candidate' as const,
   sourceIdentity: `sha256:${'0'.repeat(64)}`,
   artifact: {
     filename: dsl4ReleaseFilename,

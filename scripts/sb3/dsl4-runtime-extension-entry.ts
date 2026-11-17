@@ -1,3 +1,9 @@
+import {
+  dsl4RuntimePaletteGroups,
+  dsl4RuntimeTranslations,
+  localizeDsl4ExtensionInfo,
+  withDsl4PaletteGroups,
+} from '../../dist/dsl4/block-palette-i18n.js';
 import {assertKamishibaiDocumentSourceReady} from '../../dist/dsl4/embedded-yaml-view-state.js';
 import {
   createEmbeddedYamlDocumentMenu,
@@ -79,7 +85,7 @@ import {
 import {createDsl4TurboWarpRuntimeVariableBlockSurface} from '../../dist/dsl4/platform/turbowarp-runtime-variable-block.js';
 import {createDsl4TurboWarpTransitionPort} from '../../dist/dsl4/platform/turbowarp-transition-port.js';
 import {dsl4RuntimeProvenance} from '../../dist/dsl4/runtime-provenance.js';
-import {dsl4RuntimeBlockIconURI} from '../../dist/dsl4/runtime-icon.js';
+import {dsl4RuntimeBlockIconSvg, dsl4RuntimeBlockIconURI} from '../../dist/dsl4/runtime-icon.js';
 import {
   createYamlBlockDefinitions,
   createYamlBlockMenus,
@@ -110,7 +116,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.0-rc.94';
+const extensionVersion = '4.0.0-rc.95';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -740,7 +746,7 @@ class KamishibaiDsl4RuntimeExtension {
       {ArgumentType, BlockType},
       {stateVisible: productionFeatureFlags.dsl4TurboWarpStateSurface === true},
     );
-    return {
+    const info = {
       id: extensionId,
       name: 'Kamishibai DSL 4.0 Runtime',
       description:
@@ -857,6 +863,12 @@ class KamishibaiDsl4RuntimeExtension {
         },
       },
     };
+    // Groups for the palette of TurboWarp Plus, and the texts in the editor's language.
+    return localizeDsl4ExtensionInfo(
+      withDsl4PaletteGroups(info, dsl4RuntimePaletteGroups, dsl4RuntimeBlockIconSvg),
+      dsl4RuntimeTranslations,
+      this.Scratch.translate?.language,
+    );
   }
 
   embeddedYamlDocumentsMenu() {

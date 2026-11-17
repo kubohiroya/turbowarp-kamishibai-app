@@ -171,6 +171,8 @@ test('ships the Standard artifact as one compact static extension bundle', async
       members: memberExtensionIds,
       recoveryCapsule: contract.standardArtifact.recoveryCapsule,
       blockEditorRegistrations: true,
+      paletteGroups: 'members',
+      memberColors: 'member',
       metadata: {
         description: 'Run a self-contained TurboWarp Kamishibai DSL 4.0 story.',
         descriptions: {ja: 'TurboWarp紙芝居 DSL 4.0の作品を実行する、自己完結した機能拡張です。'},

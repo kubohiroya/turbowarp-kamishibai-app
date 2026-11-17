@@ -1,3 +1,4 @@
+import {dsl4AuthoringTranslations, localizeDsl4ExtensionInfo} from './block-palette-i18n.js';
 import {createDsl4NarrativeRowsEditor} from './narrative-row-editor.js';
 import {installDsl4SectionAppearance} from './block-source-section-appearance.js';
 import {Dsl4BlockSourceError, dsl4BlockAuthoringExtensionId} from './block-source-shared.js';
@@ -73,7 +74,8 @@ export function createDsl4BlockAuthoringExtensionSource(
     formatDsl4BlockAuthoringExtensionHeader(info) +
     `// SPDX-License-Identifier: MPL-2.0\n` +
     `// Kamishibai block script declarations are inert; the builder reads their block graph.\n` +
-    `(function(Scratch){"use strict";const extension={getInfo(){return ${json(info)};}};` +
+    `(function(Scratch){"use strict";const extension={getInfo(){return (${localizeDsl4ExtensionInfo.toString()})(` +
+    `${json(info)},${json(dsl4AuthoringTranslations)},Scratch.translate&&Scratch.translate.language);}};` +
     `${definitions.map(({opcode}) => `extension.${opcode}=function(){};`).join('')}` +
     `Scratch.extensions.register(extension);` +
     `const cleanup=[];let disposed=false;` +

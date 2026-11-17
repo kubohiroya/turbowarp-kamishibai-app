@@ -45,7 +45,7 @@ export * from './dsl4-release-policy.ts';
 const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 /** The release source the SB3 builder materializes: one relative path per file, in insertion order. */
-type Dsl4ReleaseSourceFiles = ReadonlyMap<string, string | Uint8Array>;
+type Dsl4ReleaseSourceFiles = Map<string, string | Uint8Array>;
 
 /** The SB3 builder the workflow drives, named as the narrow call so callers can substitute it. */
 type Dsl4ReleaseSb3Builder = (
@@ -195,7 +195,10 @@ export async function verifyDsl4ReleaseSnapshot({
   const metadata = await readMetadata(root);
   assert(metadata, `Missing ${dsl4ReleaseMetadataPath}. Run pnpm release:dsl4:update.`);
   if (metadata.state === 'published') {
-    await verifySb3ReleaseSnapshot({metadata, fetchPublishedArtifact: fetchReleaseArtifact});
+    await verifySb3ReleaseSnapshot({
+      metadata,
+      fetchPublishedArtifact: () => fetchReleaseArtifact(metadata),
+    });
   } else {
     const files = await createSourceFiles();
     await verifySb3ReleaseSnapshot({
@@ -259,7 +262,7 @@ export async function recordDsl4Publication(
   );
   const published = assertDsl4ReleaseMetadata(
     await recordPublishedSb3ReleaseSnapshot(metadata, dsl4ReleasePublicationUrls(urls), {
-      fetchPublishedArtifact: fetchReleaseArtifact,
+      fetchPublishedArtifact: () => fetchReleaseArtifact(metadata),
     }),
   );
   await writeMetadataAtomically(root, published);

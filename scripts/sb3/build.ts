@@ -3,12 +3,13 @@ import path from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
 import {buildSb3, createDeterministicSb3} from '@kubohiroya/sb3-toolchain';
+import type {BuildSb3Options} from '@kubohiroya/sb3-toolchain';
 
 import {withTitleBuildMetadataSource} from './title-build-metadata.ts';
 
 /**
- * What both entry points read off their own options. `create` and `build` stay as the narrow shapes
- * this module calls rather than the toolchain's own types, so callers can inject doubles for them.
+ * What both entry points read off their own options. `create` and `build` take the toolchain's own
+ * functions, so the results keep the toolchain's types.
  */
 interface KamishibaiSb3Options {
   buildDate?: unknown;
@@ -18,15 +19,10 @@ interface KamishibaiSb3Options {
   packageJsonPath?: string;
   sourceDirectory?: string;
   version?: unknown;
-  create?: (sourceDirectory: string) => Promise<Record<string, unknown>>;
-  build?: (request: {
-    confirmReplace?: unknown;
-    outputPath: string;
-    sourceDirectory: string;
-    yes: boolean;
-  }) => Promise<Record<string, unknown>>;
+  create?: typeof createDeterministicSb3;
+  build?: typeof buildSb3;
   outputPath?: string;
-  confirmReplace?: unknown;
+  confirmReplace?: BuildSb3Options['confirmReplace'];
   yes?: boolean;
 }
 
@@ -71,7 +67,7 @@ export async function buildKamishibaiSb3(options: KamishibaiSb3Options = {}) {
     titleSourceOptions(options),
     async ({metadata, sourceDirectory}: KamishibaiTitleSource) => ({
       ...(await build({
-        confirmReplace: options.confirmReplace,
+        ...(options.confirmReplace ? {confirmReplace: options.confirmReplace} : {}),
         outputPath,
         sourceDirectory,
         yes: options.yes ?? false,

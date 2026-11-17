@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 
 import {turboWarpExtension} from '@kubohiroya/vite-plugin-turbowarp-extension';
 import {buildExtensionBundles} from '@kubohiroya/sb3-toolchain';
-import type {ExtensionBundleMetadata} from '@kubohiroya/sb3-toolchain';
+import type {EmbeddedExtension, ExtensionBundleMetadata} from '@kubohiroya/sb3-toolchain';
 import {build} from 'vite';
 
 import {dsl4ReleaseCompactWasm} from './dsl4-release-policy.ts';
@@ -168,6 +168,10 @@ const extensionBundle = Object.freeze({
   members: [...bundleMemberIds],
   recoveryCapsule: false,
   blockEditorRegistrations: true,
+  // TurboWarp Plus shows each member, and each group the runtime declares, as a palette group of its own, drawn in
+  // the member's colours. Other editors show one category.
+  paletteGroups: 'members',
+  memberColors: 'member',
   metadata: bundleMetadata,
 });
 const closeTitleBroadcastId = 'closeTitleMessage';
@@ -627,7 +631,9 @@ async function loadExternalExtensionSources(compactWasm: boolean) {
   );
 }
 
-function extensionSourceDescriptors(externalExtensionSources: readonly ExtensionMemberSource[]) {
+function extensionSourceDescriptors(
+  externalExtensionSources: readonly ExtensionMemberSource[],
+): EmbeddedExtension[] {
   return [
     {
       id: runtimeExtensionId,
@@ -636,7 +642,7 @@ function extensionSourceDescriptors(externalExtensionSources: readonly Extension
       parameters: [],
       encoding: 'base64',
     },
-    ...externalExtensionSources.map((member) => ({
+    ...externalExtensionSources.map((member): EmbeddedExtension => ({
       id: member.id,
       path: member.path,
       mediaType: 'text/javascript',

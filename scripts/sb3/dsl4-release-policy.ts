@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 
 import {assertSb3ReleaseSnapshotMetadata} from '@kubohiroya/sb3-toolchain';
+import type {Sb3ReleaseSnapshotMetadata} from '@kubohiroya/sb3-toolchain';
 
 import releasePins from '../../test/fixtures/dsl4/release-pins.json' with {type: 'json'};
 
@@ -17,7 +18,9 @@ import releasePins from '../../test/fixtures/dsl4/release-pins.json' with {type:
  * owns the full shape and validates it first through `assertSb3ReleaseSnapshotMetadata`; this
  * declares the members the release workflow then reads, with the types those assertions establish.
  */
-export interface Dsl4ReleaseMetadata {
+export type Dsl4ReleaseMetadata = Sb3ReleaseSnapshotMetadata & {
+  readonly formatVersion: number;
+  readonly sourceIdentity: string;
   readonly series: string;
   readonly version: string;
   readonly channel: string;
@@ -35,14 +38,14 @@ export interface Dsl4ReleaseMetadata {
     readonly pages?: unknown;
     readonly urls?: Readonly<Record<string, unknown>>;
   };
-}
+};
 
 export const dsl4ReleaseVersion = releasePins.release.version;
-export const dsl4NextReleaseVersion = '4.0.0-rc.95';
+export const dsl4NextReleaseVersion = '4.0.0-rc.96';
 // Reproduce the frozen rc.84 artifact; subsequent candidates use the compact SIMD build.
 export const dsl4ReleaseCompactWasm = dsl4ReleaseVersion !== '4.0.0-rc.84';
 export const dsl4ReleaseSeries = releasePins.release.series;
-export const dsl4ReleaseBuildDate = '2026-11-11';
+export const dsl4ReleaseBuildDate = '2026-11-17';
 export const dsl4ReleaseChannel = releasePins.release.channel;
 export const dsl4ReleaseTag = `v${dsl4ReleaseVersion}`;
 export const dsl4ReleaseFilename = `kamishibai-${dsl4ReleaseVersion}.sb3`;
@@ -88,8 +91,12 @@ export function dsl4ReleaseSb3Options({
   };
 }
 
-export function assertDsl4ReleaseMetadata(metadata: Dsl4ReleaseMetadata) {
-  assertSb3ReleaseSnapshotMetadata(metadata);
+export function assertDsl4ReleaseMetadata(
+  snapshot: Sb3ReleaseSnapshotMetadata,
+): Dsl4ReleaseMetadata {
+  assertSb3ReleaseSnapshotMetadata(snapshot);
+  // The generic snapshot checks passed; the DSL 4 fields are checked below.
+  const metadata = snapshot as Dsl4ReleaseMetadata;
   assert.equal(metadata.series, dsl4ReleaseSeries, 'DSL 4 release series is invalid.');
   assert.equal(metadata.version, dsl4ReleaseVersion, 'DSL 4 release version is invalid.');
   assert.equal(metadata.channel, dsl4ReleaseChannel, 'DSL 4 release channel is invalid.');

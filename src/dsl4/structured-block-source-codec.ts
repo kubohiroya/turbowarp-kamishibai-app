@@ -1,3 +1,5 @@
+import {dsl4BlockAuthoringIconSvg} from './authoring-icon.js';
+import {dsl4AuthoringPaletteGroups, withDsl4PaletteGroups} from './block-palette-i18n.js';
 import {stringify} from 'yaml';
 import {
   appendDsl4SectionAuthoringState,
@@ -29,10 +31,7 @@ export {
 };
 
 const dsl4BlockAuthoringEditorIcon =
-  'data:image/svg+xml,' +
-  encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><rect x="6" y="4" width="28" height="32" rx="4" fill="white"/><path d="M12 13h16M12 20h16M12 27h10" stroke="#683f8f" stroke-width="3"/></svg>',
-  );
+  'data:image/svg+xml,' + encodeURIComponent(dsl4BlockAuthoringIconSvg);
 export const dsl4ConfigDefinitionKeys = new Set([
   'controls',
   'viewport',
@@ -297,7 +296,7 @@ export function createDsl4BlockAuthoringInfo({
       color1: '#6b7280',
       color2: '#59616d',
       color3: '#454d59',
-      text: 'この部分を使う [ENABLED]',
+      text: 'use this part [ENABLED]',
       arguments: {ENABLED: {type: 'string', menu: 'sectionEnabled', defaultValue: 'on'}},
     },
     {
@@ -341,24 +340,28 @@ export function createDsl4BlockAuthoringInfo({
       },
     },
   ];
-  return {
-    id: dsl4BlockAuthoringExtensionId,
-    name: 'Kamishibai Block Script',
-    blockIconURI: dsl4BlockAuthoringEditorIcon,
-    menus: {
-      sectionEnabled: {
-        acceptReporters: false,
-        items: [
-          {text: '✅ オン', value: 'on'},
-          {text: '🚫 オフ', value: 'off'},
-        ],
+  return withDsl4PaletteGroups(
+    {
+      id: dsl4BlockAuthoringExtensionId,
+      name: 'Kamishibai Block Script',
+      blockIconURI: dsl4BlockAuthoringEditorIcon,
+      menus: {
+        sectionEnabled: {
+          acceptReporters: false,
+          items: [
+            {text: '✅ on', value: 'on'},
+            {text: '🚫 off', value: 'off'},
+          ],
+        },
       },
+      color1: '#7b4ba8',
+      color2: '#683f8f',
+      color3: '#563375',
+      blocks: definitions,
     },
-    color1: '#7b4ba8',
-    color2: '#683f8f',
-    color3: '#563375',
-    blocks: definitions,
-  };
+    dsl4AuthoringPaletteGroups,
+    dsl4BlockAuthoringIconSvg,
+  );
 }
 
 /** Convert validated source into scene substacks containing the existing runtime action blocks. */
