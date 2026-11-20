@@ -110,7 +110,7 @@ test('renders ordered versioned download cards from one release catalog', async 
     assert.equal(npmVersion, releasePins.release.version);
     assertDsl4ReleaseMetadata(npmMetadata);
     assert.match(npmMetadata.sourceIdentity, /^sha256:[a-f0-9]{64}$/u);
-    assert.equal(npmMetadata.publication.npm.distTag, 'next');
+    assert.equal(npmMetadata.publication.npm.distTag, 'latest');
     assert.equal(npmMetadata.publication.github.tag, `v${npmVersion}`);
     assert.equal(npmMetadata.publication.urls, undefined);
   }
@@ -226,9 +226,12 @@ test('renders ordered versioned download cards from one release catalog', async 
   assert(packageJson.files.includes('README.md'));
   assert(packageJson.files.includes('README.ja.md'));
   assert.equal(currentCandidate?.version, packageJson.version);
-  assert.equal(currentCandidate?.status, 'リリース候補');
+  assert.equal(currentCandidate?.status, '安定版');
   assert.equal(currentCandidate?.updatedAt, releaseMetadata.buildDate);
-  assert.equal(recommendedStable?.version, '3.2.3');
+  assert.equal(
+    recommendedStable?.version,
+    releaseMetadata.state === 'published' ? packageJson.version : '3.2.3',
+  );
   assert.equal(recommendedStable?.status, '安定版');
   assert.equal(releaseMetadata.publication.npm.distTag, packageJson.publishConfig.tag);
   assert.equal(packageJson.bin['turbowarp-kamishibai'], 'bin/turbowarp-kamishibai.mjs');
@@ -275,21 +278,13 @@ test('renders ordered versioned download cards from one release catalog', async 
     );
     assert(source.split('\n').length <= 190, 'README must remain a visitor entry point.');
   }
-  const releaseNoteLabel = `rc${packageJson.version.split('-rc.').at(1) ?? ''}`;
-  assert.match(
-    releaseNoteLabel,
-    /^rc\d+$/u,
-    'the README link label follows the release candidate.',
-  );
+  const releaseNoteLabel = 'stable4';
   for (const source of readmeSources) {
-    if (npmMetadata.state === 'frozen') {
-      assert(
-        source.includes(
-          `[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v${packageJson.version}`,
-        ),
-      );
-      continue;
-    }
+    assert(
+      source.includes(
+        `[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v${packageJson.version}`,
+      ),
+    );
     const releaseNotePath = source.match(
       new RegExp(
         `\\[${releaseNoteLabel}\\]: https://github\\.com/kubohiroya/turbowarp-kamishibai-app/blob/main/(\\S+)`,

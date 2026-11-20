@@ -42,8 +42,8 @@ test('names the release artifact and its publication surfaces from the pinned ve
   );
   assert.deepEqual(dsl4ReleasePublicationPolicy, {
     npm: {distTag: releasePins.release.channel},
-    github: {prerelease: true, tag: dsl4ReleaseTag},
-    pages: {recommended: false},
+    github: {prerelease: false, tag: dsl4ReleaseTag},
+    pages: {recommended: true},
   });
 });
 
@@ -64,8 +64,19 @@ test('rejects snapshot metadata that drifts from the pinned release identity', (
     /build date is invalid/u,
   );
   assert.throws(
-    () => assertDsl4ReleaseMetadata({...validMetadata(), channel: 'latest'}),
+    () => assertDsl4ReleaseMetadata({...validMetadata(), channel: 'next'}),
     /channel is invalid/u,
+  );
+  assert.throws(
+    () =>
+      assertDsl4ReleaseMetadata({
+        ...validMetadata(),
+        publication: {
+          ...dsl4ReleasePublicationPolicy,
+          github: {prerelease: true, tag: dsl4ReleaseTag},
+        },
+      }),
+    /prerelease/u,
   );
   assert.throws(
     // The member is not in `Dsl4ReleaseMetadata`; supplying one is the point of the case.

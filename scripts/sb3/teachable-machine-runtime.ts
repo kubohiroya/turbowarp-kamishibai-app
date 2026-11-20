@@ -108,6 +108,17 @@ async function compactEmbeddedWasm(source: string) {
 
 /** Share one reviewed graph across successive projects in the same Editor page. */
 export async function createDsl4TeachableMachineExtensionSource({compactWasm = false} = {}) {
+  const packageMetadata = JSON.parse(
+    await readFile(
+      new URL(
+        '../package.json',
+        import.meta
+          .resolve('@kubohiroya/turbowarp-teachable-machine/dist/teachable-machine-webgpu.js'),
+      ),
+      'utf8',
+    ),
+  );
+  assert.equal(packageMetadata.name, '@kubohiroya/turbowarp-teachable-machine');
   const [embedded, loader] = await Promise.all([
     readFile(
       fileURLToPath(
@@ -142,7 +153,7 @@ const captureTeachableMachine = (extension) => {
   if (teachableMachineExtension) throw new Error('Duplicate Teachable Machine registration');
   teachableMachineExtension = extension;
 };
-if (globalThis[Symbol.for(${JSON.stringify(key)})]?.version === '4.2.0' &&
+if (globalThis[Symbol.for(${JSON.stringify(key)})]?.version === ${JSON.stringify(packageMetadata.version)} &&
     globalThis.tf && globalThis.tmPose && globalThis.tmCompute) {
 ${captureRegistration(loader)}
 } else {

@@ -17,26 +17,26 @@ importers:
         specifier: ^0.6.1
         version: 0.6.1
       '@kubohiroya/turbowarp-asset-cache':
-        specifier: ^0.8.0
-        version: 0.8.0(@kubohiroya/turbowarp-named-data@0.8.0)
+        specifier: ^0.9.0
+        version: 0.9.0(@kubohiroya/turbowarp-named-data@0.8.0)
       '@kubohiroya/turbowarp-async-input':
-        specifier: ^0.12.0
-        version: 0.12.0
+        specifier: ^0.13.0
+        version: 0.13.0
       '@kubohiroya/turbowarp-bubble':
-        specifier: ^0.19.0
-        version: 0.19.0(@kubohiroya/turbowarp-asset-cache@0.8.0(@kubohiroya/turbowarp-named-data@0.8.0))(@kubohiroya/turbowarp-async-input@0.12.0)(@kubohiroya/turbowarp-runtime-expression@0.10.0)
+        specifier: ^0.20.0
+        version: 0.20.0(@kubohiroya/turbowarp-asset-cache@0.9.0(@kubohiroya/turbowarp-named-data@0.8.0))(@kubohiroya/turbowarp-async-input@0.13.0)(@kubohiroya/turbowarp-runtime-expression@0.11.0)
       '@kubohiroya/turbowarp-camera-source':
-        specifier: ^0.23.1
-        version: 0.23.1
+        specifier: ^0.24.0
+        version: 0.24.0
       '@kubohiroya/turbowarp-document-data':
-        specifier: 0.6.0
-        version: 0.6.0(@kubohiroya/turbowarp-named-data@0.8.0)(supports-color@7.2.0)
+        specifier: 0.7.0
+        version: 0.7.0(@kubohiroya/turbowarp-named-data@0.8.0)(supports-color@7.2.0)
       '@kubohiroya/turbowarp-document-source':
         specifier: 0.4.0
         version: 0.4.0
       '@kubohiroya/turbowarp-extension-loader':
-        specifier: 0.11.1
-        version: 0.11.1
+        specifier: 0.12.0
+        version: 0.12.0
       '@kubohiroya/turbowarp-extension-manifest':
         specifier: ^0.5.0
         version: 0.5.0
@@ -56,20 +56,20 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       '@kubohiroya/turbowarp-runtime-expression':
-        specifier: ^0.10.0
-        version: 0.10.0
+        specifier: ^0.11.0
+        version: 0.11.0
       '@kubohiroya/turbowarp-sb3-save-format':
-        specifier: 0.4.0-rc.2
-        version: 0.4.0-rc.2
+        specifier: 0.4.0
+        version: 0.4.0
       '@kubohiroya/turbowarp-svg-text':
-        specifier: ^0.15.0
-        version: 0.15.0
+        specifier: ^0.16.0
+        version: 0.16.0
       '@kubohiroya/turbowarp-teachable-machine':
-        specifier: ^4.2.0
-        version: 4.2.0
+        specifier: ^4.3.0
+        version: 4.3.0
       '@kubohiroya/turbowarp-yaml-json':
-        specifier: 0.10.0
-        version: 0.10.0
+        specifier: 0.11.0
+        version: 0.11.0
       '@teachablemachine/pose':
         specifier: 0.8.6
         version: 0.8.6(@tensorflow/tfjs-converter@3.21.0(@tensorflow/tfjs-core@3.21.0))(@tensorflow/tfjs-core@3.21.0)(@tensorflow/tfjs@4.22.0(seedrandom@3.0.5))
@@ -454,17 +454,17 @@ packages:
     resolution: {integrity: sha512-IHJWp9QGjQfGyS/et3YFQgsKwaHqEEFMPJw/yXY6mmcaLiscPdfI9BF1uFEeVzjuQU1aq7EiiaGu2UBDEWoFvQ==}
     engines: {node: '>=24'}
 
-  '@kubohiroya/turbowarp-asset-cache@0.8.0':
-    resolution: {integrity: sha512-V2aIdwJXxpw4wggI0slTpU+tXOEYjEns1pNLgbbrhMCYTTPMQOP+swGL/6VyYzIBVj/gIvxqJjxCRYjgFQkt6A==}
+  '@kubohiroya/turbowarp-asset-cache@0.9.0':
+    resolution: {integrity: sha512-D2NGEoXGEXRE96jCp3rhQh3RzNGT7qCs/WUSsbD+pu8l1oi0Ns6ywISHHnKClG5N++oAdNh9kC60rX1IkDy9Og==}
     engines: {node: '>=24'}
     peerDependencies:
       '@kubohiroya/turbowarp-named-data': ^0.8.0-rc.1
 
-  '@kubohiroya/turbowarp-async-input@0.12.0':
-    resolution: {integrity: sha512-ZiHxIa/0mWIrmAZvufMLyKcdIMvf8etEOSseoFucIT4eXAApRPqrYVkWKJnKt5+nVGXnyrkwb/+yrTM+h3C7cw==}
+  '@kubohiroya/turbowarp-async-input@0.13.0':
+    resolution: {integrity: sha512-xHeiwife7rfzCWILcmAanc5EMDULtdgxFhp/1lbQh/6CkT2hG6DZi3qVFi79tVPtFBWfqVREdENLyiDv0Fh8XA==}
     engines: {node: '>=24'}
     peerDependencies:
-      '@kubohiroya/turbowarp-jsqr': ^0.8.0
+      '@kubohiroya/turbowarp-jsqr': ^0.9.0
       '@kubohiroya/turbowarp-webusb-pasori': ^0.7.0
     peerDependenciesMeta:
       '@kubohiroya/turbowarp-jsqr':
@@ -472,13 +472,13 @@ packages:
       '@kubohiroya/turbowarp-webusb-pasori':
         optional: true
 
-  '@kubohiroya/turbowarp-bubble@0.19.0':
-    resolution: {integrity: sha512-7cwoD4xGQFz9+2mcqwcBC/4Xo+749U2wRf4MJvCGpwP7bpk+dSb00PpPx87X9KxW4mP8mq5UfeaOA9JgSrC8dQ==}
+  '@kubohiroya/turbowarp-bubble@0.20.0':
+    resolution: {integrity: sha512-UbaVC8GDId2/NPpIMkNpgz7s8inQMak95gPSvF/pRdeSW4Oc5VHA/QbscertrH8Qx/cRYTEFLijlejdlQmyMSg==}
     engines: {node: '>=24'}
     peerDependencies:
-      '@kubohiroya/turbowarp-asset-cache': ^0.8.0
-      '@kubohiroya/turbowarp-async-input': ^0.12.0
-      '@kubohiroya/turbowarp-runtime-expression': ^0.10.0
+      '@kubohiroya/turbowarp-asset-cache': ^0.9.0
+      '@kubohiroya/turbowarp-async-input': ^0.13.0
+      '@kubohiroya/turbowarp-runtime-expression': ^0.11.0
     peerDependenciesMeta:
       '@kubohiroya/turbowarp-asset-cache':
         optional: true
@@ -487,12 +487,12 @@ packages:
       '@kubohiroya/turbowarp-runtime-expression':
         optional: true
 
-  '@kubohiroya/turbowarp-camera-source@0.23.1':
-    resolution: {integrity: sha512-SVhbtDyh4/bf1oLYoyU4wQ2TD5Z6s9DCk0khhsTRbidP9VEdU00198biI29nZAdmI0BJnmF5cnKHuNF2nkFUZg==}
+  '@kubohiroya/turbowarp-camera-source@0.24.0':
+    resolution: {integrity: sha512-vzZ5pdQedCGXxMoK3rKbgjdZkTZmFem/GBdztS2C2D22uge7F/YUKa5ojpV6AGN2gX/XS4w9fpmCfxeszduDJA==}
     engines: {node: '>=24'}
 
-  '@kubohiroya/turbowarp-document-data@0.6.0':
-    resolution: {integrity: sha512-lE/XGSVBpISUSTXknkn+SgdHaItV6uYVfSlvCZkDP57GcPDSwBSMWBq8dHSSY+oI63+wPqKAAj7jNVp15kzTQA==}
+  '@kubohiroya/turbowarp-document-data@0.7.0':
+    resolution: {integrity: sha512-Gn6zCvfhZvcumrNQ67Fh1BePY5OrCH9esVdLf6K2uqEUNPKtuy8KUW9DkQJEhVaWtw2+FICy3ia1z8twi+00nA==}
     engines: {node: '>=24'}
     peerDependencies:
       '@kubohiroya/turbowarp-named-data': 0.8.0
@@ -501,12 +501,8 @@ packages:
     resolution: {integrity: sha512-rHcgB6YLMPsXTp39wrEkZboRtYMfjCeJ4qcOSJu5Ns2PblUxHPXcOGnMdV9SM/cCKRSg/7FlJg3XsXlNKH27aQ==}
     engines: {node: '>=22'}
 
-  '@kubohiroya/turbowarp-extension-loader@0.11.1':
-    resolution: {integrity: sha512-0jgwZBPcYbVll8WX3nWvvnNsMD0cglABPVY3uuh/pGAuMkKzsMZDc74qEO47/GHblk+tLMClTMROZgm3C+BbNg==}
-    engines: {node: '>=26'}
-
-  '@kubohiroya/turbowarp-extension-loader@0.8.0':
-    resolution: {integrity: sha512-DMeJoSErRDUUfK/JPIOVEV3W82BKHHtVXjNUd0lTMg7TsYI91/hmakuOZUDKBqv/y+T9dmaZRWlf4ab/3JP9sg==}
+  '@kubohiroya/turbowarp-extension-loader@0.12.0':
+    resolution: {integrity: sha512-mgt5y2oToh8DM9Sa9N8zV1CRMo6GC/zPO2RfLgCFC5gsgI58eP6/OHEX/OjFJGYteh4upBohgz35I2QrCFMZXg==}
     engines: {node: '>=26'}
 
   '@kubohiroya/turbowarp-extension-manifest@0.5.0':
@@ -537,12 +533,12 @@ packages:
     resolution: {integrity: sha512-J3S+rpBPtj6lKQeeucmifpSJT7pczK9WZYLyXKwVyLunp61TnnZNOfwsWOAWQGqkzssgWr4QwpUe71iWvRIgoA==}
     engines: {node: '>=24'}
 
-  '@kubohiroya/turbowarp-runtime-expression@0.10.0':
-    resolution: {integrity: sha512-f/TkwNhFP//Jrn3qlU+Cb437xiV+vKVN5BeEM1/rkPuaudp3AfxmgQfkAqS94BuWo+XnXg8LhFXsG1zgWFutCA==}
+  '@kubohiroya/turbowarp-runtime-expression@0.11.0':
+    resolution: {integrity: sha512-76TmAn//336uk26B9FHIQTU9IVQFBEKNw3vUFmEsTr5qXm6XIlfA1TD0cyvEMMt3k8pQ4Rwds6zSWgKTggSW7w==}
     engines: {node: '>=24'}
 
-  '@kubohiroya/turbowarp-sb3-save-format@0.4.0-rc.2':
-    resolution: {integrity: sha512-5DU6XZPA7+OfKIpN8InPBMJ3p5p0k1V9tTYzniHmwg2VWzt/xS2UhjjPqAqbowMsyXl8OGRycnzQDL8XuPOFYw==}
+  '@kubohiroya/turbowarp-sb3-save-format@0.4.0':
+    resolution: {integrity: sha512-BSFDpW+ZIZ3xdtJNKum0sYKyl3WRMD8B+ICxxk5O0ZYJH/JXZRcAkFzOgITfI3xz8xCsXHiXVk12zJKepsO2Cw==}
     engines: {node: '>=24'}
     peerDependencies:
       react: ^16.14.0 || ^17 || ^18 || ^19
@@ -550,20 +546,16 @@ packages:
       react:
         optional: true
 
-  '@kubohiroya/turbowarp-svg-text@0.14.0':
-    resolution: {integrity: sha512-zxvrWeAILR2shmL4FH4906nZdAeW4UMAmC3sldO7CK53hG5bXN/kSPRZZT03mTeWXv0ZMfmzcCISwVICkeBq4Q==}
+  '@kubohiroya/turbowarp-svg-text@0.16.0':
+    resolution: {integrity: sha512-1cXHuMiVQ/MFdzqIPgHJ5TDwKcYuv5KRYLevlOypcyXK0kI+EqQS8QQbfeSILJRWVRUj/7ho9Ev4ZtfPm1egTQ==}
     engines: {node: '>=24'}
 
-  '@kubohiroya/turbowarp-svg-text@0.15.0':
-    resolution: {integrity: sha512-7ui1FD/yGkvmv9S7MyCag4+u1w/KlO9nWwfdTF/5IqgjXc5gISq51gzYEE8RRsG+ZYEnCaQpydRiNz0f2AyXOA==}
+  '@kubohiroya/turbowarp-teachable-machine@4.3.0':
+    resolution: {integrity: sha512-lnRICYT2r4lKnd70qMlqF2jp7hXLCyTMNidEP8IOaGxgIdhnwR0KbWkqsu7VbxL+oszey3vVoSw+mI0MX7yM3w==}
     engines: {node: '>=24'}
 
-  '@kubohiroya/turbowarp-teachable-machine@4.2.0':
-    resolution: {integrity: sha512-0TULMXYX5EcVN2HXBVHJ7En/ag9tvFzWbLx/2YtEHOgE6nI0oDDhSAUCWyY9R6Ad5QgWNNbd56bJBC0NgBgUWQ==}
-    engines: {node: '>=24'}
-
-  '@kubohiroya/turbowarp-yaml-json@0.10.0':
-    resolution: {integrity: sha512-Wq7GxPFqU2xUSgVRGOJKmlBI8skuMkHy8xW3ueSY78MaKPBx+SSFQ4AyqhnWV76Hrhs3LJEV+Q8pZBVNC/uVmg==}
+  '@kubohiroya/turbowarp-yaml-json@0.11.0':
+    resolution: {integrity: sha512-o3bF8HrbczIwmSmcJHWXylYJTZZn43oEFOCSBMjXrqa9cDZ1+vUX6aS55UJQ/DLHlZW45p//qsc1GX22wd3HOg==}
     engines: {node: '>=24'}
 
   '@kubohiroya/vite-plugin-turbowarp-extension@0.11.0':
@@ -4005,28 +3997,28 @@ snapshots:
 
   '@kubohiroya/turbowarp-app-shell@0.6.1': {}
 
-  '@kubohiroya/turbowarp-asset-cache@0.8.0(@kubohiroya/turbowarp-named-data@0.8.0)':
+  '@kubohiroya/turbowarp-asset-cache@0.9.0(@kubohiroya/turbowarp-named-data@0.8.0)':
     dependencies:
       '@kubohiroya/turbowarp-named-data': 0.8.0
 
-  '@kubohiroya/turbowarp-async-input@0.12.0': {}
+  '@kubohiroya/turbowarp-async-input@0.13.0': {}
 
-  '@kubohiroya/turbowarp-bubble@0.19.0(@kubohiroya/turbowarp-asset-cache@0.8.0(@kubohiroya/turbowarp-named-data@0.8.0))(@kubohiroya/turbowarp-async-input@0.12.0)(@kubohiroya/turbowarp-runtime-expression@0.10.0)':
+  '@kubohiroya/turbowarp-bubble@0.20.0(@kubohiroya/turbowarp-asset-cache@0.9.0(@kubohiroya/turbowarp-named-data@0.8.0))(@kubohiroya/turbowarp-async-input@0.13.0)(@kubohiroya/turbowarp-runtime-expression@0.11.0)':
     dependencies:
       '@cto.af/linebreak': 4.0.3
-      '@kubohiroya/turbowarp-svg-text': 0.14.0
+      '@kubohiroya/turbowarp-svg-text': 0.16.0
     optionalDependencies:
-      '@kubohiroya/turbowarp-asset-cache': 0.8.0(@kubohiroya/turbowarp-named-data@0.8.0)
-      '@kubohiroya/turbowarp-async-input': 0.12.0
-      '@kubohiroya/turbowarp-runtime-expression': 0.10.0
+      '@kubohiroya/turbowarp-asset-cache': 0.9.0(@kubohiroya/turbowarp-named-data@0.8.0)
+      '@kubohiroya/turbowarp-async-input': 0.13.0
+      '@kubohiroya/turbowarp-runtime-expression': 0.11.0
 
-  '@kubohiroya/turbowarp-camera-source@0.23.1': {}
+  '@kubohiroya/turbowarp-camera-source@0.24.0': {}
 
-  '@kubohiroya/turbowarp-document-data@0.6.0(@kubohiroya/turbowarp-named-data@0.8.0)(supports-color@7.2.0)':
+  '@kubohiroya/turbowarp-document-data@0.7.0(@kubohiroya/turbowarp-named-data@0.8.0)(supports-color@7.2.0)':
     dependencies:
       '@kubohiroya/turbowarp-document-source': 0.4.0
       '@kubohiroya/turbowarp-named-data': 0.8.0
-      '@kubohiroya/turbowarp-yaml-json': 0.10.0
+      '@kubohiroya/turbowarp-yaml-json': 0.11.0
       mdast-util-from-markdown: 2.1.0(supports-color@7.2.0)
       mdast-util-to-markdown: 2.2.1
       parse5: 8.0.1
@@ -4035,9 +4027,7 @@ snapshots:
 
   '@kubohiroya/turbowarp-document-source@0.4.0': {}
 
-  '@kubohiroya/turbowarp-extension-loader@0.11.1': {}
-
-  '@kubohiroya/turbowarp-extension-loader@0.8.0': {}
+  '@kubohiroya/turbowarp-extension-loader@0.12.0': {}
 
   '@kubohiroya/turbowarp-extension-manifest@0.5.0': {}
 
@@ -4053,19 +4043,18 @@ snapshots:
 
   '@kubohiroya/turbowarp-runtime-adapter@0.6.0': {}
 
-  '@kubohiroya/turbowarp-runtime-expression@0.10.0': {}
+  '@kubohiroya/turbowarp-runtime-expression@0.11.0': {}
 
-  '@kubohiroya/turbowarp-sb3-save-format@0.4.0-rc.2':
+  '@kubohiroya/turbowarp-sb3-save-format@0.4.0':
     dependencies:
-      '@kubohiroya/turbowarp-extension-loader': 0.8.0
+      '@kubohiroya/turbowarp-extension-loader': 0.12.0
+      '@turbowarp/jszip': 3.12.0
 
-  '@kubohiroya/turbowarp-svg-text@0.14.0': {}
+  '@kubohiroya/turbowarp-svg-text@0.16.0': {}
 
-  '@kubohiroya/turbowarp-svg-text@0.15.0': {}
+  '@kubohiroya/turbowarp-teachable-machine@4.3.0': {}
 
-  '@kubohiroya/turbowarp-teachable-machine@4.2.0': {}
-
-  '@kubohiroya/turbowarp-yaml-json@0.10.0':
+  '@kubohiroya/turbowarp-yaml-json@0.11.0':
     dependencies:
       '@kubohiroya/turbowarp-document-source': 0.4.0
       ajv: 8.20.0

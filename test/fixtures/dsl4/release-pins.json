@@ -4,18 +4,18 @@
     "package": "@kubohiroya/turbowarp-kamishibai-app",
     "repositoryPath": "/kubohiroya/turbowarp-kamishibai-app",
     "series": "4.0",
-    "channel": "next",
-    "version": "4.0.0-rc.95"
+    "channel": "latest",
+    "version": "4.0.0"
   },
   "extensions": {
-    "@kubohiroya/turbowarp-asset-cache": "0.8.0",
+    "@kubohiroya/turbowarp-asset-cache": "0.9.0",
     "@kubohiroya/turbowarp-kvs": "0.6.0",
-    "@kubohiroya/turbowarp-async-input": "0.12.0",
-    "@kubohiroya/turbowarp-bubble": "0.19.0",
-    "@kubohiroya/turbowarp-runtime-expression": "0.10.0",
-    "@kubohiroya/turbowarp-svg-text": "0.15.0",
-    "@kubohiroya/turbowarp-camera-source": "0.23.1",
-    "@kubohiroya/turbowarp-teachable-machine": "4.2.0"
+    "@kubohiroya/turbowarp-async-input": "0.13.0",
+    "@kubohiroya/turbowarp-bubble": "0.20.0",
+    "@kubohiroya/turbowarp-runtime-expression": "0.11.0",
+    "@kubohiroya/turbowarp-svg-text": "0.16.0",
+    "@kubohiroya/turbowarp-camera-source": "0.24.0",
+    "@kubohiroya/turbowarp-teachable-machine": "4.3.0"
   },
   "devDependencies": {
     "@kubohiroya/sb3-toolchain": "0.28.0"
@@ -25,9 +25,9 @@
     "@tensorflow/tfjs": "4.22.0",
     "fflate": "0.8.3",
     "yaml": "2.9.1",
-    "@kubohiroya/turbowarp-extension-loader": "0.2.0"
+    "@kubohiroya/turbowarp-extension-loader": "0.12.0"
   },
   "artifactFingerprint": {
-    "expected": "sha256-cpwOiMcCg78VzImRGxVY+Bic01o5TeBI3RO9cBnT1vU="
+    "expected": "sha256-AYho+EOl8Czx0ptNQ6UhyoLs/8OSErYiCKL8TEWaXBY="
   }
 }

@@ -71,6 +71,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const require = createRequire(import.meta.url);
+const teachableMachineVersion = JSON.parse(
+  await readFile(new URL('../fixtures/dsl4/release-pins.json', import.meta.url), 'utf8'),
+).extensions['@kubohiroya/turbowarp-teachable-machine'];
 const TurboWarpPackager = require('@turbowarp/packager');
 
 let pendingCurrentDsl4ReleaseSb3;
@@ -1101,7 +1104,7 @@ console.warn = (...values) => {
       await waitForEvaluation(client, 'Boolean(globalThis.Scratch?.vm)', 'packaged TurboWarp VM');
       await waitForEvaluation(
         client,
-        'Boolean(globalThis[Symbol.for("@kubohiroya/turbowarp-teachable-machine/runtime")]?.version === "4.2.0" && document.querySelector("[data-runtime-dock-control=kamishibai-recognition-compute]"))',
+        `Boolean(globalThis[Symbol.for("@kubohiroya/turbowarp-teachable-machine/runtime")]?.version === ${JSON.stringify(teachableMachineVersion)} && document.querySelector("[data-runtime-dock-control=kamishibai-recognition-compute]"))`,
         'Teachable Machine settings entry in shared controls Dock',
       );
       await waitForEvaluation(
