@@ -59,6 +59,8 @@ const dsl4PublishedArtifact =
         sourceIdentity: dsl4ReleaseMetadata.sourceIdentity,
       }
     : undefined;
+const dsl4IsStable = !dsl4ReleaseMetadata.version.includes('-');
+const recommendDsl4 = dsl4IsStable && Boolean(dsl4PublishedArtifact);
 
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -76,13 +78,14 @@ export const downloadCatalog: readonly DownloadCatalogEntry[] = deepFreeze([
   {
     artifact: dsl4PublishedArtifact,
     description:
-      'YAML、local preview、自己完結SB3を先行検証する公開候補です。安定運用には3.2.3を利用してください。',
+      'YAML、local preview、自己完結SB3を利用できる4.0系列です。既存の3.1／3.2作品には引き続き3.2.3を利用できます。',
     docsUrl: dsl4DocsUrl,
     series: '4.0',
-    status: 'リリース候補',
-    statusKind: 'development',
+    recommended: recommendDsl4,
+    status: dsl4IsStable ? '安定版' : 'リリース候補',
+    statusKind: dsl4IsStable ? 'stable' : 'development',
     unavailableLabel: '公開準備中',
-    unavailableNote: 'GitHub prereleaseの公開後にダウンロードできます。',
+    unavailableNote: '検証済みGitHub Releaseの公開後にダウンロードできます。',
     updatedAt: dsl4ReleaseMetadata.buildDate,
     version: dsl4ReleaseMetadata.version,
   },
@@ -96,8 +99,8 @@ export const downloadCatalog: readonly DownloadCatalogEntry[] = deepFreeze([
       sourceCommit: '28015ac9ff5221f371e8bd0357a7750ce40bbf7c',
     },
     description:
-      '3.1と3.2の既存作品を扱う現在の推奨安定版です。4.0はリリース候補として先行検証できます。',
-    recommended: true,
+      '3.1と3.2の既存作品を扱う安定版です。YAMLで新しく制作する場合は4.0を利用できます。',
+    recommended: !recommendDsl4,
     series: '3.2',
     status: '安定版',
     statusKind: 'stable',

@@ -301,18 +301,17 @@ test('pins a deterministic release, publication, and rollback sequence', async (
   assert.deepEqual(contract.releaseOrder, [
     'release-capability-packages',
     'update-exact-package-and-lock-pins',
-    'set-release-candidate-version',
-    'update-release-candidate-atomically',
+    'set-release-version',
+    'cut-and-freeze-release-candidate-atomically',
     'run-full-verification',
-    'check-release-candidate-without-mutation',
+    'check-frozen-release-without-mutation',
     'merge-release-candidate',
     'rerun-release-verification',
-    'freeze-release-source-identity-and-artifact-hash',
     'create-version-tag',
-    'publish-npm-package-with-next-dist-tag',
-    'publish-github-prerelease',
+    'publish-npm-package-with-latest-dist-tag',
+    'publish-github-release',
     'record-publication',
-    'publish-site-with-stable-recommendation-unchanged',
+    'publish-site-with-current-stable-recommendation',
     'verify-publication',
   ]);
   assert.deepEqual(contract.rollbackOrder, [
@@ -339,7 +338,7 @@ test('pins a deterministic release, publication, and rollback sequence', async (
     `https://github.com${releasePins.release.repositoryPath}/releases/download/${releaseTag}/${releaseFilename}`,
   );
   assert.deepEqual(metadata.publication?.npm, {distTag: releasePins.release.channel});
-  assert.deepEqual(metadata.publication?.github, {prerelease: true, tag: releaseTag});
+  assert.deepEqual(metadata.publication?.github, {prerelease: false, tag: releaseTag});
   assert.match(metadata.artifact.sha256, /^[0-9a-f]{64}$/u);
   assert.match(metadata.sourceIdentity, /^sha256:[0-9a-f]{64}$/u);
   if (metadata.state === 'published') {
@@ -363,9 +362,9 @@ test('pins a deterministic release, publication, and rollback sequence', async (
     freezeCommand: 'pnpm release:dsl4:freeze',
     publicationCommand: 'pnpm release:dsl4:record-publication',
     immutableStates: ['frozen', 'published'],
-    npmDistTag: 'next',
-    githubPrerelease: true,
-    recommendedStableVersion: '3.2.3',
+    npmDistTag: 'latest',
+    githubPrerelease: false,
+    recommendedStableVersion: '4.0.0',
   });
 
   for (const evidencePath of contract.evidence) {

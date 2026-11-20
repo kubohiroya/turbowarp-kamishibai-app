@@ -41,11 +41,12 @@ export type Dsl4ReleaseMetadata = Sb3ReleaseSnapshotMetadata & {
 };
 
 export const dsl4ReleaseVersion = releasePins.release.version;
-export const dsl4NextReleaseVersion = '4.0.0-rc.96';
+export const dsl4NextReleaseVersion = '4.0.1';
+export const dsl4ReleaseIsPrerelease = dsl4ReleaseVersion.includes('-');
 // Reproduce the frozen rc.84 artifact; subsequent candidates use the compact SIMD build.
 export const dsl4ReleaseCompactWasm = dsl4ReleaseVersion !== '4.0.0-rc.84';
 export const dsl4ReleaseSeries = releasePins.release.series;
-export const dsl4ReleaseBuildDate = '2026-11-17';
+export const dsl4ReleaseBuildDate = '2026-11-20';
 export const dsl4ReleaseChannel = releasePins.release.channel;
 export const dsl4ReleaseTag = `v${dsl4ReleaseVersion}`;
 export const dsl4ReleaseFilename = `kamishibai-${dsl4ReleaseVersion}.sb3`;
@@ -71,8 +72,8 @@ export const dsl4ReleaseArtifactIdentity = Object.freeze({
 
 export const dsl4ReleasePublicationPolicy = Object.freeze({
   npm: Object.freeze({distTag: dsl4ReleaseChannel}),
-  github: Object.freeze({prerelease: true, tag: dsl4ReleaseTag}),
-  pages: Object.freeze({recommended: false}),
+  github: Object.freeze({prerelease: dsl4ReleaseIsPrerelease, tag: dsl4ReleaseTag}),
+  pages: Object.freeze({recommended: !dsl4ReleaseIsPrerelease}),
 });
 
 /** Kamishibai SB3 build inputs, including the title build metadata stamped into the artifact. */
@@ -109,8 +110,8 @@ export function assertDsl4ReleaseMetadata(
   assert.equal(metadata.artifact.filename, dsl4ReleaseFilename);
   assert.equal(metadata.artifact.url, dsl4ReleaseAssetUrl);
   assert.deepEqual(metadata.publication?.npm, {distTag: dsl4ReleaseChannel});
-  assert.deepEqual(metadata.publication?.github, {prerelease: true, tag: dsl4ReleaseTag});
-  assert.deepEqual(metadata.publication?.pages, {recommended: false});
+  assert.deepEqual(metadata.publication?.github, dsl4ReleasePublicationPolicy.github);
+  assert.deepEqual(metadata.publication?.pages, dsl4ReleasePublicationPolicy.pages);
   if (metadata.state === 'published') {
     assert.deepEqual(
       Object.keys(metadata.publication?.urls ?? {})
@@ -176,6 +177,8 @@ export async function assertDsl4ReleaseDownloadCatalog(metadata: Dsl4ReleaseMeta
   }
   assert.equal(
     downloadCatalog.find(({recommended}: {recommended?: unknown}) => recommended)?.version,
-    dsl4RecommendedLegacyReleaseVersion,
+    metadata.state === 'published' && !dsl4ReleaseIsPrerelease
+      ? metadata.version
+      : dsl4RecommendedLegacyReleaseVersion,
   );
 }
