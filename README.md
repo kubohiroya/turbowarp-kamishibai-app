@@ -24,7 +24,7 @@ This repository contains the runtime, DSL, CLI and JavaScript APIs, distributabl
 
 ## Choose a Version
 
-|                 | 3.2.3                                           | 4.0.0                                              |
+|                 | 3.2.3                                           | 4.0.1                                              |
 | --------------- | ----------------------------------------------- | -------------------------------------------------- |
 | Status          | Stable for existing 3.1/3.2 stories             | Stable 4.0                                         |
 | Best for        | Workshops, stable use, existing 3.1/3.2 stories | YAML authoring, browser workflows, and the CLI/API |
@@ -32,7 +32,7 @@ This repository contains the runtime, DSL, CLI and JavaScript APIs, distributabl
 | Get it          | [Downloads][downloads]                          | [Downloads][downloads] (SB3)                       |
 | Read on updates | [Published documentation][docs]                 | [4.0 release status][current-release]              |
 
-Version 4.0.0 is the stable release for YAML authoring and the 4.0 APIs. Use 3.2.3 for existing 3.1/3.2 stories. Published 3.1 and 3.2 stories continue to work without migrating to 4.0.
+Version 4.0.1 is the stable release for YAML authoring and the 4.0 APIs. Use 3.2.3 for existing 3.1/3.2 stories. Published 3.1 and 3.2 stories continue to work without migrating to 4.0.
 
 ## Try It First
 
@@ -48,7 +48,7 @@ Use 3.2.3 when you need the stable path for an event or an existing 3.1/3.2 stor
 
 ### Use 4.0 for YAML projects
 
-The stable release, 4.0.0, organizes script and runtime blocks into palette groups in TurboWarp Plus and displays their labels in Japanese or English according to the editor language. See the [4.0.0 release notes][stable4] and check the [current release status][current-release] before installing a versioned Standard SB3, Player, or npm package.
+The stable release, 4.0.1, adds a playback settings screen: open it from Config on the title or with Esc during playback to change pose-wait skipping and the BGM and sound effect volumes, and to open the camera and recognition backend settings. See the [4.0.1 release notes][stable4] and check the [current release status][current-release] before installing a versioned Standard SB3, Player, or npm package.
 
 ```yaml
 kamishibai: '4.0'
@@ -71,10 +71,10 @@ For practical scripts, asset references, pose models, branches, speech bubbles, 
 
 rc.64 fixes the initial language of the recognition backend settings, following the TurboWarp language or the browser language when the host has no preference. The panel supports English and Japanese, including its accessible labels; the app’s language switch also updates it. Teachable Machine 4.0.2 and backend selection were added in rc.63. The earlier rc.58 fixed preview cleanup for the client’s own stream abort. Stories sealed with rc.51 through rc.55 remain unsupported; rebuild them as source or compiled distributions. The following examples target 4.0.0 and should be run after its release job completes; confirm the [release status][current-release] first.
 
-The [`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.0) CLI is intended for CI, reproducible builds, larger projects, and distribution-profile management. Use Node.js 24.0.0 or later and pnpm 11, and install the exact version you have validated. The CLI command is `turbowarp-kamishibai`, and `tm-kamishibai` stays as a deprecated alias.
+The [`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.1) CLI is intended for CI, reproducible builds, larger projects, and distribution-profile management. Use Node.js 24.0.0 or later and pnpm 11, and install the exact version you have validated. The CLI command is `turbowarp-kamishibai`, and `tm-kamishibai` stays as a deprecated alias.
 
 ```bash
-pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.0
+pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.1
 pnpm exec turbowarp-kamishibai --help
 pnpm exec turbowarp-kamishibai validate-dsl4 --input opening.k4.yml --format pretty
 pnpm exec turbowarp-kamishibai preview-dsl4 --watch --base kamishibai-4-base.sb3 --project-root .
@@ -184,5 +184,5 @@ Software and assets copyrighted by this project are licensed under MPL-2.0 unles
 [rc81]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.81.md
 [rc82]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.82.md
 [rc88]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.88.md
-[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.0
-[stable4]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0.md
+[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.1
+[stable4]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.1.md

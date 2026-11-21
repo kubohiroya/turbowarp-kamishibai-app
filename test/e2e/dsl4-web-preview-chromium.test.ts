@@ -1150,116 +1150,119 @@ console.warn = (...values) => {
         'Camera Source entry in the shared Dock',
       );
       const dockClient = client;
-      const dock = '[data-runtime-controls-dock]';
-      const handle = '[data-runtime-dock-handle]';
       const compute = '[data-runtime-dock-control=kamishibai-recognition-compute]';
-      const revealDock = async () => {
-        const point = requireRecord(await centerOf(dockClient, handle), 'the Dock handle');
-        await dockClient.send('Input.dispatchMouseEvent', {type: 'mouseMoved', ...point});
-        await waitForEvaluation(
-          dockClient,
-          `document.querySelector('${dock}').dataset.expanded === 'true'`,
-          'Dock revealed by hovering',
-        );
-      };
-      const hideDock = async () => {
-        await revealDock();
-        const point = await evaluateRecord(dockClient, '({x:innerWidth/2,y:innerHeight/2})');
-        await dockClient.send('Input.dispatchMouseEvent', {type: 'mouseMoved', ...point});
-        await waitForEvaluation(
-          dockClient,
-          `document.querySelector('${dock}').dataset.expanded === 'false'`,
-          'Dock automatically hidden after leaving its edge',
-        );
-      };
-      await hideDock();
-      await client.send('Emulation.setTouchEmulationEnabled', {enabled: true, maxTouchPoints: 1});
-      const touch = requireRecord(await centerOf(client, handle), 'the Dock touch target');
-      await client.send('Input.dispatchTouchEvent', {type: 'touchStart', touchPoints: [touch]});
-      await client.send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
-      await waitForEvaluation(
+      // The Player hides the Dock; the playback settings open the panels it would have offered.
+      const dockState = await evaluateRecord(
         client,
-        `document.querySelector('${dock}').dataset.expanded === 'true'`,
-        'Dock revealed by tapping',
-      );
-      for (const edge of ['bottom', 'top', 'left', 'right']) {
-        await revealDock();
-        await click(client, '[data-runtime-dock-bar] > button:last-child');
-        await client.evaluate(`(() => {
-          const select = document.querySelector('[data-runtime-dock-settings] select');
-          select.value = ${JSON.stringify(edge)};
-          select.dispatchEvent(new Event('change', {bubbles:true}));
-        })()`);
-        await click(client, '[data-runtime-dock-settings] button');
-        await hideDock();
-        await revealDock();
-        await click(client, compute);
-        const placement = await evaluateRecord(
-          client,
-          `(() => {
-        const entry = document.querySelector('[data-runtime-dock-control=kamishibai-recognition-compute]');
+        `(() => {
+        const docks = [...document.querySelectorAll('[data-runtime-controls-dock]')];
+        const entry = document.querySelector('${compute}');
         const camera = document.querySelector('[data-runtime-dock-control=camera]');
-        const dock = entry.closest('[data-runtime-controls-dock]');
+        return {
+          dockCount: docks.length,
+          hidden: docks.every((dock) => getComputedStyle(dock).display === 'none'),
+          sharedWithCamera: camera.closest('[data-runtime-controls-dock]') === entry.closest('[data-runtime-controls-dock]'),
+          buttonText: entry.textContent,
+        };
+      })()`,
+      );
+      assert.equal(dockState.dockCount, 1);
+      assert.equal(dockState.hidden, true);
+      assert.equal(dockState.sharedWithCamera, true);
+      assert.match(String(dockState.buttonText), /Teachable Machine/u);
+      const settingsOpen = `document.querySelector('[data-dsl4-playback-settings=true]')?.hidden === false`;
+      const openComputeFromSettings = async () => {
+        // This Player waits behind the Packager's "Click to start" screen.
+        if (
+          await dockClient.evaluate(
+            `(() => { const launch = document.querySelector('#launch'); return Boolean(launch) && getComputedStyle(launch).display !== 'none'; })()`,
+          )
+        ) {
+          await click(dockClient, '#launch');
+        }
+        await waitForEvaluation(
+          dockClient,
+          `document.querySelector('[data-dsl4-title-controls=true]')?.style.display === 'block'`,
+          'title with its Config button',
+        );
+        await click(dockClient, '[data-dsl4-title-action=config]');
+        await waitForEvaluation(dockClient, settingsOpen, 'settings opened from the title');
+        await waitForEvaluation(
+          dockClient,
+          `(() => {
+          const button = document.querySelector('[data-dsl4-settings-open=recognition]');
+          return Boolean(button) && button.getClientRects().length > 0;
+        })()`,
+          'recognition backend entry in the settings',
+        );
+        await click(dockClient, '[data-dsl4-settings-open=recognition]');
+        await waitForEvaluation(
+          dockClient,
+          `getComputedStyle(document.querySelector('[data-dsl4-compute-settings]')).display !== 'none'`,
+          'recognition backend panel opened from the settings',
+        );
+      };
+      const closeComputeAndSettings = async () => {
+        await click(dockClient, '[data-dsl4-compute-close]');
+        await click(dockClient, '[data-dsl4-settings-close]');
+        await waitForEvaluation(dockClient, `!(${settingsOpen})`, 'settings closed');
+      };
+      await openComputeFromSettings();
+      const placement = await evaluateRecord(
+        client,
+        `(() => {
         const canvas = document.querySelector('canvas');
         const panel = document.querySelector('[data-dsl4-compute-settings]');
         const select = panel.querySelector('select');
         const rect = panel.getBoundingClientRect();
         return {
-          inStage: !!canvas?.parentElement?.contains(entry),
           panelInStage: !!canvas?.parentElement?.contains(panel),
-          sharedWithCamera: camera.closest('[data-runtime-controls-dock]') === dock,
-          dockCount: document.querySelectorAll('[data-runtime-controls-dock]').length,
-          buttonText: entry.textContent,
-          edge: dock.dataset.edge,
-          keptOpen: dock.dataset.expanded,
           options: [...select.options].map(option => option.value),
           initial: select.value,
           locale: panel.getAttribute('lang'),
           title: panel.querySelector('h2').textContent,
-          visible: getComputedStyle(panel).display !== 'none' && rect.height > 0,
+          visible: rect.height > 0,
           withinViewport: rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight,
         };
-        })()`,
-        );
-        assert.equal(placement.inStage, false);
-        assert.equal(placement.panelInStage, false);
-        assert.equal(placement.sharedWithCamera, true);
-        assert.equal(placement.dockCount, 1);
-        assert.match(String(placement.buttonText), /Teachable Machine/u);
-        assert.equal(placement.edge, edge);
-        assert.equal(placement.keptOpen, 'true');
-        assert.deepEqual(placement.options, ['auto', 'webgpu', 'wasm', 'cpu']);
-        assert.equal(placement.initial, 'auto');
-        assert.equal(placement.locale, 'ja');
-        assert.equal(placement.title, '認識の計算方式');
-        assert.equal(placement.visible, true);
-        assert.equal(placement.withinViewport, true);
-        await client.evaluate(
-          'new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))',
-        );
-        const screenshot = requireRecord(
-          await client.send('Page.captureScreenshot', {format: 'png'}),
-          'the settings screenshot',
-        );
-        await writeFile(
-          path.join(tmpdir(), `kamishibai-teachable-machine-dock-${edge}.png`),
-          Buffer.from(requireString(screenshot.data, 'the screenshot bytes'), 'base64'),
-        );
-        if (edge === 'bottom') {
-          await click(client, '[data-runtime-dock-control=camera]');
-          assert.equal(
-            await client.evaluate(
-              'getComputedStyle(document.querySelector("[data-dsl4-compute-settings]")).display',
-            ),
-            'none',
-          );
-          await click(client, '[data-runtime-dock-control=camera]');
-        } else await click(client, '[data-dsl4-compute-close]');
-      }
+      })()`,
+      );
+      assert.deepEqual(placement, {
+        panelInStage: false,
+        options: ['auto', 'webgpu', 'wasm', 'cpu'],
+        initial: 'auto',
+        locale: 'ja',
+        title: '認識の計算方式',
+        visible: true,
+        withinViewport: true,
+      });
+      await closeComputeAndSettings();
+      // The camera entry in the settings opens Camera Source's own controls. Starting the project
+      // from the launch screen released the earlier registration, so register the camera again.
+      await client.evaluate(`(() => {
+        const camera = globalThis.Scratch.vm.runtime.ext_kubohiroyacamerasource;
+        globalThis.__dsl4DockCamera.dispose();
+        globalThis.__dsl4DockCamera = camera.registerCameraControls({owner:'dock-test', cameraId:'pose', locale:'ja'});
+        globalThis.__dsl4DockCamera.start();
+      })()`);
+      await waitForEvaluation(
+        client,
+        'Boolean(document.querySelector("[data-runtime-dock-control=camera]"))',
+        'Camera Source entry registered again',
+      );
+      await click(client, '[data-dsl4-title-action=config]');
+      await waitForEvaluation(client, settingsOpen, 'settings reopened from the title');
+      await client.evaluate(`(() => {
+        globalThis.__dsl4CameraClicks = 0;
+        document.querySelector('[data-runtime-dock-control=camera]')
+          .addEventListener('click', () => { globalThis.__dsl4CameraClicks += 1; });
+      })()`);
+      await click(client, '[data-dsl4-settings-open=camera]');
+      assert.equal(await client.evaluate('globalThis.__dsl4CameraClicks'), 1);
+      await client.evaluate(`document.querySelector('[data-dsl4-settings-close]')?.click()`);
+      await waitForEvaluation(client, `!(${settingsOpen})`, 'settings closed after the camera');
       await client.evaluate('globalThis.__dsl4DockCamera.dispose()');
       const assertSettingsLocale = async (locale: 'ja' | 'en') => {
-        await revealDock();
-        await click(dockClient, compute);
+        await openComputeFromSettings();
         const labels = await evaluateRecord(
           dockClient,
           `(() => {
@@ -1307,7 +1310,7 @@ console.warn = (...values) => {
           path.join(tmpdir(), `kamishibai-compute-locale-${locale}.png`),
           Buffer.from(requireString(screenshot.data, 'the screenshot bytes'), 'base64'),
         );
-        await click(dockClient, '[data-dsl4-compute-close]');
+        await closeComputeAndSettings();
       };
       await assertSettingsLocale('ja');
       await client.evaluate(`globalThis.Scratch.vm.runtime._primitives[
@@ -1866,6 +1869,220 @@ test(
       );
       assert.equal(fresh.directoryPickerCalls, loaded.directoryPickerCalls);
       assert.equal(fresh.extensionLoaded, true);
+      assert.deepEqual(client.exceptions, []);
+    } finally {
+      client?.close();
+      await stopChrome(chrome);
+      await new Promise((resolve) => server.close(resolve));
+      await Promise.all([
+        rm(profileDirectory, {recursive: true, force: true, maxRetries: 10, retryDelay: 100}),
+        rm(fixtureDirectory, {recursive: true, force: true}),
+      ]);
+    }
+  },
+);
+
+test(
+  'opens playback settings from the title and with Esc, pausing and resuming the story',
+  {timeout: 90_000},
+  async () => {
+    const chromeExecutable = await resolveChromeExecutable();
+    const profileDirectory = await mkdtemp(path.join(tmpdir(), 'dsl4-playback-settings-'));
+    const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'dsl4-playback-settings-package-'));
+    const packageSb3 = async (archive: Uint8Array, title: string) => {
+      const packager = new TurboWarpPackager.Packager();
+      packager.project = await TurboWarpPackager.loadProject(archive);
+      excludeEmbeddedProjectExtensionsFromPackagerPreload(packager);
+      packager.options.autoplay = true;
+      packager.options.app.title = title;
+      return (await packager.package()).data;
+    };
+    const release = await createCurrentDsl4ReleaseSb3();
+    await writeFile(
+      path.join(fixtureDirectory, 'index.html'),
+      await packageSb3(release.archive, 'DSL 4.0 playback settings authoring'),
+    );
+    const {server, url} = await startFixtureServer('/index.html', fixtureDirectory);
+    const chrome = spawn(
+      chromeExecutable,
+      [
+        '--headless=new',
+        '--disable-background-networking',
+        '--disable-dev-shm-usage',
+        '--use-angle=swiftshader',
+        '--no-first-run',
+        '--no-sandbox',
+        '--remote-debugging-port=0',
+        `--user-data-dir=${profileDirectory}`,
+        url,
+      ],
+      {stdio: ['ignore', 'pipe', 'pipe']},
+    );
+    // The story's own reporter blocks are the public window on its state.
+    const reporter = (name: string) =>
+      `globalThis.Scratch.vm.runtime._primitives['kubohiroyakamishibai4_kubohiroyakamishibairuntime4__${name}']({}, {})`;
+    const storyStatus = reporter('storyStatusReporter');
+    const actionNumber = reporter('currentActionNumberReporter');
+    const settingsOpen = `document.querySelector('[data-dsl4-playback-settings=true]')?.hidden === false`;
+    const titleShown = `document.querySelector('[data-dsl4-title-controls=true]')?.style.display === 'block'`;
+    const menuShown = `document.querySelector('[data-dsl4-application-menu=true]')?.style.display === 'block'`;
+    const escape = {key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27};
+    let client: CdpClient | null = null;
+    try {
+      client = await CdpClient.connect(await waitForPageTarget(await waitForDevTools(chrome), url));
+      await client.send('Runtime.enable');
+      await waitForEvaluation(client, 'Boolean(globalThis.Scratch?.vm)', 'packaged TurboWarp VM');
+      // Build a distribution SB3 of a three-action story in the authoring app, as an author would.
+      await client.evaluate(`(() => {
+        const encoder = new TextEncoder();
+        const files = new Map([
+          ['project.source.json', JSON.stringify({
+            formatVersion: 1, mode: 'external', sourceId: 'main', path: 'story.kamishibai.yaml'
+          })],
+          ['story.kamishibai.yaml', "kamishibai: '4.0'\\ncontrols:\\n  keymaps:\\n    production:\\n      Space: navigation.nextAction\\nscenes:\\n  opening:\\n    - wait: 0.05\\n    - wait: 1.5\\n    - wait: 0.05\\n"]
+        ]);
+        const notFound = () => new DOMException('Entry not found', 'NotFoundError');
+        const root = {
+          kind: 'directory', name: 'settings-story',
+          async queryPermission() { return 'granted'; },
+          async requestPermission() { return 'granted'; },
+          async getFileHandle(name) {
+            if (!files.has(name)) throw notFound();
+            return {kind: 'file', name, async getFile() {
+              const bytes = encoder.encode(files.get(name));
+              return {name, size: bytes.byteLength, async arrayBuffer() { return bytes.slice().buffer; }};
+            }};
+          },
+          async getDirectoryHandle() { throw notFound(); }
+        };
+        globalThis.__dsl4SavedDistribution = null;
+        globalThis.showDirectoryPicker = async () => root;
+        globalThis.showSaveFilePicker = async () => ({
+          kind: 'file', name: 'story.sb3',
+          async createWritable() {
+            return {
+              async write(bytes) { globalThis.__dsl4SavedDistribution = new Uint8Array(bytes); },
+              async close() {}
+            };
+          }
+        });
+        return true;
+      })()`);
+      await waitForEvaluation(client, titleShown, 'authoring title');
+      await click(client, '[data-dsl4-title-action=close]');
+      await waitForEvaluation(client, menuShown, 'authoring application menu');
+      await click(client, '[data-dsl4-menu-action=open]');
+      await waitForEvaluation(
+        client,
+        `Boolean(document.querySelector('[data-dsl4-source-choice=project]'))`,
+        'project source chooser',
+      );
+      await click(client, '[data-dsl4-source-choice=project]');
+      await waitForEvaluation(
+        client,
+        `${menuShown} && document.querySelector('[data-dsl4-menu-action=build]')?.disabled === false`,
+        'enabled distribution build action',
+      );
+      await click(client, '[data-dsl4-menu-action=build]');
+      await waitForEvaluation(
+        client,
+        `globalThis.__dsl4SavedDistribution instanceof Uint8Array`,
+        'saved distribution SB3',
+      );
+      const distribution = Buffer.from(
+        requireString(
+          await client.evaluate(`(() => {
+            let binary = '';
+            for (const byte of globalThis.__dsl4SavedDistribution) binary += String.fromCharCode(byte);
+            return btoa(binary);
+          })()`),
+          'the distribution SB3',
+        ),
+        'base64',
+      );
+      await writeFile(
+        path.join(fixtureDirectory, 'play.html'),
+        await packageSb3(new Uint8Array(distribution), 'DSL 4.0 playback settings Player'),
+      );
+      await client.send('Page.navigate', {url: new URL('/play.html', url).href});
+      await client.send('Runtime.enable');
+      await waitForEvaluation(client, titleShown, 'Player title', {timeoutMs: 20_000});
+
+      // The Player keeps no always-visible Tools Dock; the settings are the entry point.
+      assert.equal(
+        await client.evaluate(`[...document.querySelectorAll('[data-runtime-controls-dock]')]
+          .every((dock) => getComputedStyle(dock).display === 'none')`),
+        true,
+      );
+
+      // Title: Config opens the settings over the title, and closing leaves the title up.
+      await click(client, '[data-dsl4-title-action=config]');
+      await waitForEvaluation(client, settingsOpen, 'settings opened from the title');
+      const fromTitle = await evaluateRecord(
+        client,
+        `(() => {
+          const root = document.querySelector('[data-dsl4-playback-settings=true]');
+          return {
+            context: root.getAttribute('data-dsl4-settings-context'),
+            pausedNote: root.querySelector('[data-dsl4-settings-paused]').hidden,
+            empty: root.querySelector('[data-dsl4-settings-empty]').hidden,
+          };
+        })()`,
+      );
+      assert.deepEqual(
+        fromTitle,
+        {context: 'title', pausedNote: true, empty: false},
+        'a story with only waits has no settings to offer',
+      );
+      await pressKey(client, escape);
+      await waitForEvaluation(client, `!(${settingsOpen})`, 'settings closed with Esc');
+      assert.equal(await client.evaluate(titleShown), true, 'closing must not start the story');
+
+      // Start the story and press Esc in its long wait.
+      await click(client, '[data-dsl4-title-action=start]');
+      await waitForEvaluation(
+        client,
+        `${storyStatus} === 'running' && ${actionNumber} === 2`,
+        'the long wait action',
+      );
+      await pressKey(client, escape);
+      await waitForEvaluation(client, settingsOpen, 'settings opened with Esc');
+      await waitForEvaluation(client, `${storyStatus} === 'paused'`, 'paused story');
+      const paused = await evaluateRecord(
+        client,
+        `(() => {
+          const root = document.querySelector('[data-dsl4-playback-settings=true]');
+          return {
+            context: root.getAttribute('data-dsl4-settings-context'),
+            pausedNote: root.querySelector('[data-dsl4-settings-paused]').hidden,
+            actionNumber: ${actionNumber},
+          };
+        })()`,
+      );
+      assert.deepEqual(paused, {context: 'playback', pausedNote: false, actionNumber: 2});
+      // The story stays paused while the settings are open, well past the wait it was in.
+      await new Promise((resolve) => setTimeout(resolve, 2_000));
+      assert.equal(await client.evaluate(storyStatus), 'paused');
+
+      await click(client, '[data-dsl4-settings-done]');
+      await waitForEvaluation(client, `!(${settingsOpen})`, 'settings closed');
+      await waitForEvaluation(
+        client,
+        `${storyStatus} === 'running' && ${actionNumber} === 2`,
+        'the story resumed at the action it stopped in',
+      );
+      // The end-of-story menu keeps its actions once the story finishes.
+      await waitForEvaluation(client, menuShown, 'end-of-story application menu', {
+        timeoutMs: 15_000,
+      });
+      const menu = await evaluateRecord(
+        client,
+        `Object.fromEntries(['open', 'reload', 'about', 'language'].map((action) => [
+          action,
+          document.querySelector('[data-dsl4-menu-action=' + action + ']')?.hidden === false,
+        ]))`,
+      );
+      assert.deepEqual(menu, {open: true, reload: true, about: true, language: true});
       assert.deepEqual(client.exceptions, []);
     } finally {
       client?.close();

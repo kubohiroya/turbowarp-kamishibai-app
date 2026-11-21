@@ -13,6 +13,8 @@
  * widening those to the concrete record types would tie every host to the controller's snapshot
  * shape for no gain.
  */
+import type {Dsl4PlaybackFeatures} from './playback-features.js';
+
 export interface Dsl4NavigationSessionSurface {
   captureSave?(): Promise<unknown>;
   exportSave?(): Promise<Blob>;
@@ -46,6 +48,8 @@ export interface Dsl4NavigationSessionSurface {
   invokeAction(action: Readonly<Record<string, unknown>>): Promise<unknown>;
   queueVariableWrite(request: unknown): unknown;
   rejectActionInvocation(error: unknown): Promise<unknown>;
+  /** What the playback settings can offer for this story; preview doubles may omit it. */
+  getPlaybackFeatures?(): Dsl4PlaybackFeatures;
   /** Probed before use: only sessions with the debugger surface expose it. */
   getRuntimeVariableSnapshot?(): unknown;
 }

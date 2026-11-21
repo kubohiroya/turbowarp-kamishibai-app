@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import {createDsl4AudioMixer} from '../src/dsl4/platform/audio-mixer.js';
+import {createDsl4PlaybackPreferences} from '../src/dsl4/platform/playback-preferences.js';
 import {creationCleanup} from './helpers/creation-cleanup.ts';
 import {createHash, webcrypto} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
@@ -959,6 +961,71 @@ scenes:
   await hostOf(result).dispose('crossfade-test');
   assert.deepEqual(requireDefined(voices[0], 'the first voice').calls.at(-1), ['stop']);
   assert.deepEqual(requireDefined(voices[1], 'the second voice').calls.at(-1), ['stop']);
+});
+
+test('routes BGM voices through the playback settings mixer and reports the story features', async () => {
+  const project = await packagedProject(`
+kamishibai: '4.0'
+controls:
+  keymaps:
+    production:
+      Space: navigation.nextAction
+assets:
+  OpeningSound: sound
+scenes:
+  opening:
+    - bgm: OpeningSound
+`);
+  const fixture = platformFixture([]);
+  fixture.runtime.renderer = {};
+  const gains: unknown[] = [];
+  fixture.assetManagerComposition.getMimeType = (name: unknown) =>
+    name === 'OpeningSound' ? 'audio/wav' : 'image/svg+xml';
+  fixture.assetManagerComposition.createAudioVoice = async (_name: unknown, options: unknown) => {
+    gains.push((options as {gain: number}).gain);
+    return {
+      ended: new Promise(() => {}),
+      setGain(value: unknown) {
+        gains.push(value);
+      },
+      stop() {},
+    };
+  };
+  const preferences = createDsl4PlaybackPreferences();
+  preferences.setChannel('bgm', {volume: 50});
+  const audioMixer = createDsl4AudioMixer(preferences);
+  const result = await createDsl4TurboWarpRuntimeHost(
+    enabledOptions(project, fixture, {
+      featureFlags: {dsl4Runtime: true, dsl4CrossfadeTransitions: true},
+      audioMixer,
+    }),
+  );
+  assert.equal(result.ok, true, JSON.stringify(result.diagnostics));
+  const host = hostOf(result) as ReturnType<typeof hostOf> & {
+    getPlaybackFeatures(): unknown;
+    quiesce: unknown;
+    resumeQuiesce: unknown;
+  };
+  assert.deepEqual(host.getPlaybackFeatures(), {
+    bgm: true,
+    effects: false,
+    skip: false,
+    skipDefault: false,
+    recognition: false,
+  });
+  assert.equal(typeof host.quiesce, 'function');
+  assert.equal(typeof host.resumeQuiesce, 'function');
+  assert.equal(reported(await host.start(), 'the runtime state').status, 'finished');
+  assert.deepEqual(gains, [0.5], 'the authored full volume is halved by the BGM slider');
+  preferences.setChannel('bgm', {enabled: false});
+  assert.deepEqual(gains, [0.5, 0], 'the playing BGM follows the switch');
+  await host.dispose('mixer-test');
+  await assert.rejects(
+    createDsl4TurboWarpRuntimeHost(
+      enabledOptions(project, platformFixture([]), {audioMixer: {} as typeof audioMixer}),
+    ),
+    /audioMixer must provide/u,
+  );
 });
 
 test('resolves one startup-fixed session backing policy behind its default-off flag', () => {

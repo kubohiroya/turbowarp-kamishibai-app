@@ -49,6 +49,8 @@ import {createDsl4ScratchPoseFeedbackAdapter} from './scratch-pose-feedback-adap
 import {createDsl4SvgTextPlatform} from './svg-text-action-port.js';
 import {createDsl4TurboWarpActorPlatform} from './turbowarp-actor-adapter.js';
 import {createDsl4TurboWarpCrossfadePlatform} from './turbowarp-crossfade-platform.js';
+import type {Dsl4AudioMixer} from './audio-mixer.js';
+import {dsl4NoPlaybackFeatures} from '../playback-features.js';
 import {
   createDsl4RuntimeCacheLeaseLifecycle,
   defaultCacheLeaseHeartbeatMs,
@@ -134,6 +136,10 @@ interface TurboWarpRuntimeHostOptions extends SessionBackingHostOptions {
   readonly createAssetManagerComposition?: AssetManagerCompositionFactory;
   readonly createAsyncInputComposition?: AsyncInputCompositionFactory;
   readonly createAudioVoice?: (assetId: string, options: Readonly<{gain: number}>) => unknown;
+  /** Scales BGM and sound effect gains by the person's playback settings. */
+  readonly audioMixer?: Dsl4AudioMixer;
+  /** The playback settings' skip choice; `null` follows the story. */
+  readonly skipOverride?: () => boolean | null;
   readonly createBubbleComposition?: Dsl4ForwardedFactory;
   readonly createFile?: Dsl4ForwardedFactory;
   readonly createHostPort?: (context: HostPortContext) => HostPort | Promise<HostPort>;
@@ -256,6 +262,18 @@ let fallbackSessionIdCounter = 0;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readAudioMixer(value: unknown): Dsl4AudioMixer | undefined {
+  if (value === undefined) return undefined;
+  if (
+    !isRecord(value) ||
+    typeof value.playbackFactory !== 'function' ||
+    typeof value.voiceFactory !== 'function'
+  ) {
+    throw new TypeError('audioMixer must provide playbackFactory and voiceFactory');
+  }
+  return value as unknown as Dsl4AudioMixer;
 }
 
 function createSessionBackingId() {
@@ -588,6 +606,7 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
   let latestPoseState: Readonly<Record<string, unknown>> | null = null;
   const inputArbitration = createDsl4InputArbitration();
   const featureFlags = resolveDsl4FeatureFlags(options.featureFlags);
+  const audioMixer = readAudioMixer(options.audioMixer);
   const videoScenes = component.storyDocument.scenes as readonly {
     actions: readonly {command: string}[];
   }[];
@@ -839,11 +858,15 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
     publishBinarySessionBacking(assetSession.binaryAssetBacking);
     if (featureFlags.dsl4CrossfadeTransitions) {
       const composition = assetSession.assetManagerComposition;
-      const createAudioVoice =
+      const createBaseAudioVoice =
         options.createAudioVoice ??
         (typeof composition.createAudioVoice === 'function'
           ? composition.createAudioVoice.bind(composition)
           : undefined);
+      const createAudioVoice =
+        createBaseAudioVoice === undefined || audioMixer === undefined
+          ? createBaseAudioVoice
+          : audioMixer.voiceFactory('bgm', createBaseAudioVoice);
       crossfadePlatform = createDsl4TurboWarpCrossfadePlatform({
         runtimeHost: turboWarpHost,
         ...(options.actorScheduler === undefined ? {} : {scheduler: options.actorScheduler}),
@@ -861,8 +884,16 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
     }
     const displayBindings = new Map<string, string>();
     const imageComposition = assetSession.assetManagerComposition;
+    const createEffectPlayback =
+      audioMixer === undefined || typeof imageComposition.createAudioPlayback !== 'function'
+        ? undefined
+        : audioMixer.playbackFactory(
+            'effects',
+            imageComposition.createAudioPlayback.bind(imageComposition),
+          );
     const trackedComposition = {
       ...imageComposition,
+      ...(createEffectPlayback === undefined ? {} : {createAudioPlayback: createEffectPlayback}),
       async applyToStage(name: string) {
         await imageComposition.applyToStage(name);
         displayBindings.set('$stage', name);
@@ -888,12 +919,17 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
     audioPort = createDsl4AudioActionPort({
       getAssetResource: assetSession.getAssetResource,
       createAudioPlayback(source, settings) {
-        const create = assetSession?.assetManagerComposition.createAudioPlayback;
-        if (typeof create !== 'function')
+        const composition = assetSession?.assetManagerComposition;
+        const baseCreate = composition?.createAudioPlayback;
+        if (typeof baseCreate !== 'function')
           throw hostError(
             'K4-AUDIO-UNAVAILABLE',
             'Asset Manager composition requires createAudioPlayback',
           );
+        const create =
+          audioMixer === undefined
+            ? baseCreate
+            : audioMixer.playbackFactory('effects', baseCreate.bind(composition));
         return Promise.resolve(create(source, settings)) as ReturnType<
           Parameters<typeof createDsl4AudioActionPort>[0]['createAudioPlayback']
         >;
@@ -1698,6 +1734,9 @@ export async function createDsl4TurboWarpRuntimeHost(options: TurboWarpRuntimeHo
     ...(options.debugExecution === undefined
       ? {}
       : {debugExecution: options.debugExecution as RuntimeDebugExecution}),
+    ...(options.skipOverride === undefined
+      ? {}
+      : {skipOverride: options.skipOverride as () => boolean | null}),
     subtleCrypto: options.subtleCrypto,
     async createRuntimeEnvironment(
       runtimeComponent: Readonly<Record<string, unknown>>,
@@ -1927,6 +1966,18 @@ export async function createDsl4TurboWarpRuntimeHost(options: TurboWarpRuntimeHo
     },
     whenInputIdle() {
       return session.whenInputIdle();
+    },
+    /** Stop at a safe action boundary, for example while the playback settings are open. */
+    quiesce(request: {candidateId: number}) {
+      ensureActive();
+      return session.quiesce(request);
+    },
+    resumeQuiesce(candidateId: number) {
+      ensureActive();
+      return session.resumeQuiesce(candidateId);
+    },
+    getPlaybackFeatures() {
+      return session.getPlaybackFeatures?.() ?? dsl4NoPlaybackFeatures;
     },
     getState() {
       return session.getState();

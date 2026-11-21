@@ -3,6 +3,7 @@ import {test} from 'vitest';
 
 import {createDsl4RuntimeController, dsl4CoreActionNames} from '../src/dsl4/index.js';
 import type {RuntimeEvent} from '../src/dsl4/runtime-controller.js';
+import {resolveDsl4PlaybackFeatures} from '../src/dsl4/playback-features.js';
 import type {Dsl4RuntimePort} from '../src/dsl4/runtime-port.js';
 import {deferred} from './helpers/async-test-helpers.ts';
 import {dsl4TestSourceFrontend} from './helpers/dsl4-test-frontend.ts';
@@ -2235,6 +2236,71 @@ test('pose navigation policy is independent of all feedback modes', async () => 
     allowedCleanup.resolve();
     await allowedRun;
   }
+});
+
+test('the playback settings skip choice overrides the story allowSkip while the story runs', async () => {
+  let override: boolean | null = true;
+  const cleanup = deferred();
+  const controller = createDsl4RuntimeController({
+    storyDocument: poseNavigationStory(false),
+    poseNavigationPolicyEnabled: true,
+    skipOverride: () => override,
+    port: {
+      waitForPose: poseWaitWithDeferredCleanup(cleanup, []),
+      stage: async () => {},
+    },
+  });
+  const run = controller.start();
+  assert.equal(controller.canAdvance('navigation.nextAction'), true, 'override allows');
+  override = null;
+  assert.equal(controller.canAdvance('navigation.nextAction'), false, 'null follows the story');
+  override = false;
+  assert.equal(controller.canAdvance('navigation.nextAction'), false, 'override forbids');
+  controller.stop('test-cleanup');
+  cleanup.resolve();
+  await run;
+
+  const allowedCleanup = deferred();
+  const forbidden = createDsl4RuntimeController({
+    storyDocument: poseNavigationStory(true),
+    poseNavigationPolicyEnabled: true,
+    skipOverride: () => {
+      throw new Error('settings unavailable');
+    },
+    port: {
+      waitForPose: poseWaitWithDeferredCleanup(allowedCleanup, []),
+      stage: async () => {},
+    },
+  });
+  const allowedRun = forbidden.start();
+  assert.equal(
+    forbidden.canAdvance('navigation.nextAction'),
+    true,
+    'a failing settings reader keeps the story policy',
+  );
+  forbidden.stop('test-cleanup');
+  allowedCleanup.resolve();
+  await allowedRun;
+
+  assert.throws(
+    () =>
+      createDsl4RuntimeController({
+        storyDocument: poseNavigationStory(true),
+        skipOverride: true as unknown as () => boolean,
+        port: {},
+      }),
+    /skipOverride must be a function/u,
+  );
+});
+
+test('playback features read the normalized pose story', () => {
+  assert.deepEqual(resolveDsl4PlaybackFeatures(poseNavigationStory(true)), {
+    bgm: false,
+    effects: true,
+    skip: true,
+    skipDefault: true,
+    recognition: true,
+  });
 });
 
 test('unskippable pose policy does not block navigation outside waitForPose', async () => {

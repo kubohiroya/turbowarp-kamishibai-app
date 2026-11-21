@@ -1,3 +1,4 @@
+import {resolveDsl4PlaybackFeatures} from './playback-features.js';
 import {createDsl4SessionSavePort} from './session-save.js';
 import type {Dsl4SaveIdentity, Dsl4SaveDataV1} from './save-data.js';
 import type {Dsl4RestorePresentation} from './save-presentation.js';
@@ -95,6 +96,7 @@ export function createDsl4NavigationSession({
   historyLimits,
   port,
   debugExecution,
+  skipOverride,
   assetLifecycle,
   createAssetLifecycle,
   evaluateCondition,
@@ -123,6 +125,7 @@ export function createDsl4NavigationSession({
   historyLimits?: {maxActionEntries: number; maxSceneVisits: number} | undefined;
   port: Dsl4RuntimePort;
   debugExecution?: NavigationDebugExecution | undefined;
+  skipOverride?: (() => boolean | null) | undefined;
   assetLifecycle?: Dsl4AssetPreloadLifecycle;
   createAssetLifecycle?: () => Dsl4AssetPreloadLifecycle;
   evaluateCondition?: (
@@ -299,6 +302,7 @@ export function createDsl4NavigationSession({
       storyDocument,
       port,
       ...(debugExecution === undefined ? {} : {debugExecution}),
+      ...(skipOverride === undefined ? {} : {skipOverride}),
       ...(resolvedAssetLifecycle === undefined ? {} : {assetLifecycle: resolvedAssetLifecycle}),
       ...(evaluateCondition === undefined
         ? {}
@@ -486,6 +490,7 @@ export function createDsl4NavigationSession({
     ...(onInputError === undefined ? {} : {onError: onInputError}),
   });
 
+  const playbackFeatures = resolveDsl4PlaybackFeatures(storyDocument);
   const actionsByPath = new Map(
     (storyDocument.scenes as ReadonlyArray<Readonly<Record<string, unknown>>>).flatMap((scene) =>
       (scene.actions as ReadonlyArray<Readonly<Record<string, unknown>>>).map((action) => [
@@ -698,6 +703,7 @@ export function createDsl4NavigationSession({
     resumeQuiesce(candidateId: number) {
       return controller.resumeQuiesce(candidateId);
     },
+    getPlaybackFeatures: () => playbackFeatures,
     hasPendingCleanup: cleanup.hasPendingCleanup,
     dispose() {
       disposed = true;
