@@ -1,0 +1,27 @@
+{
+  "formatVersion": 1,
+  "series": "4.0",
+  "version": "4.0.2",
+  "channel": "latest",
+  "buildDate": "2026-11-22",
+  "state": "frozen",
+  "sourceIdentity": "sha256:dc16a6a3215023811d323cac3d2bac7ac8f6a0e4c3548f107d59d0b8fbcb0ea3",
+  "artifact": {
+    "filename": "kamishibai-4.0.2.sb3",
+    "sha256": "3948ce066fa8a8d5798b7547731ef484712e436bfeabed866ce20066d1a0d05c",
+    "size": 7858420,
+    "url": "https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/download/v4.0.2/kamishibai-4.0.2.sb3"
+  },
+  "publication": {
+    "npm": {
+      "distTag": "latest"
+    },
+    "github": {
+      "prerelease": false,
+      "tag": "v4.0.2"
+    },
+    "pages": {
+      "recommended": true
+    }
+  }
+}
