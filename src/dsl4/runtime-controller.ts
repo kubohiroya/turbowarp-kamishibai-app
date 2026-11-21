@@ -185,6 +185,7 @@ export function createDsl4RuntimeController({
   structuredDataIntegration,
   createRestoreStructuredDataIntegration,
   debugExecution,
+  skipOverride,
   posePreviewMirroringEnabled = false,
   cameraPreviewControlsEnabled = false,
   poseNavigationPolicyEnabled = false,
@@ -208,6 +209,11 @@ export function createDsl4RuntimeController({
   structuredDataIntegration?: StructuredDataIntegration;
   createRestoreStructuredDataIntegration?: () => StructuredDataIntegration;
   debugExecution?: DebugExecution;
+  /**
+   * The person's skip choice from the playback settings, read at each decision. `null` follows
+   * the story's `recognition.navigation.allowSkip`.
+   */
+  skipOverride?: () => boolean | null;
   posePreviewMirroringEnabled?: boolean;
   cameraPreviewControlsEnabled?: boolean;
   poseNavigationPolicyEnabled?: boolean;
@@ -240,6 +246,9 @@ export function createDsl4RuntimeController({
       typeof debugExecution.getState !== 'function')
   ) {
     throw new TypeError('debugExecution must provide beforeAction and getState');
+  }
+  if (skipOverride !== undefined && typeof skipOverride !== 'function') {
+    throw new TypeError('skipOverride must be a function');
   }
   if (typeof posePreviewMirroringEnabled !== 'boolean') {
     throw new TypeError('posePreviewMirroringEnabled must be boolean');
@@ -423,6 +432,17 @@ export function createDsl4RuntimeController({
           : false,
     },
   });
+  /** The story's skip policy, unless the person overrode it in the playback settings. */
+  function allowSkip() {
+    if (skipOverride === undefined) return poseSequenceRecognition.navigation.allowSkip;
+    let override: unknown = null;
+    try {
+      override = skipOverride();
+    } catch {
+      // A failing settings reader cannot change what the story itself allows.
+    }
+    return typeof override === 'boolean' ? override : poseSequenceRecognition.navigation.allowSkip;
+  }
   const poseSelectionRecognition = deepFreeze({
     ...defaultPoseSelectionRecognition,
     ...((recognition.selection ?? {}) as Readonly<Record<string, number>>),
@@ -2012,7 +2032,7 @@ export function createDsl4RuntimeController({
     const poseWait = activePoseWait;
     return (
       hasActivePoseWait() &&
-      (poseWait?.waitingForRecognition || poseSequenceRecognition.navigation.allowSkip) &&
+      (poseWait?.waitingForRecognition || allowSkip()) &&
       (reason === 'rehearsal.skipPose' ||
         (poseNavigationPolicyEnabled && reason === 'navigation.nextAction'))
     );
@@ -2028,7 +2048,7 @@ export function createDsl4RuntimeController({
     if (poseAdvanceLock && poseAdvanceLock.generation !== generation) poseAdvanceLock = null;
     if (poseAdvanceLock || rehearsalSkipLock || rehearsalSceneSkip) return false;
     if (command === 'rehearsal.skipPose') {
-      return hasActivePoseWait() && poseSequenceRecognition.navigation.allowSkip;
+      return hasActivePoseWait() && allowSkip();
     }
     if (command === 'rehearsal.skipAction') {
       return actionAbortController !== null && currentAction() !== null;
@@ -2045,7 +2065,7 @@ export function createDsl4RuntimeController({
     if (poseAdvanceLock && poseAdvanceLock.generation !== generation) poseAdvanceLock = null;
     if (poseAdvanceLock) return false;
     if (!isPoseNavigationAdvance(reason)) return true;
-    return poseSequenceRecognition.navigation.allowSkip;
+    return allowSkip();
   }
 
   /** Continue at the next normal execution boundary after the active action is cancelled. */

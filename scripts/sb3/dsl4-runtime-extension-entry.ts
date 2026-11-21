@@ -28,6 +28,11 @@ import {
   createDsl4ComputeSettings,
 } from '../../dist/dsl4/platform/compute-settings.js';
 import {createDsl4PublicationDistributionSb3} from '../../dist/dsl4/platform/publication-distribution.js';
+import {createDsl4PlaybackPreferences} from '../../dist/dsl4/platform/playback-preferences.js';
+import {createDsl4AudioMixer} from '../../dist/dsl4/platform/audio-mixer.js';
+import {createDsl4PlaybackSettings} from '../../dist/dsl4/platform/playback-settings.js';
+import type {Dsl4PlaybackSettingsContext} from '../../dist/dsl4/platform/playback-settings.js';
+import type {Dsl4PlaybackFeatures} from '../../dist/dsl4/playback-features.js';
 import {downloadDsl4BrowserDistributionSb3} from '../../dist/dsl4/platform/browser-distribution-build.js';
 import {readDsl4ProjectPublication} from '../../dist/dsl4/platform/publication-project.js';
 import {createDsl4PublicationVmStageFactory} from '../../dist/dsl4/platform/publication-vm-stage.js';
@@ -116,7 +121,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.0';
+const extensionVersion = '4.0.1';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -256,6 +261,10 @@ interface RuntimeEntryRuntimeInvoker {
  */
 interface RuntimeEntryRuntimeHost extends RuntimeEntryRuntimeInvoker {
   getState?(): RuntimeEntryStateSnapshot;
+  /** Probed: publication hosts cannot pause at an action boundary. */
+  quiesce?(request: {candidateId: number}): Promise<unknown>;
+  resumeQuiesce?(candidateId: number): unknown;
+  getPlaybackFeatures?(): Dsl4PlaybackFeatures;
   start(): Promise<{status: string; diagnostic?: unknown; failureContext?: unknown}>;
   prepareMenu(): unknown | Promise<unknown>;
   attach(target: unknown): unknown;
@@ -620,6 +629,17 @@ class KamishibaiDsl4RuntimeExtension {
   applicationMenu: ReturnType<typeof createDsl4RuntimeApplicationMenu> | null;
   computePreferences = createDsl4ComputePreferences({globalObject: globalThis});
   computeSettings: ReturnType<typeof createDsl4ComputeSettings> | null = null;
+  /** Device audio preferences and this story's skip choice, shared by every generation. */
+  playbackPreferences = createDsl4PlaybackPreferences({globalObject: globalThis});
+  audioMixer = createDsl4AudioMixer(this.playbackPreferences);
+  playbackSettings: ReturnType<typeof createDsl4PlaybackSettings> | null = null;
+  /** The story stopped at an action boundary while the settings are open. */
+  settingsPause: {
+    shell: RuntimeEntryAppShell;
+    candidateId: number;
+    paused: Promise<boolean>;
+  } | null = null;
+  settingsCandidateId = 0;
 
   titleControls: ReturnType<typeof createDsl4RuntimeTitleControls> | null;
   sourceChooser: RuntimeEntrySourceChooser | null;
@@ -698,6 +718,8 @@ class KamishibaiDsl4RuntimeExtension {
           kamishibaiLog.warn('camera controls cleanup failed.', loggedError(error));
         }
       }
+      // The skip choice belongs to one story; a new project starts from what its story says.
+      this.playbackPreferences.setSkipOverride(null);
       queueMicrotask(() => {
         this.computeSettings?.dispose();
         this.computeSettings = null;
@@ -722,6 +744,8 @@ class KamishibaiDsl4RuntimeExtension {
       });
     }
     if (DSL4_AUTHORING_PROFILE) this.installDropTarget();
+    this.installPlaybackSettingsShortcut();
+    this.hideRuntimeDockInPlayer();
     this.ensureComputeSettings();
     this.ensureTitleControls()?.show(this.titleLocale);
     this.ensureCameraPermissionGate(this.titleLocale);
@@ -1387,6 +1411,131 @@ class KamishibaiDsl4RuntimeExtension {
     return this.computeSettings;
   }
 
+  /**
+   * The Player has no Editor toolbar, so app-shell shows its Runtime controls Dock ("Tools") over
+   * the page all the time. The playback settings are the entry point instead: they open the
+   * Teachable Machine and camera panels the Dock would have, so the Dock itself stays hidden.
+   */
+  hideRuntimeDockInPlayer() {
+    const document = globalThis.document;
+    if (!document || Array.isArray(document.scripts) || this.Scratch.gui?.stageControls) return;
+    if (document.querySelector?.('style[data-dsl4-hidden-runtime-dock]')) return;
+    const style = document.createElement('style');
+    style.dataset.dsl4HiddenRuntimeDock = 'true';
+    style.textContent = '[data-runtime-controls-dock]{display:none!important}';
+    (document.head ?? document.body)?.appendChild(style);
+  }
+
+  /** The Dock's camera entry, which Camera Source registers in players. */
+  runtimeDockCameraButton() {
+    const button = globalThis.document?.querySelector?.(
+      '[data-runtime-controls-dock] [data-runtime-dock-control="camera"]',
+    ) as HTMLButtonElement | null | undefined;
+    return button && !button.hidden ? button : null;
+  }
+
+  /** Esc while the story plays opens the settings, before the story's keymap sees the key. */
+  installPlaybackSettingsShortcut() {
+    const document = globalThis.document;
+    if (!document || Array.isArray(document.scripts)) return;
+    // The window sees the key before the story's keymap, which listens on the document.
+    const view = document.defaultView;
+    if (!view || typeof view.addEventListener !== 'function') return;
+    view.addEventListener(
+      'keydown',
+      (event: KeyboardEvent) => {
+        if (event.key !== 'Escape' && event.code !== 'Escape') return;
+        if (event.repeat) return;
+        if (this.playbackSettings?.isOpen() || this.status !== 'running' || !this.shell) return;
+        const target = event.target as HTMLElement | null;
+        // Leave Esc to text fields, the editor's own inputs, and panels that close on it.
+        if (
+          target &&
+          (target.isContentEditable ||
+            ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+            target.closest?.(
+              '[data-dsl4-compute-settings], [data-camera-source-settings], [role="dialog"]',
+            ))
+        ) {
+          return;
+        }
+        event.preventDefault();
+        // The settings close on Esc from their own listener; this press only opens them.
+        event.stopImmediatePropagation();
+        this.openPlaybackSettings('playback');
+      },
+      true,
+    );
+  }
+
+  ensurePlaybackSettings() {
+    if (this.playbackSettings) return this.playbackSettings;
+    const document = globalThis.document;
+    if (!document || Array.isArray(document.scripts)) return null;
+    try {
+      this.playbackSettings = createDsl4PlaybackSettings({
+        document,
+        mount: resolveRuntimeMount(this.Scratch),
+        preferences: this.playbackPreferences,
+        onClose: (context) => this.closePlaybackSettings(context),
+        canOpenCamera: () => this.runtimeDockCameraButton() !== null,
+        onOpenCamera: () => this.runtimeDockCameraButton()?.click(),
+        onOpenRecognition: () => this.ensureComputeSettings()?.show(this.titleLocale),
+        onError: (error) => kamishibaiLog.warn('playback settings failed.', loggedError(error)),
+      });
+    } catch (error) {
+      kamishibaiLog.error('playback-settings failed.', loggedError(error));
+      return null;
+    }
+    return this.playbackSettings;
+  }
+
+  /** What the settings can offer: the story's own answer once it is loaded. */
+  playbackFeatures(): Dsl4PlaybackFeatures {
+    const features = this.shell?.runtimeHost.getPlaybackFeatures?.();
+    if (features) return features;
+    // Before a story is loaded only device settings are known to apply.
+    return Object.freeze({
+      bgm: true,
+      effects: true,
+      skip: false,
+      skipDefault: false,
+      recognition: this.computeSettings !== null,
+    });
+  }
+
+  openPlaybackSettings(context: Dsl4PlaybackSettingsContext) {
+    const settings = this.ensurePlaybackSettings();
+    if (!settings || settings.isOpen()) return;
+    if (context === 'playback') {
+      const shell = this.shell;
+      const host = shell?.runtimeHost;
+      if (shell && typeof host?.quiesce === 'function' && !this.settingsPause) {
+        this.settingsCandidateId += 1;
+        const candidateId = this.settingsCandidateId;
+        const paused = host.quiesce({candidateId}).then(
+          () => true,
+          (error: unknown) => {
+            // A story that cannot stop here keeps playing behind the settings.
+            kamishibaiLog.warn('playback could not pause for settings.', loggedError(error));
+            return false;
+          },
+        );
+        this.settingsPause = {shell, candidateId, paused};
+      }
+    }
+    settings.show({features: this.playbackFeatures(), locale: this.titleLocale, context});
+  }
+
+  async closePlaybackSettings(context: Dsl4PlaybackSettingsContext) {
+    this.computeSettings?.hide();
+    if (context !== 'playback') return;
+    const pause = this.settingsPause;
+    this.settingsPause = null;
+    if (!pause || !(await pause.paused) || this.shell !== pause.shell) return;
+    await pause.shell.runtimeHost.resumeQuiesce?.(pause.candidateId);
+  }
+
   ensureTitleControls() {
     if (this.titleControls) return this.titleControls;
     const document = globalThis.document;
@@ -1400,16 +1549,19 @@ class KamishibaiDsl4RuntimeExtension {
             website: 'Open Official Website',
             close: appShellLocales.en.ui.close,
             start: 'Start Kamishibai',
+            config: 'Config',
           },
           ja: {
             website: '公式Webサイトを開く',
             close: appShellLocales.ja.ui.close,
             start: '紙芝居を始める',
+            config: '設定',
           },
         },
         websiteIconUrl: officialWebsiteIcon,
         onWebsite: () => this.openOfficialWebsite(),
         onClose: () => this.requestCloseTitle(),
+        onConfig: () => this.openPlaybackSettings('title'),
         onError: (error) => this.reportFailure(error, 'title-controls'),
       });
     } catch (error) {
@@ -1791,6 +1943,9 @@ class KamishibaiDsl4RuntimeExtension {
 
   async stop(reason: string) {
     this.computeSettings?.hide();
+    // Stopping discards the paused generation, so closing the settings has nothing to resume.
+    this.settingsPause = null;
+    this.playbackSettings?.hide();
     this.previewShell?.setReloadVisible(false);
     this.errorPresentation += 1;
     this.blockErrorLocation?.clearHighlight();
@@ -2025,6 +2180,8 @@ class KamishibaiDsl4RuntimeExtension {
               }
             : {}),
           runtime: turboWarpHost.runtime,
+          audioMixer: this.audioMixer,
+          skipOverride: () => this.playbackPreferences.getSkipOverride(),
           onTitleStart() {
             turboWarpHost.startHats('event_whenbroadcastreceived', {
               BROADCAST_OPTION: 'closeTitle',

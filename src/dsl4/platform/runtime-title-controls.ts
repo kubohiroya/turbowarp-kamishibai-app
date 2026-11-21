@@ -50,6 +50,7 @@ function requireDocument(value: unknown) {
 }
 
 const titleStartLabels = Object.freeze({en: 'Start Kamishibai', ja: '紙芝居を始める'});
+const titleConfigLabels = Object.freeze({en: 'Config', ja: '設定'});
 
 /**
  * The start action is the title's primary call to action: large, saturated and centred in the band
@@ -63,6 +64,10 @@ const titleWebsiteButtonCss =
 const titleWebsiteIconCss =
   'display:inline-flex;flex:none;width:5.8333cqw;height:5.8333cqw;align-items:center;justify-content:center;line-height:1;font-size:3.75cqw;opacity:.8;';
 const titleWebsiteLabelCss = 'font-size:2.0833cqw;line-height:1.15;text-align:center;';
+/** The settings action sits under the website action, as quiet as it is. */
+const titleConfigButtonCss =
+  'position:absolute;left:55.5%;top:46.6667%;width:32%;height:9.4444%;display:flex;align-items:center;justify-content:center;gap:1.25cqw;box-sizing:border-box;border:.2083cqw solid #8ccfbb;border-radius:1.6667cqw;background:#c6eadf;color:#005f50;box-shadow:none;cursor:pointer;pointer-events:auto;padding:0 1.25cqw;font:inherit;font-size:2.0833cqw;line-height:1.15;text-align:center;white-space:nowrap;';
+const titleConfigIconCss = 'flex:none;font-size:2.9167cqw;line-height:1;opacity:.8;';
 
 function childElements(element: Dsl4RuntimeUiElement) {
   return Array.from(element.children ?? []);
@@ -79,13 +84,15 @@ export function createDsl4RuntimeTitleControls(options: {
   document: unknown;
   mount: unknown;
   locales: Readonly<
-    Record<'en' | 'ja', Readonly<{website: string; close: string; start?: string}>>
+    Record<'en' | 'ja', Readonly<{website: string; close: string; start?: string; config?: string}>>
   >;
   websiteIconUrl?: string;
   onWebsite: () => unknown | Promise<unknown>;
   /** Defaults to `onClose`: leaving the title is what starts the Kamishibai. */
   onStart?: () => unknown | Promise<unknown>;
   onClose: () => unknown | Promise<unknown>;
+  /** Opens the playback settings. Without it the title has no settings action. */
+  onConfig?: () => unknown | Promise<unknown>;
   onError?: (error: unknown) => unknown;
 }) {
   if (!isRecord(options)) throw new TypeError('title control options are required');
@@ -95,6 +102,8 @@ export function createDsl4RuntimeTitleControls(options: {
   if (typeof options.onClose !== 'function') throw new TypeError('onClose must be a function');
   if (options.onStart !== undefined && typeof options.onStart !== 'function')
     throw new TypeError('onStart must be a function');
+  if (options.onConfig !== undefined && typeof options.onConfig !== 'function')
+    throw new TypeError('onConfig must be a function');
   for (const locale of ['en', 'ja'] as const) {
     if (
       !isRecord(options.locales?.[locale]) ||
@@ -159,11 +168,45 @@ export function createDsl4RuntimeTitleControls(options: {
   };
   start.addEventListener('click', onStartClick);
   root.appendChild(start);
+
+  const onConfig = options.onConfig;
+  let config: Dsl4RuntimeUiElement | null = null;
+  let configLabel: Dsl4RuntimeUiElement | null = null;
+  const onConfigClick = (event: {stopPropagation?: () => void}) => {
+    // The title overlay sits on the Stage; the click must not also start the story.
+    event?.stopPropagation?.();
+    try {
+      void Promise.resolve(onConfig?.()).catch((error: unknown) => options.onError?.(error));
+    } catch (error) {
+      options.onError?.(error);
+    }
+  };
+  if (onConfig) {
+    config = createElement.call(document, 'button');
+    config.type = 'button';
+    config.setAttribute('data-dsl4-title-action', 'config');
+    config.style.cssText = titleConfigButtonCss;
+    const icon = createElement.call(document, 'span');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.style.cssText = titleConfigIconCss;
+    icon.textContent = '⚙';
+    configLabel = createElement.call(document, 'span');
+    config.appendChild(icon);
+    config.appendChild(configLabel);
+    config.addEventListener('click', onConfigClick);
+    root.appendChild(config);
+  }
+
   let locale: 'en' | 'ja' = 'en';
   const renderStart = () => {
     const label = options.locales[locale].start ?? titleStartLabels[locale];
     start.textContent = label;
     start.setAttribute('aria-label', label);
+    if (config && configLabel) {
+      const text = options.locales[locale].config ?? titleConfigLabels[locale];
+      configLabel.textContent = text;
+      config.setAttribute('aria-label', text);
+    }
   };
   renderStart();
 
@@ -178,6 +221,8 @@ export function createDsl4RuntimeTitleControls(options: {
     dispose: () => {
       start.removeEventListener('click', onStartClick);
       start.remove();
+      config?.removeEventListener('click', onConfigClick);
+      config?.remove();
       controls.dispose();
     },
   });

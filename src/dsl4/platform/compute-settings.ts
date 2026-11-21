@@ -190,6 +190,9 @@ export function createDsl4ComputeSettings(options: {
     const view = document.defaultView;
     if (!dock || !view) return;
     const rect = dock.getBoundingClientRect();
+    // The playback settings hide the Dock in players and open this panel themselves. A hidden
+    // Dock has no box, so it cannot bound the panel: keep the panel's own viewport limits.
+    if (rect.width === 0 && rect.height === 0) return;
     const edge = dock.getAttribute('data-edge');
     const height =
       edge === 'bottom'

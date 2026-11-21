@@ -182,6 +182,8 @@ export async function createDsl4RuntimeStartup(
       context: Readonly<{command: string; code: string}>,
     ) => unknown | Promise<unknown>;
     debugExecution?: RuntimeDebugExecution;
+    /** The playback settings' skip choice; `null` follows the story. */
+    skipOverride?: () => boolean | null;
     subtleCrypto?: Dsl4SubtleCrypto | undefined;
   } = {},
 ) {
@@ -206,6 +208,9 @@ export async function createDsl4RuntimeStartup(
     throw new TypeError(
       'debugExecution is required when dsl4Debugger or dsl4EditorDebugger is enabled',
     );
+  }
+  if (options.skipOverride !== undefined && typeof options.skipOverride !== 'function') {
+    throw new TypeError('skipOverride must be a function');
   }
   if (options.assetLifecycle !== undefined && options.createAssetLifecycle !== undefined) {
     throw new TypeError('Provide either assetLifecycle or createAssetLifecycle, not both');
@@ -404,6 +409,7 @@ export async function createDsl4RuntimeStartup(
       ...(debuggerEnabled && options.debugExecution !== undefined
         ? {debugExecution: options.debugExecution}
         : {}),
+      ...(options.skipOverride === undefined ? {} : {skipOverride: options.skipOverride}),
       ...(createAssetLifecycle
         ? {createAssetLifecycle: () => createAssetLifecycle(component, startupContext)}
         : {}),

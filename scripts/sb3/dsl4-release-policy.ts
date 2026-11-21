@@ -41,12 +41,12 @@ export type Dsl4ReleaseMetadata = Sb3ReleaseSnapshotMetadata & {
 };
 
 export const dsl4ReleaseVersion = releasePins.release.version;
-export const dsl4NextReleaseVersion = '4.0.1';
+export const dsl4NextReleaseVersion = '4.0.2';
 export const dsl4ReleaseIsPrerelease = dsl4ReleaseVersion.includes('-');
 // Reproduce the frozen rc.84 artifact; subsequent candidates use the compact SIMD build.
 export const dsl4ReleaseCompactWasm = dsl4ReleaseVersion !== '4.0.0-rc.84';
 export const dsl4ReleaseSeries = releasePins.release.series;
-export const dsl4ReleaseBuildDate = '2026-11-20';
+export const dsl4ReleaseBuildDate = '2026-11-22';
 export const dsl4ReleaseChannel = releasePins.release.channel;
 export const dsl4ReleaseTag = `v${dsl4ReleaseVersion}`;
 export const dsl4ReleaseFilename = `kamishibai-${dsl4ReleaseVersion}.sb3`;
