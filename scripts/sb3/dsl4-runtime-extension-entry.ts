@@ -49,7 +49,10 @@ import {
 
 import schema from '../../schema/dsl-4.schema.json' with {type: 'json'};
 
-import {createDsl4ProductionSourceFrontend} from '../../dist/builder/dsl4-source-frontend.js';
+import {
+  createDsl4ProductionSourceFrontend,
+  createLazyDsl4SourceFrontend,
+} from '../../dist/builder/dsl4-source-frontend.js';
 import {
   dsl4StandardProductionFeatureFlags,
   resolveDsl4FeatureFlags,
@@ -121,7 +124,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.1';
+const extensionVersion = '4.0.2';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -590,8 +593,11 @@ class KamishibaiDsl4RuntimeExtension {
   /** The coordinator of the editor run, which `getInspectorVariables` reads the pause from. */
   editorDebugExecution: Readonly<{getState(): Readonly<Record<string, unknown>>}> | null = null;
   editorDebugSession: RuntimeEntryDisposable | null = null;
-  coreActionBlockAdapter: ReturnType<typeof createDsl4TurboWarpCoreActionBlockAdapter>;
-  frontend: ReturnType<typeof createDsl4ProductionSourceFrontend>;
+  coreActionBlockAdapterInstance: ReturnType<
+    typeof createDsl4TurboWarpCoreActionBlockAdapter
+  > | null = null;
+  /** Builds the production frontend, and compiles its schema, on the first parse. */
+  frontend: ReturnType<typeof createLazyDsl4SourceFrontend>;
   declare installDropTarget: () => unknown;
   declare isDistributionBuildEnabled: () => boolean;
   declare openStoryFile: () => unknown;
@@ -666,11 +672,14 @@ class KamishibaiDsl4RuntimeExtension {
     }
     for (const operation of Object.values(yamlBlockOperations))
       Object.defineProperty(this, operation, {value: () => false});
-    this.frontend = createDsl4ProductionSourceFrontend(schema, {
-      runtimeStateExpressionsEnabled: productionFeatureFlags.dsl4ExpressionRuntimeState,
-      narrativeControlEnabled: productionFeatureFlags.dsl4NarrativeControl,
-    });
-    this.coreActionBlockAdapter = createDsl4TurboWarpCoreActionBlockAdapter(schema);
+    // Compiling the schema costs on the order of 100 ms, which the title screen, compiled stories
+    // and projects without a story never need; the first parse pays for it instead.
+    this.frontend = createLazyDsl4SourceFrontend(() =>
+      createDsl4ProductionSourceFrontend(schema, {
+        runtimeStateExpressionsEnabled: productionFeatureFlags.dsl4ExpressionRuntimeState,
+        narrativeControlEnabled: productionFeatureFlags.dsl4NarrativeControl,
+      }),
+    );
     this.shell = null;
     this.errorIndicator = null;
     this.warningIndicator = null;
@@ -1141,11 +1150,17 @@ class KamishibaiDsl4RuntimeExtension {
     return invoker as RuntimeEntryActionInvoker;
   }
 
+  /** The action block adapter compiles its schema definitions, so it is built on first use. */
+  coreActionBlockAdapter() {
+    this.coreActionBlockAdapterInstance ??= createDsl4TurboWarpCoreActionBlockAdapter(schema);
+    return this.coreActionBlockAdapterInstance;
+  }
+
   async invokeCoreActionBlock(command: string, args: ScratchBlockArguments) {
     let invoker;
     try {
       invoker = this.actionInvoker();
-      const action = this.coreActionBlockAdapter.createAction(command, args);
+      const action = this.coreActionBlockAdapter().createAction(command, args);
       return await invoker.invokeAction(action);
     } catch (error) {
       if (invoker) {
