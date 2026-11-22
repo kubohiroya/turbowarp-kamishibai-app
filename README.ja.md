@@ -119,7 +119,7 @@ preview、validator、builder、runtime loaderは同じStoryDocumentと診断を
 - [Capability bundle and release contract](https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/design/dsl-4-capability-bundle-release.md): 固定extension package、embedded ID、artifact provenance、rollback policy
 - [DSL 3.1/3.2 to 4.0 migration](https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/design/dsl-4-migration.md): 変換分類、warning、legacy artifact policy
 
-現行4.0正式版は`@kubohiroya/turbowarp-teachable-machine@4.3.0`と`kubohiroyatm` embedded Teachable Machine extension IDを使います。旧package名、CLI名、URL、SB3 IDは過去releaseとmigration noteにだけ残します。認識の計算方式は初回Autoです。単独HTMLでは縁の「ツール」にホバー／タップすると共通Dockが現れ、カメラと並ぶ「Teachable Machine」から設定を開けます。Dockの設定で上・下・左・右を選べます。緑の旗・停止ボタンと同じ操作列の設定ボタンからJavaScript（CPU）・WASM・WebGPUを選択できます。開発者APIと適用時のモデル解放については[認識の計算方式](https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/recognition-compute.ja.md)を参照してください。
+現行4.0正式版は`@kubohiroya/turbowarp-teachable-machine@4.4.0`と`kubohiroyatm` embedded Teachable Machine extension IDを使います。旧package名、CLI名、URL、SB3 IDは過去releaseとmigration noteにだけ残します。認識の計算方式は初回Autoです。単独HTMLでは縁の「ツール」にホバー／タップすると共通Dockが現れ、カメラと並ぶ「Teachable Machine」から設定を開けます。Dockの設定で上・下・左・右を選べます。緑の旗・停止ボタンと同じ操作列の設定ボタンからJavaScript（CPU）・WASM・WebGPUを選択できます。開発者APIと適用時のモデル解放については[認識の計算方式](https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/recognition-compute.ja.md)を参照してください。
 
 ## このリポジトリを開発する
 
