@@ -128,8 +128,9 @@ jobs:
             fi
           done
 
-  # npm and the site do not depend on each other. Running them side by side keeps the registry's
-  # serving delay (often several minutes) from also delaying the site.
+  # The site lists the current release from its verified publication record, which the npm job
+  # attaches to the GitHub Release as its last step. So the site job waits for the npm job; run
+  # side by side, the site build found no record and failed (v4.0.4).
   npm:
     needs: release
     permissions:
@@ -229,7 +230,7 @@ jobs:
           git diff --exit-code
 
   site:
-    needs: release
+    needs: [release, npm]
     permissions:
       contents: write
       pages: write
