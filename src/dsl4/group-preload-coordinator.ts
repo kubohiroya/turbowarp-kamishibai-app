@@ -119,6 +119,8 @@ export function createDsl4GroupPreloadCoordinator({
   // Recognition models loading in the background, and those already loaded, by asset id.
   const background = new Map<string, BackgroundLoad>();
   const loadedBackground = new Map<string, string>();
+  /** Identifies the latest scene to start background loads, so a stale one starts no prefetch. */
+  let backgroundToken = 0;
   function prepareBackground(
     sceneId: string,
     assetId: string,
@@ -154,44 +156,61 @@ export function createDsl4GroupPreloadCoordinator({
     }
     releaseBackground(stopped, reason, null);
   }
-  /** Start loading a scene's recognition models without holding up the scene. */
-  function startBackground(sceneId: string, generation: number) {
-    const assetIds = index.scenes[sceneId]?.background ?? [];
-    stopBackground(new Set(assetIds), 'scene-superseded');
-    for (const assetId of assetIds) {
-      if (background.has(assetId) || loadedBackground.has(assetId)) continue;
-      const abort = new AbortController();
-      const load: BackgroundLoad = {sceneId, abort, promise: Promise.resolve()};
-      background.set(assetId, load);
-      onEvent('assets.background.start', {sceneId, assetIds: [assetId]});
-      load.promise = prepareBackground(
-        sceneId,
-        assetId,
-        context(abort.signal, generation, sceneId),
-      );
-      void load.promise.then(
-        () => {
-          if (background.get(assetId) !== load) return;
-          background.delete(assetId);
-          loadedBackground.set(assetId, sceneId);
-          onEvent('assets.background.ready', {sceneId, assetIds: [assetId]});
-        },
-        (error) => {
-          if (background.get(assetId) !== load) return;
-          background.delete(assetId);
-          // The recognition action that needs the model reports the failure when it waits.
-          onEvent('assets.background.error', {
-            sceneId,
-            assetIds: [assetId],
-            message: error instanceof Error ? error.message : String(error),
-          });
-        },
-      );
-    }
+  /** Load one recognition model in the background, or join its load if one is running. */
+  function loadBackground(
+    sceneId: string,
+    generation: number,
+    assetId: string,
+    prefetch: boolean,
+  ): Promise<void> {
+    if (loadedBackground.has(assetId)) return Promise.resolve();
+    const running = background.get(assetId);
+    if (running) return running.promise.catch(() => {});
+    const abort = new AbortController();
+    const load: BackgroundLoad = {sceneId, abort, promise: Promise.resolve()};
+    background.set(assetId, load);
+    onEvent('assets.background.start', {sceneId, assetIds: [assetId], prefetch});
+    load.promise = prepareBackground(sceneId, assetId, context(abort.signal, generation, sceneId));
+    return load.promise.then(
+      () => {
+        if (background.get(assetId) !== load) return;
+        background.delete(assetId);
+        loadedBackground.set(assetId, sceneId);
+        onEvent('assets.background.ready', {sceneId, assetIds: [assetId], prefetch});
+      },
+      (error) => {
+        if (background.get(assetId) !== load) return;
+        background.delete(assetId);
+        // The recognition action that needs the model reports the failure when it waits.
+        onEvent('assets.background.error', {
+          sceneId,
+          assetIds: [assetId],
+          prefetch,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      },
+    );
   }
-  /** Release loaded models that the committed scene does not use. */
+  /**
+   * Start loading a scene's recognition models without holding up the scene. Once they have
+   * settled, the models of the scenes it can move to next load too.
+   */
+  function startBackground(sceneId: string, generation: number) {
+    const scene = index.scenes[sceneId];
+    const own = scene?.background ?? [];
+    const prefetch = scene?.prefetch ?? [];
+    stopBackground(new Set([...own, ...prefetch]), 'scene-superseded');
+    const token = ++backgroundToken;
+    const loads = own.map((assetId) => loadBackground(sceneId, generation, assetId, false));
+    void Promise.all(loads).then(() => {
+      if (token !== backgroundToken) return;
+      for (const assetId of prefetch) void loadBackground(sceneId, generation, assetId, true);
+    });
+  }
+  /** Release loaded models that neither the committed scene nor the scenes after it use. */
   function commitBackground(sceneId: string) {
-    const keep = new Set(index.scenes[sceneId]?.background ?? []);
+    const scene = index.scenes[sceneId];
+    const keep = new Set([...(scene?.background ?? []), ...(scene?.prefetch ?? [])]);
     const unused = [...loadedBackground.keys()].filter((assetId) => !keep.has(assetId));
     for (const assetId of unused) loadedBackground.delete(assetId);
     releaseBackground(unused, 'scene-committed', sceneId);
@@ -203,6 +222,7 @@ export function createDsl4GroupPreloadCoordinator({
     for (const load of background.values()) load.abort.abort(reason);
     background.clear();
     loadedBackground.clear();
+    backgroundToken += 1;
     releasing = (async () => {
       const errors: unknown[] = [];
       try {

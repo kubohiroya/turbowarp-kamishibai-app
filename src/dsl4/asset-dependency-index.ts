@@ -162,12 +162,26 @@ export function createDsl4AssetDependencyIndex(storyDocument: Readonly<Record<st
       lazy: ReadonlyArray<string>;
       /** Recognition models the scene loads in the background without waiting for them. */
       background: ReadonlyArray<string>;
+      /**
+       * Recognition models of the scenes this scene can move to next, loaded in the background
+       * once the scene's own models are ready, so the next scene rarely waits for its model.
+       */
+      prefetch: ReadonlyArray<string>;
       sceneRetained: ReadonlyArray<string>;
     }>
   > = {};
-  for (const scene of (storyDocument.scenes ?? []) as ReadonlyArray<
+  const sceneList = (storyDocument.scenes ?? []) as ReadonlyArray<
     Readonly<Record<string, unknown>>
-  >) {
+  >;
+  const backgroundBySceneId = new Map<string, ReadonlyArray<string>>();
+  const successorsBySceneId = new Map<string, ReadonlySet<string>>();
+  for (const [sceneIndex, scene] of sceneList.entries()) {
+    successorsBySceneId.set(
+      String(scene.id),
+      sceneSuccessors(scene, sceneList[sceneIndex + 1], storyDocument.branches),
+    );
+  }
+  for (const scene of sceneList) {
     const dependencies = new Set<string>();
     addDependency(scene.recognitionModel, dependencies);
     let usesPoseRecognition = false;
@@ -187,13 +201,28 @@ export function createDsl4AssetDependencyIndex(storyDocument: Readonly<Record<st
       for (const assetId of recognitionDependencies) dependencies.add(assetId);
     }
     const all = sortedUnique(dependencies);
-    scenes[String(scene.id)] = deepFreeze({
+    backgroundBySceneId.set(
+      String(scene.id),
+      all.filter((assetId) => recognitionModels.has(assetId)),
+    );
+    scenes[String(scene.id)] = {
       all,
       eager: all.filter((assetId) => startup.has(assetId)),
       lazy: all.filter((assetId) => !startup.has(assetId) && !recognitionModels.has(assetId)),
-      background: all.filter((assetId) => recognitionModels.has(assetId)),
+      background: backgroundBySceneId.get(String(scene.id)) ?? [],
+      prefetch: [],
       sceneRetained: all.filter((assetId) => sceneRetainedAssets.has(assetId)),
-    });
+    };
+  }
+  for (const [sceneId, entry] of Object.entries(scenes)) {
+    const own = new Set(entry.background);
+    const prefetch = new Set<string>();
+    for (const next of successorsBySceneId.get(sceneId) ?? []) {
+      for (const assetId of backgroundBySceneId.get(next) ?? []) {
+        if (!own.has(assetId)) prefetch.add(assetId);
+      }
+    }
+    scenes[sceneId] = deepFreeze({...entry, prefetch: sortedUnique(prefetch)});
   }
 
   return deepFreeze({
@@ -208,4 +237,68 @@ export function createDsl4AssetDependencyIndex(storyDocument: Readonly<Record<st
     sceneRetained: sortedUnique(sceneRetainedAssets),
     scenes,
   });
+}
+
+/**
+ * The scenes a scene can move to next: the following scene in order unless the scene ends by
+ * moving elsewhere, and every scene its actions
+ * name through `goto`, a branch, or the routes of an input action, at any nesting depth. A custom
+ * action can also move elsewhere, but its destination is not known before it runs.
+ */
+function sceneSuccessors(
+  scene: Readonly<Record<string, unknown>>,
+  following: Readonly<Record<string, unknown>> | undefined,
+  branches: unknown,
+): ReadonlySet<string> {
+  const successors = new Set<string>();
+  const actions = Array.isArray(scene.actions) ? scene.actions : [];
+  const last = actions.at(-1) as Readonly<Record<string, unknown>> | undefined;
+  // A scene that ends by moving elsewhere never runs on into the following scene.
+  const endsByMoving =
+    last?.command === 'goto' ||
+    last?.command === 'branch' ||
+    (typeof last?.command === 'string' && last.command.endsWith('InputToChangeScene'));
+  if (following && !endsByMoving) successors.add(String(following.id));
+  const branchRules =
+    typeof branches === 'object' && branches !== null
+      ? (branches as Readonly<Record<string, unknown>>)
+      : {};
+  const visit = (value: unknown, depth: number) => {
+    if (depth > 64 || typeof value !== 'object' || value === null) return;
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item, depth + 1);
+      return;
+    }
+    const record = value as Readonly<Record<string, unknown>>;
+    const args =
+      typeof record.args === 'object' && record.args !== null
+        ? (record.args as Readonly<Record<string, unknown>>)
+        : null;
+    if (record.kind === 'Action' && args) {
+      if (record.command === 'goto' && typeof args.scene === 'string') successors.add(args.scene);
+      if (record.command === 'branch' && typeof args.branch === 'string') {
+        const rules = branchRules[args.branch];
+        for (const rule of Array.isArray(rules) ? rules : []) {
+          const target =
+            (rule as Readonly<Record<string, unknown>>)?.goto ??
+            (rule as Readonly<Record<string, unknown>>)?.else;
+          if (typeof target === 'string') successors.add(target);
+        }
+      }
+      if (
+        typeof record.command === 'string' &&
+        record.command.endsWith('InputToChangeScene') &&
+        typeof args.routes === 'object' &&
+        args.routes !== null
+      ) {
+        for (const target of Object.values(args.routes)) {
+          if (typeof target === 'string') successors.add(target);
+        }
+      }
+    }
+    for (const child of Object.values(record)) visit(child, depth + 1);
+  };
+  visit(scene.actions, 0);
+  successors.delete(String(scene.id));
+  return successors;
 }

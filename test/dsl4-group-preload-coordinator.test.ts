@@ -550,13 +550,18 @@ scenes:
   assert((await owner.waitForSceneAsset('rescue', 'RescuePose', 1, signal)).ok);
   assert.equal(prepared.length, before);
 
+  // With its own model ready, the scene prefetches the model of the scene it moves to next.
+  await waitUntil(() => prepared.flat().includes('SeaPose'));
+  assert(events.includes('assets.background.start:SeaPose'));
+
   // Moving on releases the previous model only when the next scene commits.
   owner.beginScene('sea', 2);
   assert((await withDeadline(owner.waitForScene('sea'), 'next scene entry', 1000)).ok);
   assert(live.has('RescuePose'));
   await owner.commitScene('sea', 'transition');
   await waitUntil(() => !live.has('RescuePose'));
-  assert(events.includes('assets.background.start:SeaPose'));
+  // The prefetch already running is joined, not started again.
+  assert.equal(prepared.filter((ids) => ids.includes('SeaPose')).length, 1);
 
   // Release stops the load still running.
   await owner.release('dispose');
