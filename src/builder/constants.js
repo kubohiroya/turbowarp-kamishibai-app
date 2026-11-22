@@ -1,5 +1,5 @@
 export const packageName = '@kubohiroya/tmpose-kamishibai';
-export const packageVersion = '3.2.3';
+export const packageVersion = '3.2.4';
 export const bundleManifestFormatVersion = 2;
 export const assetManifestFormatVersion = 1;
 export const fixedZipTimestamp = new Date(1980, 0, 1, 0, 0, 0, 0);

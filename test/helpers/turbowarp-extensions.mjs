@@ -1052,12 +1052,15 @@ export function registerKamishibaiTestExtensions(
     }
   }
 
-  class WebLinkExtension {
+  // TurboWarp gallery Network (true-fantom/network.js): only the block the app uses.
+  class NetworkExtension {
     getInfo() {
-      return extensionInfo('kubohiroyaweblink', [block('openUrl', BlockType.COMMAND, ['URL'])]);
+      return extensionInfo('truefantomnetwork', [
+        block('open_link_block', BlockType.COMMAND, ['USER_URL']),
+      ]);
     }
-    openUrl(args) {
-      state.openedUrls.push(Cast.toString(args.URL));
+    open_link_block(args) {
+      state.openedUrls.push(Cast.toString(args.USER_URL));
     }
   }
 
@@ -1080,7 +1083,7 @@ export function registerKamishibaiTestExtensions(
   register(vm, 'lmsTimers', TimersExtension);
   register(vm, 'files', FilesExtension);
   register(vm, 'translate', TranslateExtension);
-  register(vm, 'kubohiroyaweblink', WebLinkExtension);
+  register(vm, 'truefantomnetwork', NetworkExtension);
 
   const memberRuntimes = new Map(
     bundledMemberIds.map((memberId) => [memberId, createBundledRuntime(vm.runtime, memberId)]),

@@ -36772,12 +36772,12 @@
           "shadow": false,
           "topLevel": false
         },
-        "ui_kubohiroyaweblink_openUrl_130": {
-          "opcode": "kubohiroyaweblink_openUrl",
+        "ui_truefantomnetwork_open_link_block_130": {
+          "opcode": "truefantomnetwork_open_link_block",
           "next": null,
           "parent": "ui_control_if_132",
           "inputs": {
-            "URL": [
+            "USER_URL": [
               3,
               "ui_lmsTempVars2_getRuntimeVariable_131",
               [
@@ -36793,7 +36793,7 @@
         "ui_lmsTempVars2_getRuntimeVariable_131": {
           "opcode": "lmsTempVars2_getRuntimeVariable",
           "next": null,
-          "parent": "ui_kubohiroyaweblink_openUrl_130",
+          "parent": "ui_truefantomnetwork_open_link_block_130",
           "inputs": {
             "VAR": [
               1,
@@ -36818,7 +36818,7 @@
             ],
             "SUBSTACK": [
               2,
-              "ui_kubohiroyaweblink_openUrl_130"
+              "ui_truefantomnetwork_open_link_block_130"
             ]
           },
           "fields": {},
@@ -37047,11 +37047,11 @@
           "y": 160
         },
         "officialWebsiteOpen": {
-          "opcode": "kubohiroyaweblink_openUrl",
+          "opcode": "truefantomnetwork_open_link_block",
           "next": null,
           "parent": "officialWebsiteClick",
           "inputs": {
-            "URL": [
+            "USER_URL": [
               1,
               [
                 10,
@@ -37977,7 +37977,7 @@
     "files",
     "text",
     "translate",
-    "kubohiroyaweblink"
+    "truefantomnetwork"
   ],
   "extensionURLs": {
     "sipcconsole": "https://extensions.turbowarp.org/-SIPC-/consoles.js",
@@ -37993,7 +37993,7 @@
     "lmsTimers": "https://extensions.turbowarp.org/Lily/MoreTimers.js",
     "files": "https://extensions.turbowarp.org/files.js",
     "text": "embedded-extension:extensions/text.js",
-    "kubohiroyaweblink": "embedded-extension:extensions/kubohiroyaweblink.js",
+    "truefantomnetwork": "https://extensions.turbowarp.org/true-fantom/network.js",
     "kubohiroyasvgtext": "embedded-extension:extensions/kubohiroyasvgtext.js"
   },
   "meta": {

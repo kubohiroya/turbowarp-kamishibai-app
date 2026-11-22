@@ -117,13 +117,6 @@
         "artifact": "dist/async-input.js",
         "integrity": "sha256-7ojxfFwlnh7poT836exJ7E2FakSUeFkgZPfI88W79Kc="
       }
-    },
-    {
-      "id": "kubohiroyaweblink",
-      "path": "extensions/kubohiroyaweblink.js",
-      "mediaType": "text/javascript",
-      "parameters": [],
-      "encoding": "base64"
     }
   ],
   "extensionBundles": [
