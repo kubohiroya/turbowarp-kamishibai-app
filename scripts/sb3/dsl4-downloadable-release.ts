@@ -10,8 +10,10 @@ import {buildExtensionBundles} from '@kubohiroya/sb3-toolchain';
 import type {EmbeddedExtension, ExtensionBundleMetadata} from '@kubohiroya/sb3-toolchain';
 import {build} from 'vite';
 
-import {dsl4ReleaseCompactWasm} from './dsl4-release-policy.ts';
-import {createDsl4TeachableMachineExtensionSource} from './teachable-machine-runtime.ts';
+import {
+  createDsl4TeachableMachineExtensionSource,
+  readDsl4TeachableMachineRuntimeSite,
+} from './teachable-machine-runtime.ts';
 import {installDsl4PackagedRuntimeComponent} from '../../dist/builder/dsl4-source.js';
 import {createDsl4ProductionSourceFrontend} from '../../dist/builder/dsl4-source-frontend.js';
 import {dsl4StandardProductionFeatureFlags} from '../../dist/dsl4/feature-flags.js';
@@ -150,10 +152,10 @@ const externalExtensionMembers = Object.freeze(
       name: 'Teachable Machine',
       package: '@kubohiroya/turbowarp-teachable-machine',
       version: '4.4.0',
-      artifact: 'dist/teachable-machine-webgpu.js',
+      // The lightweight extension: the Kamishibai site serves the TensorFlow.js runtime it loads.
+      artifact: 'dist/teachable-machine.js',
       sourcePath: fileURLToPath(
-        import.meta
-          .resolve('@kubohiroya/turbowarp-teachable-machine/dist/teachable-machine-webgpu.js'),
+        import.meta.resolve('@kubohiroya/turbowarp-teachable-machine/dist/teachable-machine.js'),
       ),
     },
   ].map((member) => Object.freeze({...member, path: `extensions/${member.id}.js`})),
@@ -577,6 +579,7 @@ async function buildDsl4RuntimeExtensionSource(profile: string, narrativeControl
       ),
       DSL4_AUTHORING_PROFILE: JSON.stringify(profile === 'authoring'),
       DSL4_NARRATIVE_CONTROL: JSON.stringify(narrativeControlEnabled),
+      DSL4_TM_RUNTIME: JSON.stringify(await readDsl4TeachableMachineRuntimeSite()),
     },
     build: {
       write: false,
@@ -610,13 +613,13 @@ async function buildDsl4RuntimeExtensionSource(profile: string, narrativeControl
   return Buffer.from(output.code, 'utf8');
 }
 
-async function loadExternalExtensionSources(compactWasm: boolean) {
+async function loadExternalExtensionSources() {
   return Promise.all(
     externalExtensionMembers.map(async (member) => ({
       ...member,
       contents:
         member.id === 'kubohiroyatm'
-          ? await createDsl4TeachableMachineExtensionSource({compactWasm})
+          ? await createDsl4TeachableMachineExtensionSource()
           : await readFile(member.sourcePath),
     })),
   );
@@ -653,11 +656,10 @@ function extensionSourceDescriptors(
 export async function createDsl4RuntimeBundleSource({
   profile = 'authoring',
   narrativeControlEnabled = dsl4StandardProductionFeatureFlags.dsl4NarrativeControl,
-  compactWasm = dsl4ReleaseCompactWasm,
 } = {}) {
   const [runtimeExtensionSource, externalExtensionSources] = await Promise.all([
     createDsl4RuntimeExtensionSource({profile, narrativeControlEnabled}),
-    loadExternalExtensionSources(compactWasm),
+    loadExternalExtensionSources(),
   ]);
   const extensions = extensionSourceDescriptors(externalExtensionSources);
   const extensionContents = new Map<string, Buffer>([
@@ -688,12 +690,12 @@ export async function createDsl4RuntimeBundleSource({
   );
 }
 
-export async function createDsl4ReleaseSourceFiles({compactWasm = dsl4ReleaseCompactWasm} = {}) {
+export async function createDsl4ReleaseSourceFiles() {
   const assets = titleAssets();
   const project = await createProject(assets);
   const [runtimeExtensionSource, externalExtensionSources] = await Promise.all([
     createDsl4RuntimeExtensionSource(),
-    loadExternalExtensionSources(compactWasm),
+    loadExternalExtensionSources(),
   ]);
   const archiveEntries = ['project.json', ...assets.map(({filename}) => filename)];
   const files = new Map([

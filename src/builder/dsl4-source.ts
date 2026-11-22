@@ -14,6 +14,7 @@ import {
 } from '../dsl4/source-descriptor.js';
 import {applyDsl4SourceOrigins, Dsl4SourceOriginError} from '../dsl4/source-origin-descriptor.js';
 import {validateDsl4PoseNetProjectBundle} from '../dsl4/platform/posenet-bundle.js';
+import {validateDsl4TMOfflineRuntime} from '../dsl4/platform/tm-runtime-owner.js';
 import {
   isDsl4PoseNetRemoteDescriptor,
   validateDsl4PoseNetRemoteDescriptor,
@@ -203,6 +204,7 @@ export async function installDsl4RuntimeComponent(
     assetBundleFormat = 'embedded-base64',
     assetDistribution,
     poseNetBundle,
+    tmRuntime,
     runtimeExtensionSource,
     maxAssetFiles,
     maxAssetFileBytes,
@@ -220,6 +222,7 @@ export async function installDsl4RuntimeComponent(
     maxTotalAssetBytes?: number;
     assetDistribution?: unknown;
     poseNetBundle?: unknown;
+    tmRuntime?: unknown;
     runtimeExtensionSource?: string;
     subtleCrypto?: Dsl4SubtleCrypto | undefined;
   },
@@ -322,6 +325,9 @@ export async function installDsl4RuntimeComponent(
               : {subtleCrypto: subtleCrypto as unknown as Pick<SubtleCrypto, 'digest'>}),
           });
 
+  const validatedTMRuntime =
+    tmRuntime === undefined ? undefined : validateDsl4TMOfflineRuntime(tmRuntime);
+
   const output = structuredClone(project) as Record<string, unknown>;
   installPlaybackRuntimeExtension(output, runtimeExtensionSource);
   const extensionStorage = objectProperty(output, 'extensionStorage');
@@ -335,7 +341,8 @@ export async function installDsl4RuntimeComponent(
       opposite.artifact !== undefined ||
       opposite.assets !== undefined ||
       opposite.assetDistribution !== undefined ||
-      opposite.poseNet !== undefined)
+      opposite.poseNet !== undefined ||
+      opposite.tmRuntime !== undefined)
   ) {
     fail(
       'DSL 4.0 runtime component already exists in the opposite storage channel',
@@ -382,6 +389,10 @@ export async function installDsl4RuntimeComponent(
   if (validatedPoseNetBundle !== undefined) {
     selected.poseNet = structuredClone(validatedPoseNetBundle);
   }
+  // Only a network-free work carries the Teachable Machine runtime; a rebuild for the network
+  // drops the copy an earlier build stored.
+  if (validatedTMRuntime !== undefined) selected.tmRuntime = structuredClone(validatedTMRuntime);
+  else delete selected.tmRuntime;
   if (assetDistribution !== undefined)
     selected.assetDistribution = structuredClone(assetDistribution);
   else delete selected.assetDistribution;

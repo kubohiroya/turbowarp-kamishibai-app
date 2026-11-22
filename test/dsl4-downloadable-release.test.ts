@@ -8,12 +8,12 @@ import {fileURLToPath} from 'node:url';
 import {runInNewContext, runInThisContext} from 'node:vm';
 import {test, vi} from 'vitest';
 
-import {inflateSync, strFromU8, strToU8, unzipSync, zipSync} from 'fflate';
+import {strFromU8, strToU8, unzipSync, zipSync} from 'fflate';
 import {buildSb3, importSb3} from '@kubohiroya/sb3-toolchain';
 import {readCameraSourceRuntime} from '@kubohiroya/turbowarp-camera-source/runtime';
 
 import {createKamishibaiSb3} from '../scripts/sb3/build.ts';
-import {dsl4ReleaseCompactWasm} from '../scripts/sb3/dsl4-release-policy.ts';
+import {readDsl4TeachableMachineRuntimeSite} from '../scripts/sb3/teachable-machine-runtime.ts';
 import {authorDsl4BlockSourceSb3} from '../src/builder/dsl4-block-source-author.js';
 import {
   createDsl4ReleaseSourceFiles,
@@ -262,16 +262,15 @@ async function buildRelease() {
   return buildCurrentRuntimeRelease();
 }
 
-const pendingCurrentRuntimeReleases = new Map<boolean, Promise<{archive: Buffer}>>();
+let pendingCurrentRuntimeRelease: Promise<{archive: Buffer}> | undefined;
 
-function buildCurrentRuntimeRelease(compactWasm = dsl4ReleaseCompactWasm) {
-  const pending = pendingCurrentRuntimeReleases.get(compactWasm);
-  if (pending) return pending;
+function buildCurrentRuntimeRelease() {
+  if (pendingCurrentRuntimeRelease) return pendingCurrentRuntimeRelease;
   const built = (async () => {
     const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'dsl4-current-release-'));
     const sourceDirectory = path.join(temporaryRoot, 'app');
     try {
-      for (const [relativePath, contents] of await createDsl4ReleaseSourceFiles({compactWasm})) {
+      for (const [relativePath, contents] of await createDsl4ReleaseSourceFiles()) {
         const outputPath = path.join(sourceDirectory, relativePath);
         await mkdir(path.dirname(outputPath), {recursive: true});
         await writeFile(outputPath, contents);
@@ -288,7 +287,7 @@ function buildCurrentRuntimeRelease(compactWasm = dsl4ReleaseCompactWasm) {
       await rm(temporaryRoot, {recursive: true, force: true});
     }
   })();
-  pendingCurrentRuntimeReleases.set(compactWasm, built);
+  pendingCurrentRuntimeRelease = built;
   return built;
 }
 
@@ -675,7 +674,7 @@ async function assertFreshBrowserBuiltStoryRuns(archive: unknown) {
   }
 }
 
-test('builds the current DSL 4.0 runtime with one shared TensorFlow.js registry', async () => {
+test('builds the current DSL 4.0 runtime and leaves TensorFlow.js to the site runtime', async () => {
   const extensionSource = (await createDsl4RuntimeExtensionSource()).toString('utf8');
   const bundleSource = (await createDsl4RuntimeBundleSource()).toString('utf8');
   for (const [flag, enabled] of Object.entries(dsl4StandardProductionFeatureFlags)) {
@@ -684,19 +683,14 @@ test('builds the current DSL 4.0 runtime with one shared TensorFlow.js registry'
   }
   assert.equal(extensionSource.includes('@tensorflow/tfjs@4.22.0'), true);
   assert.equal(extensionSource.includes('if(0===r)return globalThis.tf;if(e[r])'), false);
+  // The reviewed runtime and every WASM binary live on the Kamishibai site, not in the bundle.
   assert.equal(
     bundleSource.includes('TM browser runtime found a different global TensorFlow.js instance.'),
-    true,
+    false,
   );
-  assert.equal(bundleSource.includes('data:application/octet-stream;base64,'), true);
-  assert.equal(
-    (
-      bundleSource.match(
-        /TM browser runtime found a different global TensorFlow.js instance\./gu,
-      ) ?? []
-    ).length,
-    1,
-  );
+  assert.equal(bundleSource.includes('data:application/octet-stream;base64,'), false);
+  const site = await readDsl4TeachableMachineRuntimeSite();
+  assert.equal(bundleSource.includes(JSON.stringify(site.runtimeUrl)), true);
 });
 
 test('keeps the Bubble reveal entry and provenance aligned through sb3-toolchain', async () => {
@@ -957,40 +951,32 @@ test('keeps PoseNet model data out of the current generated runtime extension an
   );
 });
 
-test('compacts the Standard SB3 with two byte-identical offline SIMD WASM variants', async () => {
-  const baseline = unzipSync((await buildCurrentRuntimeRelease(false)).archive);
-  const {archive} = await buildCurrentRuntimeRelease(true);
-  const compact = unzipSync(archive);
-  const projectBytes = entryOf(compact, 'project.json');
-  assert(entryOf(baseline, 'project.json').length - projectBytes.length > 1024 * 1024);
-  assert(projectBytes.length < 15 * 1024 * 1024);
+test('carries no TensorFlow.js: the Teachable Machine member loads the runtime from the site', async () => {
+  const {archive} = await buildCurrentRuntimeRelease();
+  const projectBytes = entryOf(unzipSync(archive), 'project.json');
   const project = projectOf(JSON.parse(strFromU8(projectBytes)));
   const source = Buffer.from(
     extensionUrlOf(project).slice('data:text/javascript;base64,'.length),
     'base64',
   ).toString();
-  const assets = [
-    ...source.matchAll(
-      /get "(tfjs-backend-wasm(?:-threaded-simd|-simd)\.wasm)"\(\)\{const url=kamishibaiPackedWasm\.expand\("([A-Za-z0-9+/=]+)",(\d+)\)/gu,
-    ),
-  ];
-  assert.deepEqual(assets.map(([, name]) => name).sort(), [
-    'tfjs-backend-wasm-simd.wasm',
-    'tfjs-backend-wasm-threaded-simd.wasm',
-  ]);
-  for (const [, name, packed, size] of assets) {
-    const expected = await readFile(
+  const site = await readDsl4TeachableMachineRuntimeSite();
+  assert.equal(
+    site.runtimeUrl,
+    `https://kubohiroya.github.io/turbowarp-kamishibai-app/teachable-machine/${site.version}/runtime.js`,
+  );
+  // The member asks the Kamishibai runtime owner first and otherwise loads the site copy.
+  assert(source.includes(`var BROWSER_RUNTIME_URL = ${JSON.stringify(site.runtimeUrl)};`));
+  assert(source.includes('Symbol.for("@kubohiroya/turbowarp-kamishibai-app/tm-runtime")'));
+  assert.doesNotMatch(source, /cdn\.jsdelivr\.net\/npm\/\$\{package_default/u);
+  assert(source.includes(site.integrity), 'the runtime pins the reviewed runtime.js integrity');
+  for (const name of ['tfjs-backend-wasm-simd.wasm', 'tfjs-backend-wasm.wasm']) {
+    const wasm = await readFile(
       require.resolve(`@kubohiroya/turbowarp-teachable-machine/wasm-assets/${name}`),
     );
-    assert.equal(expected.byteLength, Number(size));
-    assert.deepEqual(Buffer.from(inflateSync(Buffer.from(packed!, 'base64'))), expected);
-    assert(!source.includes(expected.toString('base64')));
+    assert(!source.includes(wasm.subarray(0, 4096).toString('base64')), `${name} is not embedded`);
   }
-  const scalar = await readFile(
-    require.resolve('@kubohiroya/turbowarp-teachable-machine/wasm-assets/tfjs-backend-wasm.wasm'),
-  );
-  assert(!source.includes(scalar.toString('base64')));
-  assert.doesNotMatch(source, /get "tfjs-backend-wasm\.wasm"/u);
+  assert.doesNotMatch(source, /kamishibaiPackedWasm/u);
+  assert(projectBytes.length < 6 * 1024 * 1024, `project.json is ${projectBytes.length} bytes`);
   const restoreGlobals = installUnsandboxedScriptDom();
   const vm = new VirtualMachine();
   try {
@@ -1113,7 +1099,7 @@ test('builds one self-contained DSL 4.0 release with a pinned runtime extension'
   }
   assert.equal(
     extensionSource.includes('TM browser runtime found a different global TensorFlow.js instance.'),
-    true,
+    false,
   );
   const runtimeStorage = componentStorageOf(project);
   assert.equal(

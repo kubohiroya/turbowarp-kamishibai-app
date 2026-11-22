@@ -20,6 +20,7 @@ import {
 import {resolveDsl4ProjectSource} from './dsl4-project-source.js';
 import {
   readDsl4PlaybackPoseNetBundle,
+  readDsl4PlaybackTMOfflineRuntime,
   readDsl4NarrativeRuntimeExtensionSource,
   readDsl4PlaybackRuntimeExtensionSource,
 } from './dsl4-playback-runtime-source.js';
@@ -170,6 +171,13 @@ export async function buildDsl4RuntimeComponentFile(options: {
           ? readDsl4PlaybackPoseNetBundle({subtleCrypto: options.subtleCrypto})
           : Promise.resolve(createDsl4PoseNetRemoteDescriptor())
     : undefined;
+  // Works load the TensorFlow.js runtime from the Kamishibai site; a network-free build carries it.
+  const tmRuntime = usesStandardRuntime
+    ? ({network}: {network: 'allowed' | 'forbidden'}) =>
+        network === 'forbidden'
+          ? readDsl4PlaybackTMOfflineRuntime({subtleCrypto: options.subtleCrypto})
+          : Promise.resolve(undefined)
+    : undefined;
   const buildOptions = {
     baseSb3Bytes,
     projectRoot,
@@ -186,6 +194,7 @@ export async function buildDsl4RuntimeComponentFile(options: {
     maxTotalAssetBytes: options.maxTotalAssetBytes,
     ...(runtimeExtensionSource === undefined ? {} : {runtimeExtensionSource}),
     ...(poseNetBundle === undefined ? {} : {poseNetBundle}),
+    ...(tmRuntime === undefined ? {} : {tmRuntime}),
     ...(options.assetConfig === undefined ? {} : {assetConfig: options.assetConfig}),
     ...(options.assetLock === undefined ? {} : {assetLock: options.assetLock}),
     ...(options.assetProfile === undefined ? {} : {assetProfile: options.assetProfile}),

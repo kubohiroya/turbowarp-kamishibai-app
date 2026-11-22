@@ -1,6 +1,10 @@
 import {createDsl4TMPlatform} from '../../../../src/dsl4/platform/tm-model-adapter.js';
 import {createDsl4ProjectTMRuntime} from '../../../../src/dsl4/platform/posenet-bundle.js';
 import {
+  createDsl4TMRuntimeOwner,
+  installDsl4TMRuntimeOwner,
+} from '../../../../src/dsl4/platform/tm-runtime-owner.js';
+import {
   createDsl4ComputePreferences,
   createDsl4ComputeSettings,
   type Dsl4ComputeMode,
@@ -10,9 +14,16 @@ import type {
   createTMComposition,
 } from '@kubohiroya/turbowarp-teachable-machine/composition';
 
-const host = globalThis as typeof globalThis & {
-  tmPose: Parameters<typeof createDsl4ProjectTMRuntime>[0]['runtime'];
-  tmCompute: NonNullable<TMCompositionOptions['compute']>;
+// The page starts without TensorFlow.js: the owner loads the reviewed runtime from the Kamishibai
+// site the first time recognition settles a compute backend, as the Standard bundle does.
+const site = await fetch('/tm-runtime-site.json').then((response) => response.json());
+const owner = createDsl4TMRuntimeOwner({site});
+installDsl4TMRuntimeOwner(owner);
+const host = {
+  tmPose: owner.poseRuntime as unknown as Parameters<
+    typeof createDsl4ProjectTMRuntime
+  >[0]['runtime'],
+  tmCompute: owner.compute as unknown as NonNullable<TMCompositionOptions['compute']>,
 };
 const project = await fetch('/project.json').then((response) => response.json());
 const names = (await fetch('/model/files.json').then((response) => response.json())) as string[];
@@ -59,6 +70,8 @@ const settings = createDsl4ComputeSettings({
   onClose() {},
 });
 const probe = {
+  isRuntimeLoaded: () => owner.isLoaded(),
+  ensureRuntime: () => owner.ensure(),
   showSettings: () => settings.show('ja'),
   getPendingMode: () => pendingMode,
   getPreference: () => preferences.getMode(),
