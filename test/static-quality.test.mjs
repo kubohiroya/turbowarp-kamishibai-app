@@ -20,7 +20,7 @@ const vendoredExtensions = [
   'app/extensions/kubohiroyaruntimeexpression.js',
   'app/extensions/kubohiroyatextlines.js',
   'app/extensions/text.js',
-  'app/extensions/tmpose.js',
+  'app/extensions/kubohiroyatm.js',
 ];
 
 test('applies static quality rules to every first-party code area', async () => {

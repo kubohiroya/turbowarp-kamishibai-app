@@ -2091,7 +2091,7 @@
           }
         },
         "i/": {
-          "opcode": "tmpose_stopPredict",
+          "opcode": "kubohiroyatm_stopRecognition",
           "next": null,
           "parent": "dG",
           "inputs": {},
@@ -2751,7 +2751,7 @@
           "topLevel": false
         },
         "ay": {
-          "opcode": "tmpose_setModelURL",
+          "opcode": "kubohiroyatm_setModelURL",
           "next": "dS",
           "parent": "dQ",
           "inputs": {
@@ -2783,7 +2783,7 @@
           "topLevel": false
         },
         "dS": {
-          "opcode": "tmpose_loadModel",
+          "opcode": "kubohiroyatm_loadModel",
           "next": "dT",
           "parent": "ay",
           "inputs": {},
@@ -2806,7 +2806,7 @@
           "topLevel": false
         },
         "jg": {
-          "opcode": "tmpose_isModelLoaded",
+          "opcode": "kubohiroyatm_isModelLoaded",
           "next": null,
           "parent": "dT",
           "inputs": {},
@@ -2849,7 +2849,7 @@
           }
         },
         "dV": {
-          "opcode": "tmpose_setPreviewOpacity",
+          "opcode": "kubohiroyatm_setPreviewOpacity",
           "next": "az",
           "parent": "dU",
           "inputs": {
@@ -2866,7 +2866,7 @@
           "topLevel": false
         },
         "az": {
-          "opcode": "tmpose_setPreviewPosition",
+          "opcode": "kubohiroyatm_setPreviewPosition",
           "next": "dW",
           "parent": "dV",
           "inputs": {
@@ -2880,7 +2880,7 @@
           "topLevel": false
         },
         "ji": {
-          "opcode": "tmpose_menu_positionMenu",
+          "opcode": "kubohiroyatm_menu_positionMenu",
           "next": null,
           "parent": "az",
           "inputs": {},
@@ -2894,7 +2894,7 @@
           "topLevel": false
         },
         "dW": {
-          "opcode": "tmpose_hidePreview",
+          "opcode": "kubohiroyatm_hidePreview",
           "next": "jj",
           "parent": "az",
           "inputs": {},
@@ -2903,7 +2903,7 @@
           "topLevel": false
         },
         "jj": {
-          "opcode": "tmpose_startCamera",
+          "opcode": "kubohiroyatm_startCamera",
           "next": null,
           "parent": "dW",
           "inputs": {},
@@ -2946,7 +2946,7 @@
           }
         },
         "jk": {
-          "opcode": "tmpose_stopCamera",
+          "opcode": "kubohiroyatm_stopCamera",
           "next": null,
           "parent": "dX",
           "inputs": {},
@@ -3007,7 +3007,7 @@
           "topLevel": false
         },
         "jn": {
-          "opcode": "tmpose_scoreReporter",
+          "opcode": "kubohiroyatm_scoreReporter",
           "next": null,
           "parent": "dZ",
           "inputs": {},
@@ -3068,7 +3068,7 @@
           "topLevel": false
         },
         "jp": {
-          "opcode": "tmpose_currentPoseReporter",
+          "opcode": "kubohiroyatm_currentPoseReporter",
           "next": null,
           "parent": "d#",
           "inputs": {},
@@ -3111,7 +3111,7 @@
           }
         },
         "jq": {
-          "opcode": "tmpose_showPreview",
+          "opcode": "kubohiroyatm_showPreview",
           "next": null,
           "parent": "d%",
           "inputs": {},
@@ -3154,7 +3154,7 @@
           }
         },
         "js": {
-          "opcode": "tmpose_hidePreview",
+          "opcode": "kubohiroyatm_hidePreview",
           "next": null,
           "parent": "d(",
           "inputs": {},
@@ -7242,7 +7242,7 @@
           }
         },
         "j;": {
-          "opcode": "tmpose_startPredict",
+          "opcode": "kubohiroyatm_startRecognition",
           "next": null,
           "parent": "eD",
           "inputs": {},
@@ -7276,7 +7276,7 @@
           "topLevel": false
         },
         "eF": {
-          "opcode": "tmpose_startCamera",
+          "opcode": "kubohiroyatm_startCamera",
           "next": "eG",
           "parent": "eE",
           "inputs": {},
@@ -7285,7 +7285,7 @@
           "topLevel": false
         },
         "eG": {
-          "opcode": "tmpose_showPreview",
+          "opcode": "kubohiroyatm_showPreview",
           "next": "eH",
           "parent": "eF",
           "inputs": {},
@@ -7294,7 +7294,7 @@
           "topLevel": false
         },
         "eH": {
-          "opcode": "tmpose_setModelURL",
+          "opcode": "kubohiroyatm_setModelURL",
           "next": "eI",
           "parent": "eG",
           "inputs": {
@@ -7311,7 +7311,7 @@
           "topLevel": false
         },
         "eI": {
-          "opcode": "tmpose_loadModel",
+          "opcode": "kubohiroyatm_loadModel",
           "next": "eJ",
           "parent": "eH",
           "inputs": {},
@@ -7320,7 +7320,7 @@
           "topLevel": false
         },
         "eJ": {
-          "opcode": "tmpose_startPredict",
+          "opcode": "kubohiroyatm_startRecognition",
           "next": "eK",
           "parent": "eI",
           "inputs": {},
@@ -7387,7 +7387,7 @@
           "topLevel": false
         },
         "j@": {
-          "opcode": "tmpose_currentPoseReporter",
+          "opcode": "kubohiroyatm_currentPoseReporter",
           "next": null,
           "parent": "aQ",
           "inputs": {},
@@ -7421,7 +7421,7 @@
           "topLevel": false
         },
         "j[": {
-          "opcode": "tmpose_scoreReporter",
+          "opcode": "kubohiroyatm_scoreReporter",
           "next": null,
           "parent": "eL",
           "inputs": {},
@@ -7448,7 +7448,7 @@
           "topLevel": false
         },
         "j^": {
-          "opcode": "tmpose_lastErrorReporter",
+          "opcode": "kubohiroyatm_lastErrorReporter",
           "next": null,
           "parent": "aP",
           "inputs": {},
@@ -14357,7 +14357,7 @@
           "topLevel": false
         },
         "bB": {
-          "opcode": "tmpose_isPoseWithThreshold",
+          "opcode": "kubohiroyatm_isPoseWithThreshold",
           "next": null,
           "parent": "b",
           "inputs": {
@@ -14810,7 +14810,7 @@
           "topLevel": false
         },
         "f}": {
-          "opcode": "tmpose_poseScoreReporter",
+          "opcode": "kubohiroyatm_poseScoreReporter",
           "next": null,
           "parent": "bD",
           "inputs": {
@@ -37966,7 +37966,7 @@
     "lmsTempVars2",
     "strings",
     "kubohiroyaassetmanager",
-    "tmpose",
+    "kubohiroyatm",
     "localstorage",
     "kubohiroyatextlines",
     "kubohiroyaruntimeexpression",
@@ -37984,7 +37984,7 @@
     "lmsTempVars2": "https://extensions.turbowarp.org/Lily/TempVariables2.js",
     "strings": "https://extensions.turbowarp.org/text.js",
     "kubohiroyaassetmanager": "embedded-extension:extensions/kubohiroyaassetmanager.js",
-    "tmpose": "embedded-extension:extensions/tmpose.js",
+    "kubohiroyatm": "embedded-extension:extensions/kubohiroyatm.js",
     "localstorage": "https://extensions.turbowarp.org/local-storage.js",
     "kubohiroyatextlines": "embedded-extension:extensions/kubohiroyatextlines.js",
     "kubohiroyaruntimeexpression": "embedded-extension:extensions/kubohiroyaruntimeexpression.js",

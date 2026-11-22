@@ -32,18 +32,18 @@
       }
     },
     {
-      "id": "tmpose",
-      "path": "extensions/tmpose.js",
+      "id": "kubohiroyatm",
+      "path": "extensions/kubohiroyatm.js",
       "mediaType": "text/javascript",
       "parameters": [],
       "encoding": "base64",
       "source": {
         "provider": "github",
-        "repository": "kubohiroya/turbowarp-tmpose",
-        "ref": "main",
-        "resolvedCommit": "08fe0cf9da061b1eba75297b8ee187d68549eed4",
-        "artifact": "dist/tmpose.js",
-        "integrity": "sha256-YD8hvVmUwdjSOajGV2MuGgWEfBOLhPPmMgBZ98fKBHg="
+        "repository": "kubohiroya/turbowarp-teachable-machine",
+        "ref": "v4.4.0",
+        "resolvedCommit": "623c17b2bb8b9c632df28eaf576f98d8aeb94bf5",
+        "artifact": "dist/teachable-machine.js",
+        "integrity": "sha256-0hB/6InM0i+Uz8evlmdHKFuptB67cNMHn+D7edD+faQ="
       }
     },
     {

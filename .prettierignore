@@ -11,7 +11,7 @@ app/extensions/kubohiroyaruntimeexpression.js
 app/extensions/kubohiroyasvgtext.js
 app/extensions/kubohiroyatextlines.js
 app/extensions/text.js
-app/extensions/tmpose.js
+app/extensions/kubohiroyatm.js
 
 # Binary assets and package-manager output.
 app/assets/

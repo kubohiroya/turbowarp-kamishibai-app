@@ -688,9 +688,10 @@ export function registerKamishibaiTestExtensions(
     }
   }
 
+  // Teachable Machine 4.4.0 (kubohiroyatm): only the blocks the app uses.
   class PoseExtension {
     getInfo() {
-      return extensionInfo('tmpose', [
+      return extensionInfo('kubohiroyatm', [
         block('currentPoseReporter', BlockType.REPORTER),
         block('hidePreview'),
         block('isModelLoaded', BlockType.BOOLEAN),
@@ -705,9 +706,9 @@ export function registerKamishibaiTestExtensions(
         block('setPreviewPosition', BlockType.COMMAND, ['POSITION']),
         block('showPreview'),
         block('startCamera'),
-        block('startPredict'),
+        block('startRecognition'),
         block('stopCamera'),
-        block('stopPredict'),
+        block('stopRecognition'),
       ]);
     }
     currentPoseReporter() {
@@ -738,9 +739,9 @@ export function registerKamishibaiTestExtensions(
     setPreviewPosition() {}
     showPreview() {}
     startCamera() {}
-    startPredict() {}
+    startRecognition() {}
     stopCamera() {}
-    stopPredict() {}
+    stopRecognition() {}
   }
 
   class LocalStorageExtension {
@@ -1067,7 +1068,7 @@ export function registerKamishibaiTestExtensions(
   register(vm, 'sipcconsole', ConsoleExtension);
   register(vm, 'lmsTempVars2', TempVariablesExtension);
   register(vm, 'strings', StringsExtension);
-  register(vm, 'tmpose', PoseExtension);
+  register(vm, 'kubohiroyatm', PoseExtension);
   register(vm, 'localstorage', LocalStorageExtension);
   register(vm, 'kubohiroyatextlines', TextLinesExtension);
   register(
