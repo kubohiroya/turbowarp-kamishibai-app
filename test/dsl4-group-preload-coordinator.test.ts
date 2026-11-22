@@ -446,3 +446,119 @@ test('startup materializes loading artwork before presenting it while boot conte
   await owner.release('dispose');
   assert.equal(materialized.size, 0);
 });
+
+test('recognition models load in the background beside the scene groups and are waited for only on request', async () => {
+  const parsed = frontend.parse(`kamishibai: '4.0'
+assets:
+  Tick: sound
+  Charge: sound
+  HeroIdle: costume:Hero
+  Beach: backdrop
+  Ocean: backdrop
+  RescuePose:
+    kind: recognitionModel
+    file: pose-models/rescue
+  SeaPose:
+    kind: recognitionModel
+    file: pose-models/sea
+actors:
+  Hero: HeroIdle
+recognition:
+  idleSound: Tick
+  chargeSound: Charge
+scenes:
+  rescue:
+    recognitionModel: RescuePose
+    actions:
+      - stage: Beach
+      - Hero.pose:
+          steps:
+            - pose: help
+      - goto: sea
+  sea:
+    recognitionModel: SeaPose
+    actions:
+      - stage: Ocean
+      - Hero.pose:
+          steps:
+            - pose: swim
+`);
+  assert(parsed.ok, JSON.stringify(parsed.diagnostics));
+  const models = new Map([
+    ['RescuePose', deferred<void>()],
+    ['SeaPose', deferred<void>()],
+  ]);
+  const live = new Set<string>();
+  const prepared: string[][] = [];
+  const released: string[][] = [];
+  const events: string[] = [];
+  const owner = createDsl4GroupPreloadCoordinator({
+    storyDocument: parsed.storyDocument,
+    segmentId: 'models',
+    onEvent: (type, details) =>
+      events.push(`${type}:${(details.assetIds as string[] | undefined)?.join() ?? ''}`),
+    lifecycle: {
+      async prepare(payload, {signal}) {
+        const ids = payload.assetIds as string[];
+        prepared.push([...ids]);
+        // A model resolves when the test says so; an aborted load gives up.
+        await Promise.all(
+          ids.map((id) => {
+            const model = models.get(id);
+            if (!model) return undefined;
+            return Promise.race([
+              model.promise,
+              new Promise((_, reject) =>
+                signal.addEventListener('abort', () => reject(new Error('aborted')), {once: true}),
+              ),
+            ]);
+          }),
+        );
+        for (const id of ids) live.add(id);
+      },
+      releaseAssets({assetIds}) {
+        released.push([...assetIds]);
+        for (const id of assetIds) live.delete(id);
+      },
+      setLoading() {},
+      release() {
+        live.clear();
+      },
+    },
+  });
+  assert((await owner.prepareStartup(0)).ok);
+  assert.equal(prepared.flat().includes('RescuePose'), false, 'startup must not load a model');
+
+  owner.beginScene('rescue', 1);
+  // The scene is ready while its model is still loading.
+  assert((await withDeadline(owner.waitForScene('rescue'), 'scene entry', 1000)).ok);
+  await owner.commitScene('rescue', 'entry');
+  assert.equal(live.has('RescuePose'), false);
+  assert(events.includes('assets.background.start:RescuePose'));
+  assert.equal(prepared.flat().includes('SeaPose'), false, 'a later scene model must wait');
+
+  // The recognition action waits only for the model that is still loading.
+  const signal = new AbortController().signal;
+  const waited = owner.waitForSceneAsset('rescue', 'RescuePose', 1, signal);
+  await waitUntil(() => events.includes('assets.background.wait.start:RescuePose'));
+  models.get('RescuePose')!.resolve();
+  assert((await withDeadline(waited, 'model wait', 1000)).ok);
+  assert(live.has('RescuePose'));
+  assert(events.includes('assets.background.wait.end:RescuePose'));
+  // Once loaded, the wait returns without preparing again.
+  const before = prepared.length;
+  assert((await owner.waitForSceneAsset('rescue', 'RescuePose', 1, signal)).ok);
+  assert.equal(prepared.length, before);
+
+  // Moving on releases the previous model only when the next scene commits.
+  owner.beginScene('sea', 2);
+  assert((await withDeadline(owner.waitForScene('sea'), 'next scene entry', 1000)).ok);
+  assert(live.has('RescuePose'));
+  await owner.commitScene('sea', 'transition');
+  await waitUntil(() => !live.has('RescuePose'));
+  assert(events.includes('assets.background.start:SeaPose'));
+
+  // Release stops the load still running.
+  await owner.release('dispose');
+  assert.equal(live.size, 0);
+});

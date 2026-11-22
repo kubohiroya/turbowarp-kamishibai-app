@@ -4,7 +4,8 @@ function sortedUnique(values: Iterable<string>) {
   return [...new Set(values)].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
 }
 
-function lifecycleError(error: unknown, fallbackCode: string, fallbackMessage: string) {
+/** Give a lifecycle failure a stable error code without hiding a code it already carries. */
+export function lifecycleError(error: unknown, fallbackCode: string, fallbackMessage: string) {
   const errorRecord =
     typeof error === 'object' && error !== null ? (error as Record<string, unknown>) : {};
   if (typeof errorRecord.code === 'string') return error;
