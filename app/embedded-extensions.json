@@ -55,10 +55,10 @@
       "source": {
         "provider": "github",
         "repository": "kubohiroya/turbowarp-text-lines",
-        "ref": "main",
-        "resolvedCommit": "8655d764cf3af0d783ba6f138086db927abd3570",
+        "ref": "v0.8.0",
+        "resolvedCommit": "cba63afab4b8222104cbc9b4b9f86b365d0aee42",
         "artifact": "dist/text-lines.js",
-        "integrity": "sha256-au5u+S+zlhd32/Zucv7iNaTSkszbanJfAtKS7a5YgAc="
+        "integrity": "sha256-FFDHfVGssh0adEEdee6dy1Wjr1mBSSlywXDsRVak/zQ="
       }
     },
     {
@@ -70,10 +70,10 @@
       "source": {
         "provider": "github",
         "repository": "kubohiroya/turbowarp-runtime-expression",
-        "ref": "main",
-        "resolvedCommit": "7e2bd99fa57fa9f0cbe6b91306b4c53322f00aa3",
+        "ref": "v0.12.0",
+        "resolvedCommit": "ae17604e45cf24134cef34123d7fec90fe69f96a",
         "artifact": "dist/runtime-expression.js",
-        "integrity": "sha256-9jO+pkwg+Xqffybvt4Gio0FomOt9o3YNRhvVD2ftOSo="
+        "integrity": "sha256-u1g0tpQGHEodXTjFncHOkAvAFPIVQ6HBDGVOBGo8xg0="
       }
     },
     {
@@ -112,10 +112,10 @@
       "source": {
         "provider": "github",
         "repository": "kubohiroya/turbowarp-async-input",
-        "ref": "main",
-        "resolvedCommit": "3ecd7ff406b86fd957333ae4978cec118322ebd1",
+        "ref": "v0.14.0",
+        "resolvedCommit": "beab936065b99d1f52632615536414fad00afadf",
         "artifact": "dist/async-input.js",
-        "integrity": "sha256-7ojxfFwlnh7poT836exJ7E2FakSUeFkgZPfI88W79Kc="
+        "integrity": "sha256-6zHDw0WrUuxT1KrzarKONjZBLmgU3iyO4yv2BiyEPcM="
       }
     }
   ],
