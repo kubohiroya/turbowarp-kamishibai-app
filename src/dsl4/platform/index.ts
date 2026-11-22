@@ -50,6 +50,15 @@ export {
   validateDsl4PoseNetProjectBundle,
   verifyDsl4PoseNetBundle,
 } from './posenet-bundle.js';
+export {
+  createDsl4PoseNetRemoteDescriptor,
+  createDsl4PoseNetRemoteLoader,
+  dsl4PoseNetRemoteBaseUrl,
+  dsl4PoseNetRemoteCacheName,
+  dsl4PoseNetRemoteFilename,
+  isDsl4PoseNetRemoteDescriptor,
+  validateDsl4PoseNetRemoteDescriptor,
+} from './posenet-remote.js';
 export {createDsl4TurboWarpActorPlatform} from './turbowarp-actor-adapter.js';
 export {createDsl4TurboWarpCrossfadePlatform} from './turbowarp-crossfade-platform.js';
 export {

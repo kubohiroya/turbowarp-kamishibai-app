@@ -11,7 +11,6 @@ import type {
   SourceDocumentPrepared,
 } from '@kubohiroya/turbowarp-document-data/composition';
 import {encodeSourceDocumentReference} from '@kubohiroya/turbowarp-document-data/composition';
-import editorSchema from '../../schema/dsl-4-editor.schema.json' with {type: 'json'};
 import type {Dsl4SourceFrontend} from './source-frontend.js';
 import {
   readEmbeddedYamlSourceGraphRecord,
@@ -173,7 +172,7 @@ export async function replaceGraphDocumentSource(
   };
 }
 
-function documentSchema(entry: boolean) {
+function documentSchema(editorSchema: Readonly<Record<string, unknown>>, entry: boolean) {
   const result = clone(editorSchema) as ObjectRecord;
   result.$id = `https://kubohiroya.github.io/turbowarp-kamishibai-app/schema/dsl-4-editor-${entry ? 'entry' : 'module'}-source.schema.json`;
   result.title = entry ? 'DSL 4.0 entry source document' : 'DSL 4.0 partial source module';
@@ -186,8 +185,6 @@ function documentSchema(entry: boolean) {
   };
   return Object.freeze({id: String(result.$id), schema: result});
 }
-const entrySchema = documentSchema(true),
-  moduleSchema = documentSchema(false);
 const originalTargets = (runtime: Runtime) =>
   (runtime.targets ?? []).filter((target) => target.isOriginal !== false);
 function createDocument(vm: Vm, frontend: Dsl4SourceFrontend, documentId: string) {
@@ -361,8 +358,24 @@ export function createKamishibaiGraphDocumentProvider(
   {
     sourceFrontend: frontend,
     documentViewsEnabled: viewsEnabled,
-  }: {sourceFrontend: Dsl4SourceFrontend; documentViewsEnabled: boolean},
+    editorSchema = null,
+  }: {
+    sourceFrontend: Dsl4SourceFrontend;
+    documentViewsEnabled: boolean;
+    /** Without it the documents carry no schema; see `KamishibaiEmbeddedYamlProviderOptions`. */
+    editorSchema?: Readonly<Record<string, unknown>> | null;
+  },
 ): SourceDocumentProvider {
+  // Each derived schema clones the 150 KB editor schema, so build them on the first listing.
+  type DocumentSchema = ReturnType<typeof documentSchema>;
+  let documentSchemas: {entry: DocumentSchema; module: DocumentSchema} | null = null;
+  const schemaFor = (schema: Readonly<Record<string, unknown>>, entry: boolean) => {
+    documentSchemas ??= {
+      entry: documentSchema(schema, true),
+      module: documentSchema(schema, false),
+    };
+    return entry ? documentSchemas.entry : documentSchemas.module;
+  };
   const vm = vmInput as Vm;
   const runtime = vm.runtime,
     documents = new Set<SourceDocumentAdapter>(),
@@ -450,7 +463,9 @@ export function createKamishibaiGraphDocumentProvider(
             available: true,
             docsURL:
               'https://kubohiroya.github.io/turbowarp-kamishibai-docs/4.0/dsl-author-guides/dsl-4.0-author-guide/',
-            schema: path === value.graph.entryPath ? entrySchema : moduleSchema,
+            ...(editorSchema
+              ? {schema: schemaFor(editorSchema, path === value.graph.entryPath)}
+              : {}),
             ...(viewsEnabled
               ? {
                   representations: [

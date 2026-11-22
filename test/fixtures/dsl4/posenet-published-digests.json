@@ -1,0 +1,24 @@
+{
+  "formatVersion": 1,
+  "comment": "PoseNet files published under posenet/sha256-<hex> on the Kamishibai site. SB3s built since 4.0.3 fetch these URLs, so a digest must never leave this list or the site.",
+  "files": [
+    {
+      "sha256": "dd63bf2d3b983e8c80020749f135164beda00a33374c8a7be230b9598f24f798",
+      "size": 49720,
+      "path": "model-stride16.json",
+      "since": "4.0.3"
+    },
+    {
+      "sha256": "ce6afc62f89782d43139fab76c641b281a82dee2cd2759aa036c4b28aea16439",
+      "size": 4194304,
+      "path": "group1-shard1of2.bin",
+      "since": "4.0.3"
+    },
+    {
+      "sha256": "2a35b8cfb86eb50928931e03dc30c0972fdd375f148b177ee40676b81a17692d",
+      "size": 838476,
+      "path": "group1-shard2of2.bin",
+      "since": "4.0.3"
+    }
+  ]
+}

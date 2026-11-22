@@ -19,6 +19,7 @@ import {
 import {createDsl4EmbeddedAssetBundle} from '../src/dsl4/asset-bundle-descriptor.js';
 import {replaceGraphDocumentSource} from '../src/dsl4/embedded-yaml-graph-provider.js';
 import {createKamishibaiEmbeddedYamlProvider} from '../src/dsl4/embedded-yaml-provider.js';
+import {createKamishibaiEmbeddedYamlProvider as createKamishibaiEmbeddedYamlProviderCore} from '../src/dsl4/embedded-yaml-provider-core.js';
 import {
   readEmbeddedYamlSourceGraphRecord,
   createEmbeddedYamlSourceGraphRecord,
@@ -552,6 +553,34 @@ test('saving unchanged raw source synchronizes the explicit root entry and artif
     project: JSON.parse(f.vm.toJSON()),
   });
   provider.dispose?.();
+});
+test('graph documents carry the entry and module schemas only when the editor schema is given', async () => {
+  const f = await fixture();
+  const withSchema = createKamishibaiEmbeddedYamlProvider(f.vm, {documentViewsEnabled: false});
+  const listed = withSchema.list();
+  assert.deepEqual(
+    listed.map((item) => item.schema?.id),
+    [
+      'https://kubohiroya.github.io/turbowarp-kamishibai-app/schema/dsl-4-editor-entry-source.schema.json',
+      'https://kubohiroya.github.io/turbowarp-kamishibai-app/schema/dsl-4-editor-module-source.schema.json',
+      'https://kubohiroya.github.io/turbowarp-kamishibai-app/schema/dsl-4-editor-module-source.schema.json',
+    ],
+  );
+  assert.equal(
+    withSchema.list()[0]?.schema,
+    listed[0]?.schema,
+    'the derived schemas are built once',
+  );
+  withSchema.dispose?.();
+
+  const playback = createKamishibaiEmbeddedYamlProviderCore(f.vm, {documentViewsEnabled: false});
+  const files = playback.list();
+  assert.equal(files.length, 3);
+  assert.equal(
+    files.some((item) => 'schema' in item),
+    false,
+  );
+  playback.dispose?.();
 });
 test('partial or invalid root selections and stale prepared entry changes preserve raw files, projection and live edits', async () => {
   for (const [selected, extra] of [

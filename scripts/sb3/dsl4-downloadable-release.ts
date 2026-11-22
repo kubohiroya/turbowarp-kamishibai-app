@@ -19,7 +19,7 @@ import {createDsl4EmbeddedAssetBundle} from '../../dist/dsl4/asset-bundle-descri
 import {createDsl4RuntimeArtifactDescriptor} from '../../dist/dsl4/runtime-artifact-descriptor.js';
 import type {RuntimeArtifactSuccess} from '../../dist/dsl4/runtime-artifact-descriptor.js';
 import {createDsl4EmbeddedSourceDescriptor} from '../../dist/dsl4/source-descriptor.js';
-import {createDsl4PoseNetProjectBundleFromLoader} from '../../dist/dsl4/platform/posenet-bundle.js';
+import {createDsl4PoseNetRemoteDescriptor} from '../../dist/dsl4/platform/posenet-remote.js';
 import {
   dsl4RuntimeExtensionMetadata,
   dsl4RuntimeProvenance,
@@ -69,7 +69,7 @@ const externalExtensionMembers = Object.freeze(
       id: 'kubohiroyaassetcache',
       name: 'Asset Cache',
       package: '@kubohiroya/turbowarp-asset-cache',
-      version: '0.9.0',
+      version: '0.9.2',
       artifact: 'dist/asset-cache.js',
       sourcePath: path.join(
         path.dirname(
@@ -198,17 +198,6 @@ const runtimeExtensionEntryPath = path.join(
   'scripts/sb3/dsl4-runtime-extension-entry.ts',
 );
 const runtimeExtensionTarget = 'es2022';
-let pendingPoseNetProjectBundle;
-
-function createPoseNetProjectBundle() {
-  pendingPoseNetProjectBundle ??= createDsl4PoseNetProjectBundleFromLoader(
-    async ({packageSpecifier}) =>
-      new Uint8Array(await readFile(fileURLToPath(import.meta.resolve(packageSpecifier)))),
-    {subtleCrypto: webcrypto.subtle},
-  );
-  return pendingPoseNetProjectBundle;
-}
-
 /** One title costume: its bytes, the SB3 filename they take, and the costume record. */
 type Dsl4ReleaseSvgAsset = ReturnType<typeof svgAsset>;
 
@@ -510,7 +499,9 @@ async function createProject(assets: ReturnType<typeof titleAssets>) {
       subtleCrypto: webcrypto.subtle,
     },
   );
-  const poseNetBundle = await createPoseNetProjectBundle();
+  // The Standard SB3 fetches PoseNet from the Kamishibai site when pose recognition first starts and
+  // shares it through Cache Storage; offline venues build their works with `network: forbidden`.
+  const poseNetBundle = createDsl4PoseNetRemoteDescriptor();
   const installed = await installDsl4PackagedRuntimeComponent(
     project,
     parsed.storyDocument,

@@ -14,6 +14,10 @@ import {
 } from '../dsl4/source-descriptor.js';
 import {applyDsl4SourceOrigins, Dsl4SourceOriginError} from '../dsl4/source-origin-descriptor.js';
 import {validateDsl4PoseNetProjectBundle} from '../dsl4/platform/posenet-bundle.js';
+import {
+  isDsl4PoseNetRemoteDescriptor,
+  validateDsl4PoseNetRemoteDescriptor,
+} from '../dsl4/platform/posenet-remote.js';
 import {fromByteArray} from 'base64-js';
 import type {Dsl4SubtleCrypto} from '../dsl4/subtle-crypto.js';
 import {Sb3BuilderError} from './errors.js';
@@ -310,11 +314,13 @@ export async function installDsl4RuntimeComponent(
   const validatedPoseNetBundle =
     poseNetBundle === undefined
       ? undefined
-      : await validateDsl4PoseNetProjectBundle(poseNetBundle, {
-          ...(subtleCrypto === undefined
-            ? {}
-            : {subtleCrypto: subtleCrypto as unknown as Pick<SubtleCrypto, 'digest'>}),
-        });
+      : isDsl4PoseNetRemoteDescriptor(poseNetBundle)
+        ? validateDsl4PoseNetRemoteDescriptor(poseNetBundle)
+        : await validateDsl4PoseNetProjectBundle(poseNetBundle, {
+            ...(subtleCrypto === undefined
+              ? {}
+              : {subtleCrypto: subtleCrypto as unknown as Pick<SubtleCrypto, 'digest'>}),
+          });
 
   const output = structuredClone(project) as Record<string, unknown>;
   installPlaybackRuntimeExtension(output, runtimeExtensionSource);
