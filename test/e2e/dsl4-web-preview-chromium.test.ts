@@ -71,9 +71,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const require = createRequire(import.meta.url);
-const teachableMachineVersion = JSON.parse(
-  await readFile(new URL('../fixtures/dsl4/release-pins.json', import.meta.url), 'utf8'),
-).extensions['@kubohiroya/turbowarp-teachable-machine'];
 const TurboWarpPackager = require('@turbowarp/packager');
 
 let pendingCurrentDsl4ReleaseSb3;
@@ -1104,8 +1101,22 @@ console.warn = (...values) => {
       await waitForEvaluation(client, 'Boolean(globalThis.Scratch?.vm)', 'packaged TurboWarp VM');
       await waitForEvaluation(
         client,
-        `Boolean(globalThis[Symbol.for("@kubohiroya/turbowarp-teachable-machine/runtime")]?.version === ${JSON.stringify(teachableMachineVersion)} && document.querySelector("[data-runtime-dock-control=kamishibai-recognition-compute]"))`,
+        'Boolean(document.querySelector("[data-runtime-dock-control=kamishibai-recognition-compute]"))',
         'Teachable Machine settings entry in shared controls Dock',
+      );
+      // The Player starts without TensorFlow.js: the reviewed runtime waits on the Kamishibai site
+      // until a story starts recognition, and the runtime owner is ready to load it.
+      assert.deepEqual(
+        await evaluateRecord(
+          client,
+          `({
+          runtime: globalThis[Symbol.for("@kubohiroya/turbowarp-teachable-machine/runtime")] ?? null,
+          tf: typeof globalThis.tf,
+          owner: typeof globalThis[Symbol.for("@kubohiroya/turbowarp-kamishibai-app/tm-runtime")]?.ensure,
+          noRuntimeScript: [...document.scripts].every((script) => !script.src.includes('/teachable-machine/')),
+        })`,
+        ),
+        {runtime: null, tf: 'undefined', owner: 'function', noRuntimeScript: true},
       );
       await waitForEvaluation(
         client,

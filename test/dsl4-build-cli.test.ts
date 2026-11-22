@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {readReference} from '@kubohiroya/turbowarp-document-source';
 import assert from 'node:assert/strict';
 import {webcrypto} from 'node:crypto';
@@ -20,6 +21,10 @@ import {
 import {readSb3} from '../src/builder/sb3.js';
 import {loadDsl4PoseNetProjectBundle} from '../src/dsl4/platform/posenet-bundle.js';
 import {createDsl4PoseNetRemoteDescriptor} from '../src/dsl4/platform/posenet-remote.js';
+import {
+  readDsl4TMOfflineRuntime,
+  validateDsl4TMOfflineRuntime,
+} from '../src/dsl4/platform/tm-runtime-owner.js';
 import {sha256} from '../src/builder/hash.js';
 import {thrown} from './helpers/thrown-error.ts';
 import {captureWrites, cliResult, parsedOptions} from './helpers/cli-command.ts';
@@ -522,7 +527,8 @@ test('embeds PoseNet model data in a Standard work whose asset profile forbids t
       );
       return readSb3(await readFile(outputPathOf(result, `the ${network} build`))).project;
     };
-    const offline = loadDsl4PoseNetProjectBundle(await build('forbidden')) as {
+    const offlineProject = await build('forbidden');
+    const offline = loadDsl4PoseNetProjectBundle(offlineProject) as {
       encoding: string;
       files: {size: number}[];
     };
@@ -531,10 +537,18 @@ test('embeds PoseNet model data in a Standard work whose asset profile forbids t
       offline.files.reduce((total, file) => total + file.size, 0),
       5_082_500,
     );
+    // A network-free work also carries the whole Teachable Machine runtime, verified by digest.
+    const tmRuntime = validateDsl4TMOfflineRuntime(
+      readDsl4TMOfflineRuntime(offlineProject.extensionStorage),
+    );
+    assert.equal(tmRuntime.sha256, createHash('sha256').update(tmRuntime.source).digest('hex'));
+    assert.match(tmRuntime.source, /TM browser runtime found a different global TensorFlow\.js/u);
+    const onlineProject = await build('allowed');
     assert.deepEqual(
-      loadDsl4PoseNetProjectBundle(await build('allowed')),
+      loadDsl4PoseNetProjectBundle(onlineProject),
       createDsl4PoseNetRemoteDescriptor(),
     );
+    assert.equal(readDsl4TMOfflineRuntime(onlineProject.extensionStorage), undefined);
   });
 });
 

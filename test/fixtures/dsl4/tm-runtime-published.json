@@ -1,0 +1,47 @@
+{
+  "formatVersion": 1,
+  "comment": "Teachable Machine runtimes published under teachable-machine/<version>/ on the Kamishibai site. Works built since lazy TF.js loading load these files, so a version must never leave this list or the site. Earlier versions are read from the npm alias tm-runtime-<version>.",
+  "runtimes": [
+    {
+      "version": "4.4.0",
+      "since": "4.0.4",
+      "files": [
+        {
+          "path": "runtime.js",
+          "sha256": "ee572ed54826aa2a51a0a93eb4621d9c9348a5df99c3fef1887221372850b8fa",
+          "size": 1330416
+        },
+        {
+          "path": "backend-webgpu.js",
+          "sha256": "99420dfa3a4e581de7b7ff3f25ce55ae3ea150c0bd4b92700a507ed70a4a7e8d",
+          "size": 320953
+        },
+        {
+          "path": "backend-wasm.js",
+          "sha256": "d5eeffff6b546be9c6aacbecc95c73a6a7a3c51046c97ad0c49804cf575db834",
+          "size": 147262
+        },
+        {
+          "path": "wasm/tfjs-backend-wasm.wasm",
+          "sha256": "70a5d516060464e5269f01c74bac1772d6b8ab6cb612acf16b5cdaf61f78d892",
+          "size": 311123
+        },
+        {
+          "path": "wasm/tfjs-backend-wasm-simd.wasm",
+          "sha256": "77ebb28a6d34f371dbbf2086b7f2de8994acd8ea5a3cf1fa24d2c26c840cac7b",
+          "size": 424594
+        },
+        {
+          "path": "wasm/tfjs-backend-wasm-threaded-simd.wasm",
+          "sha256": "c052228d4bef185c27bbe59a9e029570c78bbb9f08b3cb46b597851650373de2",
+          "size": 435643
+        },
+        {
+          "path": "wasm/tfjs-backend-wasm-threaded-simd.worker.js",
+          "sha256": "2d56f7279a8515423f59e3a8a5793d27aee4fcf4c9f955c28c6d38a4462f9472",
+          "size": 3115
+        }
+      ]
+    }
+  ]
+}

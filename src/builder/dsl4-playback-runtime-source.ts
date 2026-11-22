@@ -2,6 +2,10 @@ import {readFile} from 'node:fs/promises';
 
 import {createDsl4PoseNetProjectBundleFromLoader} from '../dsl4/platform/posenet-bundle.js';
 import type {Dsl4SubtleCrypto} from '../dsl4/subtle-crypto.js';
+import {
+  createDsl4TMOfflineRuntime,
+  type Dsl4TMOfflineRuntime,
+} from '../dsl4/platform/tm-runtime-owner.js';
 
 const playbackRuntimeUrl = new URL(
   './generated/dsl4-playback-runtime-extension.js',
@@ -29,6 +33,41 @@ export function readDsl4PlaybackPoseNetBundle({
     subtleCrypto === undefined ? {} : {subtleCrypto: subtleCrypto as Pick<SubtleCrypto, 'digest'>},
   );
   return pendingPoseNetProjectBundle;
+}
+
+const tmOfflineRuntimeUrl = new URL(
+  './generated/dsl4-teachable-machine-offline-runtime.json',
+  import.meta.url,
+);
+let pendingTMOfflineRuntime: Promise<Dsl4TMOfflineRuntime> | undefined;
+
+/**
+ * Read the whole Teachable Machine runtime shipped beside the playback runtime, for a work built
+ * for a network-free venue. Other works load the same runtime from the Kamishibai site.
+ */
+export function readDsl4PlaybackTMOfflineRuntime({
+  subtleCrypto = globalThis.crypto?.subtle,
+}: {subtleCrypto?: Dsl4SubtleCrypto | undefined} = {}) {
+  pendingTMOfflineRuntime ??= readFile(tmOfflineRuntimeUrl, 'utf8').then((text) => {
+    const generated = JSON.parse(text) as {
+      formatVersion?: unknown;
+      version?: unknown;
+      source?: unknown;
+    };
+    if (
+      generated.formatVersion !== 1 ||
+      typeof generated.version !== 'string' ||
+      typeof generated.source !== 'string'
+    ) {
+      throw new TypeError('The generated Teachable Machine offline runtime is malformed');
+    }
+    return createDsl4TMOfflineRuntime(
+      generated.source,
+      generated.version,
+      subtleCrypto as Pick<SubtleCrypto, 'digest'> | undefined,
+    );
+  });
+  return pendingTMOfflineRuntime;
 }
 
 const narrativeSources = new Map<string, Promise<string>>();

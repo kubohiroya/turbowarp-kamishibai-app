@@ -1289,6 +1289,41 @@ export function createDsl4RuntimeController({
     };
   }
 
+  /**
+   * Wait for the current scene's recognition model, which loads in the background from scene
+   * entry. Returns at once when it is ready; rejects with an AbortError when the wait is cancelled.
+   */
+  /**
+   * Wait for the current scene's recognition model, which loads in the background from scene
+   * entry. Without an asset lifecycle, or for a scene without a model, there is nothing to wait for
+   * and this returns `null` without yielding, so the recognition action starts in the same turn.
+   */
+  function waitForRecognitionModel(context: ActionContext): Promise<void> | null {
+    const recognitionModel = String(currentScene()?.recognitionModel ?? '');
+    const coordinator = assetCoordinator as
+      | (typeof assetCoordinator & {
+          waitForSceneAsset?: (
+            sceneId: string,
+            assetId: string,
+            generation: number,
+            signal: AbortSignal,
+          ) => Promise<Readonly<{ok: boolean; cancelled?: boolean; error?: unknown}>>;
+        })
+      | null;
+    if (!recognitionModel || typeof coordinator?.waitForSceneAsset !== 'function') return null;
+    return coordinator
+      .waitForSceneAsset(context.sceneId, recognitionModel, context.generation, context.signal)
+      .then((readiness) => {
+        if (readiness.ok) return;
+        if (readiness.cancelled) {
+          const error = new Error('Recognition model wait was cancelled');
+          error.name = 'AbortError';
+          throw error;
+        }
+        throw readiness.error;
+      });
+  }
+
   async function dispatchPose(
     {target, args}: Readonly<{target: string | null; args: Record<string, unknown>}>,
     context: ActionContext,
@@ -1330,6 +1365,12 @@ export function createDsl4RuntimeController({
           ensureActive(context);
         }
         poseWait.waitingForRecognition = true;
+        // The model loads in the background from scene entry; wait only while it still loads.
+        const modelReady = waitForRecognitionModel(stepContext);
+        if (modelReady) {
+          await modelReady;
+          ensureActive(context);
+        }
         await invokePort(
           'waitForPose',
           {
@@ -1385,6 +1426,8 @@ export function createDsl4RuntimeController({
     poseSelectionRecognition,
     dispatchPose,
     writeVariable: queueVariableWrite,
+    prepareRecognitionModel: (context: ActionContext) =>
+      waitForRecognitionModel(context) ?? undefined,
   });
 
   function dispatch(

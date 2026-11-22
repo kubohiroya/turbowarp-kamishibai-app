@@ -24,7 +24,7 @@ TurboWarp紙芝居は、カメラの前で取ったポーズをきっかけに�
 
 ## どの版を使うか
 
-|                      | 3.2.3                                | 4.0.3                                  |
+|                      | 3.2.3                                | 4.0.4                                  |
 | -------------------- | ------------------------------------ | -------------------------------------- |
 | 状態                 | 既存3.1／3.2作品向け安定版           | 4.0正式版                              |
 | 向いている用途       | 体験会、安定運用、既存の3.1／3.2作品 | YAML台本、ブラウザ制作、CLI／API       |
@@ -32,7 +32,7 @@ TurboWarp紙芝居は、カメラの前で取ったポーズをきっかけに�
 | 入手先               | [ダウンロードページ][downloads]      | [ダウンロードページ][downloads]（SB3） |
 | 変更時に確認する文書 | [公開ドキュメント][docs]             | [4.0公開状況][current-release]         |
 
-4.0.3はYAML制作フローと4.0 APIの正式版です。既存の3.1／3.2作品には引き続き3.2.3を使えます。公開済みの3.1／3.2作品は、4.0へ移行しなくても引き続き利用できます。
+4.0.4はYAML制作フローと4.0 APIの正式版です。既存の3.1／3.2作品には引き続き3.2.3を使えます。公開済みの3.1／3.2作品は、4.0へ移行しなくても引き続き利用できます。
 
 ## まず体験する
 
@@ -48,7 +48,7 @@ TurboWarp紙芝居は、カメラの前で取ったポーズをきっかけに�
 
 ### YAML projectには4.0を使う
 
-正式版4.0.3では、ポーズ認識のモデル（PoseNet）を作品に埋め込まず、最初に使うときに紙芝居アプリのサイトから取得して全作品で共有するようにし、Standard SB3を約7.9 MBから約2.7 MBに小さくしました。ネットワークのない会場で使う作品は、asset profileで`network: forbidden`を指定してビルドすると、これまでどおりモデルを埋め込みます。あわせて再生用ランタイムから編集用のschemaを外し、asset-cacheを0.9.2に上げてIndexedDBのcacheを使う部品をページで一つにまとめました。4.0.2では台本YAMLを読む部品を最初に台本を読むときに準備するようにし、タイトルが早く表示されます。4.0.1では再生設定画面を追加しました。タイトルの「設定」または再生中のEscで開き、ポーズ待ちのスキップ、BGMと効果音の音量を変え、カメラと計算方式の設定を開けます。変更と切り戻しは[4.0.3リリースノート][stable4]を参照してください。Standard SB3・Player・npmパッケージの利用可否は[現在の公開状況][current-release]で確認してください。
+正式版4.0.4では、ポーズ認識に使うTensorFlow.js（約1.3 MB）も作品に同梱せず、認識モデルを使う場面に入ったときに紙芝居アプリのサイトから読み込むようにし、Standard SB3を約2.7 MBから約1.5 MBに小さくしました。認識モデルは場面ごとに裏で読み込み、認識を始める時点で読み込みが終わっていない場合だけ待ちます。4.0.3ではポーズ認識のモデル（PoseNet）を作品に埋め込まず、最初に使うときにサイトから取得して全作品で共有するようにしました。ネットワークのない会場で使う作品は、asset profileで`network: forbidden`を指定してビルドすると、これまでどおりモデルとTensorFlow.jsを埋め込みます。4.0.3ではあわせて再生用ランタイムから編集用のschemaを外し、asset-cacheを0.9.2に上げてIndexedDBのcacheを使う部品をページで一つにまとめました。4.0.2では台本YAMLを読む部品を最初に台本を読むときに準備するようにし、タイトルが早く表示されます。4.0.1では再生設定画面を追加しました。タイトルの「設定」または再生中のEscで開き、ポーズ待ちのスキップ、BGMと効果音の音量を変え、カメラと計算方式の設定を開けます。変更と切り戻しは[4.0.4リリースノート][stable4]を参照してください。Standard SB3・Player・npmパッケージの利用可否は[現在の公開状況][current-release]で確認してください。
 
 ```yaml
 kamishibai: '4.0'
@@ -71,10 +71,10 @@ scenes:
 
 rc.64では認識の計算方式画面の初期言語を修正し、TurboWarpの表示言語、未指定ならブラウザ言語を使用します。タイトル・説明・操作ボタン・読み上げ用の名前は英語・日本語に対応し、アプリ内の言語切り替えにも追従します。Teachable Machine 4.0.2と計算方式選択はrc.63で追加しました。以前のrc.58ではpreview終了時の自己abort処理を修正しました。rc.51からrc.55でsealed保存した作品は引き続き利用できないため、元の台本からsourceまたはcompiled配布として再生成してください。以下のnpm例は4.0.0のリリースジョブ完了後に実行し、事前に[公開状況][current-release]を確認してください。
 
-[`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.3)のCLIは、CI、再現可能なbuild、大規模project、配布profileの管理に向いています。Node.js 24.0.0以上とpnpm 11を使用し、検証するversionを固定して導入します。CLIコマンド名は`turbowarp-kamishibai`です。`tm-kamishibai`は非推奨の互換aliasとして残ります。
+[`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.4)のCLIは、CI、再現可能なbuild、大規模project、配布profileの管理に向いています。Node.js 24.0.0以上とpnpm 11を使用し、検証するversionを固定して導入します。CLIコマンド名は`turbowarp-kamishibai`です。`tm-kamishibai`は非推奨の互換aliasとして残ります。
 
 ```bash
-pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.3
+pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.4
 pnpm exec turbowarp-kamishibai --help
 pnpm exec turbowarp-kamishibai validate-dsl4 --input opening.k4.yml --format pretty
 pnpm exec turbowarp-kamishibai preview-dsl4 --watch --base kamishibai-4-base.sb3 --project-root .
@@ -185,5 +185,5 @@ pnpm verify:quick
 [rc81]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.81.md
 [rc82]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.82.md
 [rc88]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.88.md
-[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.3
-[stable4]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.3.md
+[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.4
+[stable4]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.4.md

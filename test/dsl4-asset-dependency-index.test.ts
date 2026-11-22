@@ -47,21 +47,24 @@ test('indexes every direct dependency in the comprehensive DSL 4.0 fixture', asy
       all: ['Beach', 'HeroHappy', 'OpeningSound'],
       eager: ['Beach', 'HeroHappy'],
       lazy: ['OpeningSound'],
+      background: [],
       sceneRetained: [],
     },
     rescue: {
       all: ['ClockTicking', 'HeroHappy', 'HeroHelp', 'Ocean', 'Success', '救助Pose'],
       eager: ['ClockTicking', 'HeroHappy', 'HeroHelp', 'Success'],
-      lazy: ['Ocean', '救助Pose'],
+      lazy: ['Ocean'],
+      background: ['救助Pose'],
       sceneRetained: ['救助Pose'],
     },
     seaRoute: {
       all: ['救助Pose'],
       eager: [],
-      lazy: ['救助Pose'],
+      lazy: [],
+      background: ['救助Pose'],
       sceneRetained: ['救助Pose'],
     },
-    ending: {all: ['Beach'], eager: ['Beach'], lazy: [], sceneRetained: []},
+    ending: {all: ['Beach'], eager: ['Beach'], lazy: [], background: [], sceneRetained: []},
   });
 });
 
@@ -157,6 +160,7 @@ scenes:
     all: ['SceneBackdrop'],
     eager: [],
     lazy: ['SceneBackdrop'],
+    background: [],
     sceneRetained: [],
   });
   assert.equal(index.startup.includes('Unused'), false);
@@ -180,6 +184,7 @@ scenes:
     all: ['Alpha', 'Zed'],
     eager: ['Alpha', 'Zed'],
     lazy: [],
+    background: [],
     sceneRetained: [],
   });
 });
@@ -220,6 +225,7 @@ scenes:
     all: ['HeroVoice', 'TalkTick'],
     eager: [],
     lazy: ['HeroVoice', 'TalkTick'],
+    background: [],
     sceneRetained: [],
   });
 });
@@ -275,12 +281,14 @@ scenes:
     all: ['TalkTick'],
     eager: [],
     lazy: ['TalkTick'],
+    background: [],
     sceneRetained: [],
   });
   assert.deepEqual(index.scenes.second, {
     all: ['ActionTick'],
     eager: [],
     lazy: ['ActionTick'],
+    background: [],
     sceneRetained: [],
   });
 });
@@ -322,6 +330,7 @@ scenes:
     all: ['Next1', 'Next2'],
     eager: [],
     lazy: ['Next1', 'Next2'],
+    background: [],
     sceneRetained: [],
   });
   assert.deepEqual(requireDefined(index.scenes.second, 'the second scene').all, []);
@@ -355,6 +364,7 @@ scenes:
     all: ['Face', 'Finish', 'Lip', 'Tick', 'Voice'],
     eager: [],
     lazy: ['Face', 'Finish', 'Lip', 'Tick', 'Voice'],
+    background: [],
     sceneRetained: [],
   });
 });
@@ -379,4 +389,53 @@ scenes:
     () => createDsl4AssetDependencyIndex({kind: 'StoryDocument', version: '3.2'}),
     /StoryDocument version 4\.0/u,
   );
+});
+
+test('keeps recognition models out of startup and loads each with its own scene in the background', () => {
+  const storyDocument = parse(`
+kamishibai: '4.0'
+assets:
+  Beach: backdrop
+  HeroIdle: costume:Hero
+  RescuePose:
+    kind: recognitionModel
+    file: pose-models/rescue
+  SeaPose:
+    kind: recognitionModel
+    file: pose-models/sea
+    loading: lazy
+actors:
+  Hero: HeroIdle
+scenes:
+  rescue:
+    recognitionModel: RescuePose
+    actions:
+      - stage: Beach
+      - Hero.pose:
+          steps:
+            - pose: help
+  sea:
+    recognitionModel: SeaPose
+    actions:
+      - Hero.pose:
+          steps:
+            - pose: swim
+`);
+  const index = createDsl4AssetDependencyIndex(storyDocument);
+
+  // An eager (default) recognition model no longer joins startup preparation.
+  assert.equal(index.startup.includes('RescuePose'), false);
+  assert.equal(index.startup.includes('SeaPose'), false);
+  assert.deepEqual(index.sceneRetained, ['RescuePose', 'SeaPose']);
+  assert.deepEqual(requireDefined(index.scenes.rescue, 'the rescue scene').background, [
+    'RescuePose',
+  ]);
+  assert.deepEqual(requireDefined(index.scenes.rescue, 'the rescue scene').lazy, []);
+  assert.deepEqual(requireDefined(index.scenes.sea, 'the sea scene'), {
+    all: ['SeaPose'],
+    eager: [],
+    lazy: [],
+    background: ['SeaPose'],
+    sceneRetained: ['SeaPose'],
+  });
 });

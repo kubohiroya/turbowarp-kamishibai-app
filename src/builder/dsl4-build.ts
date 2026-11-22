@@ -236,6 +236,12 @@ export async function buildDsl4RuntimeComponent(options: {
    * asset profile is known (`network: 'forbidden'` builds must embed the model data).
    */
   poseNetBundle?: unknown | ((context: {network: 'allowed' | 'forbidden'}) => Promise<unknown>);
+  /**
+   * The Teachable Machine runtime to store with the work, or a function that picks it once the
+   * asset profile is known. Only a `network: 'forbidden'` build carries it; other works load the
+   * runtime from the Kamishibai site.
+   */
+  tmRuntime?: unknown | ((context: {network: 'allowed' | 'forbidden'}) => Promise<unknown>);
   /** `source` (default) keeps the YAML; `compiled` stores only the validated Story IR. */
   distributionProfile?: Dsl4DistributionProfile;
   /** Opt-in raw file storage for local embedded-document editing; never synthesizes legacy originals. */
@@ -270,6 +276,7 @@ export async function buildDsl4RuntimeComponent(options: {
     maxAssetLockBytes,
     runtimeExtensionSource,
     poseNetBundle,
+    tmRuntime,
     distributionProfile = 'source',
     embeddedSourceDocuments = false,
   } = options;
@@ -478,6 +485,12 @@ export async function buildDsl4RuntimeComponent(options: {
           network: assetDistribution?.network ?? 'allowed',
         })
       : poseNetBundle;
+  const resolvedTMRuntime =
+    typeof tmRuntime === 'function'
+      ? await (tmRuntime as (context: {network: 'allowed' | 'forbidden'}) => Promise<unknown>)({
+          network: assetDistribution?.network ?? 'allowed',
+        })
+      : tmRuntime;
 
   const snapshot = await loadDsl4LocalAssetSnapshot(projectRoot, storyDocument, {
     maxFileBytes: maxAssetFileBytes,
@@ -542,6 +555,7 @@ export async function buildDsl4RuntimeComponent(options: {
     ...(assetDistribution === undefined ? {} : {assetDistribution}),
     ...(runtimeExtensionSource === undefined ? {} : {runtimeExtensionSource}),
     ...(resolvedPoseNetBundle === undefined ? {} : {poseNetBundle: resolvedPoseNetBundle}),
+    ...(resolvedTMRuntime === undefined ? {} : {tmRuntime: resolvedTMRuntime}),
   };
   let embedded = buildFeatureFlags.dsl4RootBinaryEntryPackaging
     ? await embedDsl4BinaryEntryRuntimeComponentInSb3(

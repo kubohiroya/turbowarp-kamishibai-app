@@ -154,6 +154,7 @@ interface AuditReport {
         all: {ids: string[]};
         eager: {ids: string[]};
         lazy: {ids: string[]};
+        background: {ids: string[]};
         sceneRetained: {ids: string[]};
       }
     | undefined
@@ -189,13 +190,15 @@ function assertAuditShape(audit: AuditReport) {
     },
   });
   assert.equal(requireDefined(audit.byKind.sound, 'the sound totals').assets, 2);
-  assert.deepEqual(audit.preparation.startup.ids, ['Logo', 'RescuePose']);
+  // The recognition model loads in the background of its scene, not at startup.
+  assert.deepEqual(audit.preparation.startup.ids, ['Logo']);
   assert.deepEqual(requireDefined(audit.scenes.opening, 'the opening scene').all.ids, [
     'Chime',
     'Narration',
     'RescuePose',
   ]);
-  assert.deepEqual(requireDefined(audit.scenes.opening, 'the opening scene').eager.ids, [
+  assert.deepEqual(requireDefined(audit.scenes.opening, 'the opening scene').eager.ids, []);
+  assert.deepEqual(requireDefined(audit.scenes.opening, 'the opening scene').background.ids, [
     'RescuePose',
   ]);
   assert.deepEqual(requireDefined(audit.scenes.opening, 'the opening scene').lazy.ids, [

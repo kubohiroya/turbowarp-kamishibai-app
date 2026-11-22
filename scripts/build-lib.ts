@@ -17,6 +17,7 @@ const copiedArtifacts = [
   'builder/generated/dsl4-playback-runtime-extension.js',
   'builder/generated/dsl4-narrative-playback-runtime-extension.js',
   'builder/generated/dsl4-narrative-authoring-runtime-extension.js',
+  'builder/generated/dsl4-teachable-machine-offline-runtime.json',
 ];
 
 function run(command: string, arguments_: readonly string[]) {

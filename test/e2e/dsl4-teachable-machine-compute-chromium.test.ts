@@ -1,4 +1,10 @@
-import {createDsl4TeachableMachineExtensionSource} from '../../scripts/sb3/teachable-machine-runtime.ts';
+import {
+  createDsl4TeachableMachineExtensionSource,
+  dsl4TeachableMachineSiteBaseUrl,
+  dsl4TeachableMachineSiteFiles,
+  readDsl4TeachableMachineRuntimeSite,
+  readDsl4TeachableMachineSiteFile,
+} from '../../scripts/sb3/teachable-machine-runtime.ts';
 import assert from 'node:assert/strict';
 import {mkdir, mkdtemp, readFile, writeFile} from 'node:fs/promises';
 import {createServer} from 'node:http';
@@ -49,6 +55,17 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
       ),
     ),
   );
+  // The Teachable Machine runtime the way the Kamishibai site publishes it, under its version.
+  const tmRuntimeSite = await readDsl4TeachableMachineRuntimeSite();
+  const tmSiteBase = dsl4TeachableMachineSiteBaseUrl(tmRuntimeSite.version);
+  const tmSite = new Map<string, Buffer>(
+    await Promise.all(
+      dsl4TeachableMachineSiteFiles.map(
+        async (file) =>
+          [`${tmSiteBase}${file}`, await readDsl4TeachableMachineSiteFile(file)] as const,
+      ),
+    ),
+  );
   const resources = new Map<string, {bytes: Uint8Array | string; type: string}>([
     [
       '/probe.js',
@@ -57,10 +74,11 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
     [
       '/teachable-machine.js',
       {
-        bytes: await createDsl4TeachableMachineExtensionSource({compactWasm: true}),
+        bytes: await createDsl4TeachableMachineExtensionSource(),
         type: 'text/javascript',
       },
     ],
+    ['/tm-runtime-site.json', {bytes: JSON.stringify(tmRuntimeSite), type: 'application/json'}],
     [
       '/project.json',
       {
@@ -160,8 +178,33 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
           })
         : route.fulfill({status: 404, body: 'missing'});
     });
+    const tmRequests: string[] = [];
+    await context.route(`${tmSiteBase}**`, (route) => {
+      const url = route.request().url();
+      tmRequests.push(url);
+      const body = tmSite.get(url);
+      return body
+        ? route.fulfill({
+            status: 200,
+            body,
+            headers: {
+              'access-control-allow-origin': '*',
+              'content-type': url.endsWith('.wasm')
+                ? 'application/wasm'
+                : url.endsWith('.js')
+                  ? 'text/javascript'
+                  : 'application/octet-stream',
+              'cross-origin-resource-policy': 'cross-origin',
+            },
+          })
+        : route.fulfill({status: 404, body: 'missing'});
+    });
     await page.goto(origin);
     await page.waitForFunction('globalThis.kamishibaiComputeProbe !== undefined');
+    // Loading the member and the Kamishibai runtime fetches no TensorFlow.js.
+    assert.equal(await page.evaluate('globalThis.kamishibaiComputeProbe.isRuntimeLoaded()'), false);
+    assert.equal(await page.evaluate('globalThis.tf === undefined'), true);
+    assert.equal(tmRequests.length, 0);
     assert.equal(await page.locator('#stage [data-stage-control]').count(), 0);
     assert.equal(await page.locator('#stage [data-dsl4-compute-settings]').count(), 0);
     const results: Record<string, unknown>[] = [];
@@ -219,6 +262,15 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
     await withoutSimd.waitForFunction('globalThis.kamishibaiComputeProbe !== undefined');
     const simdFallbacks = (await withoutSimd.evaluate(`
       (async () => {
+        await globalThis.kamishibaiComputeProbe.ensureRuntime();
+        // The WASM backend registers its flags when its bundle loads from beside runtime.js.
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = ${JSON.stringify(`${tmSiteBase}backend-wasm.js`)};
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('backend-wasm.js did not load'));
+          document.head.appendChild(script);
+        });
         globalThis.tf.env().set('WASM_HAS_SIMD_SUPPORT', false);
         const explicit = await globalThis.tmCompute.select('wasm');
         Object.defineProperty(navigator, 'gpu', {value: undefined});
@@ -227,15 +279,24 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
         return {explicit, automatic};
       })()
     `)) as Record<'explicit' | 'automatic', Record<string, unknown>>;
-    assert.equal(simdFallbacks.explicit.backend, 'cpu');
+    // The site serves the scalar WASM binary too, so a browser without SIMD still runs WASM.
+    assert.equal(simdFallbacks.explicit.backend, 'wasm');
     assert.equal(simdFallbacks.explicit.requested, 'wasm');
-    assert.equal(simdFallbacks.explicit.fallback, true);
-    assert.equal(simdFallbacks.automatic.backend, 'cpu');
+    assert.equal(simdFallbacks.explicit.fallback, false);
+    assert.equal(simdFallbacks.automatic.backend, 'wasm');
     await withoutSimd.close();
     assert.deepEqual(errors, []);
     assert.deepEqual(remote, []);
     // Every recognition run, the reload, and the second page share one download through Cache Storage.
     assert.deepEqual([...poseNetRequests].sort(), [...poseNetSite.keys()].sort());
+    // runtime.js came from the site, and the WebGPU and WASM backends from beside it, only once
+    // a mode reached for them.
+    assert(tmRequests.includes(`${tmSiteBase}runtime.js`));
+    assert(tmRequests.includes(`${tmSiteBase}backend-wasm.js`));
+    assert(
+      tmRequests.every((url) => tmSite.has(url)),
+      JSON.stringify(tmRequests),
+    );
     const report = {
       browser: browser.version(),
       results,
@@ -243,6 +304,7 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
       errors,
       remoteRequests: remote,
       poseNetRequests,
+      tmRequests,
       devicePreferencePersisted: true,
       sharedRuntimeReused: reused,
       stageControlsEntry: true,

@@ -95,9 +95,16 @@ export function createDsl4AssetDependencyIndex(storyDocument: Readonly<Record<st
       .filter(([, asset]) => asset.retention === 'scene')
       .map(([assetId]) => assetId),
   );
+  // Recognition models never hold up startup or a scene entry: each scene loads its own model in
+  // the background, and only a recognition action waits for it, and only while it is still loading.
+  const recognitionModels = new Set(
+    Object.entries(assets)
+      .filter(([, asset]) => asset.kind === 'recognitionModel')
+      .map(([assetId]) => assetId),
+  );
   const startup = new Set(
     Object.entries(assets)
-      .filter(([, asset]) => asset.loading !== 'lazy')
+      .filter(([assetId, asset]) => asset.loading !== 'lazy' && !recognitionModels.has(assetId))
       .map(([assetId]) => assetId),
   );
 
@@ -153,6 +160,8 @@ export function createDsl4AssetDependencyIndex(storyDocument: Readonly<Record<st
       all: ReadonlyArray<string>;
       eager: ReadonlyArray<string>;
       lazy: ReadonlyArray<string>;
+      /** Recognition models the scene loads in the background without waiting for them. */
+      background: ReadonlyArray<string>;
       sceneRetained: ReadonlyArray<string>;
     }>
   > = {};
@@ -181,7 +190,8 @@ export function createDsl4AssetDependencyIndex(storyDocument: Readonly<Record<st
     scenes[String(scene.id)] = deepFreeze({
       all,
       eager: all.filter((assetId) => startup.has(assetId)),
-      lazy: all.filter((assetId) => !startup.has(assetId)),
+      lazy: all.filter((assetId) => !startup.has(assetId) && !recognitionModels.has(assetId)),
+      background: all.filter((assetId) => recognitionModels.has(assetId)),
       sceneRetained: all.filter((assetId) => sceneRetainedAssets.has(assetId)),
     });
   }

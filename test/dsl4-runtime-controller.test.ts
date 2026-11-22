@@ -3619,3 +3619,131 @@ test('failed scenario chapter transfer holds the current variables and action wi
   assert.equal(requireRecord(controller.getState().variables, 'story variables').marker, 7);
   assert(!controller.getTrace().some((event) => (event as {type: string}).type === 'runtime.fail'));
 });
+
+function backgroundModelStory() {
+  return parseStory(`
+kamishibai: '4.0'
+assets:
+  Tick: sound
+  Charge: sound
+  HeroIdle: costume:Hero
+  Beach: backdrop
+  Ocean: backdrop
+  RescuePose:
+    kind: recognitionModel
+    file: pose-models/rescue
+  SeaPose:
+    kind: recognitionModel
+    file: pose-models/sea
+actors:
+  Hero: HeroIdle
+recognition:
+  idleSound: Tick
+  chargeSound: Charge
+scenes:
+  rescue:
+    recognitionModel: RescuePose
+    actions:
+      - stage: Beach
+      - Hero.pose:
+          steps:
+            - pose: help
+      - goto: sea
+  sea:
+    recognitionModel: SeaPose
+    actions:
+      - stage: Ocean
+      - Hero.pose:
+          steps:
+            - pose: swim
+`);
+}
+
+test('loads each scene model in the background and waits only at the recognition action', async () => {
+  const events: string[] = [];
+  const prepared: string[][] = [];
+  const models = new Map<string, ReturnType<typeof deferred<void>>>([
+    ['RescuePose', deferred<void>()],
+    ['SeaPose', deferred<void>()],
+  ]);
+  const controller = createDsl4RuntimeController({
+    storyDocument: backgroundModelStory(),
+    port: {
+      stage: async (payload: PortPayload) => {
+        events.push(`stage:${String(payload.backdrop)}`);
+      },
+      waitForPose: async (payload: PortPayload) => {
+        events.push(`pose:${String(payload.pose)}`);
+      },
+    },
+    assetLifecycle: {
+      async prepare(payload: PortPayload) {
+        const assetIds = (payload.assetIds as string[]).slice();
+        prepared.push(assetIds);
+        // A model resolves when the test says so; every caller of the same model joins it.
+        await Promise.all(assetIds.map((assetId) => models.get(assetId)?.promise));
+      },
+      async setLoading() {},
+      async releaseAssets(payload: PortPayload) {
+        events.push(`release:${(payload.assetIds as string[]).join(',')}`);
+      },
+      async release() {},
+    },
+  });
+
+  const run = controller.start();
+  // Startup and the scene entry never wait for a model: the scene runs up to its pose action.
+  await waitFor(() => events.includes('stage:Beach'), 'the scene did not start');
+  assert.equal(
+    prepared.some((assetIds) => assetIds.includes('SeaPose')),
+    false,
+    'a later scene model must not load before its scene',
+  );
+  assert(prepared.some((assetIds) => assetIds.join() === 'RescuePose'));
+  assert.equal(events.includes('pose:help'), false, 'the pose waits while its model loads');
+  await waitFor(
+    () => traceOf(controller).some(({type}) => type === 'assets.background.wait.start'),
+    'the pose action did not start waiting for its model',
+  );
+  assert.equal(events.includes('pose:help'), false);
+
+  models.get('RescuePose')!.resolve();
+  await waitFor(() => events.includes('stage:Ocean'), 'the next scene did not start');
+  // The next scene's model loads in the background; the previous scene's model is released.
+  assert(prepared.some((assetIds) => assetIds.join() === 'SeaPose'));
+  assert(events.includes('release:RescuePose'));
+  assert.equal(events.includes('pose:swim'), false);
+
+  models.get('SeaPose')!.resolve();
+  await run;
+  assert.equal(controller.getState().status, 'finished');
+  assert.deepEqual(
+    events.filter((event) => event.startsWith('pose:') || event.startsWith('stage:')),
+    ['stage:Beach', 'pose:help', 'stage:Ocean', 'pose:swim'],
+  );
+});
+
+test('a pose action reports the failure of its background model load', async () => {
+  const controller = createDsl4RuntimeController({
+    storyDocument: backgroundModelStory(),
+    port: {
+      stage: async () => {},
+      waitForPose: async () => {},
+    },
+    assetLifecycle: {
+      async prepare(payload: PortPayload) {
+        if ((payload.assetIds as string[]).includes('RescuePose')) {
+          throw Object.assign(new Error('model files are missing'), {code: 'K4-TEST-MODEL'});
+        }
+      },
+      async setLoading() {},
+      async releaseAssets() {},
+      async release() {},
+    },
+  });
+  await controller.start();
+  const state = controller.getState();
+  assert.equal(state.status, 'failed');
+  assert.match(JSON.stringify(state.diagnostic), /RescuePose|model files are missing/u);
+  assert(traceOf(controller).some(({type}) => type === 'assets.background.error'));
+});

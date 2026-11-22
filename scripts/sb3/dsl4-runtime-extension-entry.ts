@@ -61,6 +61,12 @@ import {
 } from '../../dist/dsl4/feature-flags.js';
 import {createDsl4BrowserRemoteAssetLoader} from '../../dist/dsl4/platform/browser-remote-asset-loader.js';
 import {createDsl4ProjectTMRuntime} from '../../dist/dsl4/platform/posenet-bundle.js';
+import {
+  createDsl4TMRuntimeOwner,
+  installDsl4TMRuntimeOwner,
+  readDsl4TMOfflineRuntime,
+  type Dsl4TMRuntimeSite,
+} from '../../dist/dsl4/platform/tm-runtime-owner.js';
 import {createDsl4PackagedBinaryRuntimeBridge} from '../../dist/dsl4/platform/packaged-binary-runtime.js';
 import {createDsl4RuntimeErrorIndicator} from '../../dist/dsl4/platform/runtime-error-indicator.js';
 import {createDsl4BlockErrorLocation} from '../../dist/dsl4/platform/block-error-location.js';
@@ -126,7 +132,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.3';
+const extensionVersion = '4.0.4';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -465,20 +471,28 @@ function createCameraPermissionOwner(readRuntime: () => unknown) {
   };
 }
 
-function resolveBundledTMRuntime() {
-  const runtime =
-    typeof tmPose === 'object' && tmPose !== null
-      ? tmPose
-      : (globalThis as unknown as {tmPose?: unknown}).tmPose;
-  if (
-    typeof runtime !== 'object' ||
-    runtime === null ||
-    typeof (runtime as RuntimeEntryBundledTMRuntime).Webcam !== 'function' ||
-    typeof (runtime as RuntimeEntryBundledTMRuntime).loadFromFiles !== 'function'
-  ) {
-    throw new Error('The bundled Teachable Machine Pose runtime is unavailable.');
+/**
+ * The page's one owner of the Teachable Machine runtime. The Standard bundle carries no
+ * TensorFlow.js: recognition loads the reviewed runtime from the Kamishibai site, or from the copy a
+ * network-free work carries, the first time it needs it.
+ */
+let tmRuntimeOwner: ReturnType<typeof createDsl4TMRuntimeOwner> | null = null;
+function teachableMachineRuntime() {
+  if (!tmRuntimeOwner) {
+    tmRuntimeOwner = createDsl4TMRuntimeOwner({
+      site: DSL4_TM_RUNTIME,
+      readOfflineRuntime: () =>
+        readDsl4TMOfflineRuntime(
+          (Scratch.vm?.runtime as {extensionStorage?: unknown} | undefined)?.extensionStorage,
+        ),
+    });
+    installDsl4TMRuntimeOwner(tmRuntimeOwner);
   }
-  return runtime as RuntimeEntryBundledTMRuntime;
+  return tmRuntimeOwner;
+}
+
+function resolveBundledTMRuntime() {
+  return teachableMachineRuntime().poseRuntime as unknown as RuntimeEntryBundledTMRuntime;
 }
 
 function browserLocale(language = globalThis.navigator?.language): RuntimeEntryLocale {
@@ -544,7 +558,7 @@ declare const DSL4_APPLICATION_MENU_ICONS: Readonly<Record<string, string>>;
 declare const DSL4_OFFICIAL_WEBSITE_ICON: string;
 declare const DSL4_AUTHORING_PROFILE: boolean;
 declare const DSL4_NARRATIVE_CONTROL: boolean;
-declare const tmPose: unknown;
+declare const DSL4_TM_RUNTIME: Dsl4TMRuntimeSite;
 declare const Scratch: RuntimeEntryScratch;
 
 /**
@@ -1363,10 +1377,8 @@ class KamishibaiDsl4RuntimeExtension {
   }
 
   tmComputeOptions() {
-    const compute = (
-      globalThis as typeof globalThis & {tmCompute?: TMCompositionOptions['compute']}
-    ).tmCompute;
-    if (!compute) throw new Error('Teachable Machine 4.0.2 compute runtime is not initialized');
+    const compute = teachableMachineRuntime()
+      .compute as unknown as TMCompositionOptions['compute'] & {getSelection(): unknown};
     return {
       compute,
       computeMode: this.computePreferences.getMode(),
@@ -2302,6 +2314,7 @@ try {
   if (!Scratch?.extensions?.unsandboxed) {
     throw new Error('Kamishibai DSL 4.0 Runtime must run unsandboxed.');
   }
+  teachableMachineRuntime();
   Scratch.extensions.register(new KamishibaiDsl4RuntimeExtension(Scratch));
 } catch (error) {
   kamishibaiLog.error('extension-bootstrap failed.', loggedError(error));
