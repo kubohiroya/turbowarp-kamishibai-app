@@ -23,9 +23,8 @@ concurrency:
 jobs:
   release:
     permissions:
+      actions: read
       contents: write
-      id-token: write
-      pages: write
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -39,7 +38,38 @@ jobs:
         # token instead of exchanging the workflow identity, so publishing fails with
         # "OIDC permission denied".
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run check
+      # The release pull request's CI already ran the full release validation (verify:full) on
+      # its merge result and recorded that tree. When the tag's tree is the same, repeating the
+      # same checks here only delays the release. Any other tree runs the full validation.
+      - name: Find the full validation of this exact tree
+        id: verified
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tree="$(git rev-parse 'HEAD^{tree}')"
+          run=''
+          for pr in $(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[].number'); do
+            head="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr" --jq .head.sha)"
+            for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$head&event=pull_request&status=success" --jq '.workflow_runs[].id'); do
+              artifact="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/artifacts" --jq '[.artifacts[] | select(.name == "verified-full-tree" and (.expired | not))][0].id // empty')"
+              [ -n "$artifact" ] || continue
+              gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact/zip" > "$RUNNER_TEMP/verified.zip"
+              if [ "$(unzip -p "$RUNNER_TEMP/verified.zip" tree.txt | tr -d '[:space:]')" = "$tree" ]; then
+                run="$id"
+                break 2
+              fi
+            done
+          done
+          if [ -n "$run" ]; then
+            echo "Tree $tree passed the full validation in CI run $run (pull request #$pr)."
+          else
+            echo "No full validation of tree $tree was found; running it here."
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+      - name: Run the full release validation
+        if: ${{ steps.verified.outputs.run == '' }}
+        run: pnpm run check
         env:
           KAMISHIBAI_RELEASE_CHECK: '1'
       - name: Check the tag names the package version
@@ -97,6 +127,43 @@ jobs:
               exit 1
             fi
           done
+
+  # npm and the site do not depend on each other. Running them side by side keeps the registry's
+  # serving delay (often several minutes) from also delaying the site.
+  npm:
+    needs: release
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Take the archive attached by the release job
+        id: pack
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          file="$(node -p "'$name'.replace(/^@/, '').replace('/', '-')")-$version.tgz"
+          mkdir -p "$RUNNER_TEMP/npm"
+          gh release download "$GITHUB_REF_NAME" --pattern "$file" --dir "$RUNNER_TEMP/npm"
+          want="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" --jq ".assets[] | select(.name == \"$file\") | .digest")"
+          test "sha256:$(sha256sum "$RUNNER_TEMP/npm/$file" | cut -d' ' -f1)" = "$want"
+          echo "file=$RUNNER_TEMP/npm/$file" >> "$GITHUB_OUTPUT"
+      - name: Stage the frozen Standard SB3 for the publication record
+        run: |
+          pnpm run build:lib
+          node scripts/sb3/dsl4-published-assets.ts stage "$RUNNER_TEMP/dsl4-release"
+          git diff --exit-code
       - name: Use an npm that supports trusted publishing
         run: npm install --global npm@11.21.0
       - name: Publish to npm
@@ -160,6 +227,23 @@ jobs:
             exit 1
           fi
           git diff --exit-code
+
+  site:
+    needs: release
+    permissions:
+      contents: write
+      pages: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build:lib
       - name: Publish the verified current release site with history retained
         env:
           GH_TOKEN: ${{ github.token }}
