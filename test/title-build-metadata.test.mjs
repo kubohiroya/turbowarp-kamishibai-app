@@ -127,7 +127,7 @@ test('embeds an initial Title fallback and runtime-localized app-shell text', as
 
   const runtimeValues = new Map();
   for (const block of Object.values(stage.blocks)) {
-    if (block.opcode !== 'tmposebundle_kubohiroyaassetmanager__setTextValue') continue;
+    if (block.opcode !== 'kubohiroyaassetcache_setTextValue') continue;
     const name = block.inputs.NAME?.[1]?.[1];
     const value = block.inputs.VALUE?.[1]?.[1];
     if (typeof name !== 'string' || typeof value !== 'string') continue;
@@ -138,7 +138,7 @@ test('embeds an initial Title fallback and runtime-localized app-shell text', as
   assert.deepEqual([...runtimeValues.get('about.version')], [expectedLabel]);
   const titleWidthStyle = Object.values(stage.blocks).find(
     (block) =>
-      block.opcode === 'tmposebundle_kubohiroyaassetmanager__setTextStyle' &&
+      block.opcode === 'kubohiroyaassetcache_setTextStyle' &&
       block.inputs?.NAME?.[1]?.[1] === 'about.title' &&
       block.inputs?.PROPERTY?.[1]?.[1] === 'width',
   );

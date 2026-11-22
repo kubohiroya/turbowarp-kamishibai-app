@@ -45,7 +45,7 @@ tmpose-kamishibai 3.2.xは、冒頭が`kamishibai=3.1`または`kamishibai=3.2`�
 
 旧構文を含む台本では、プロジェクトごとに一度`LEGACY_TEXT_ASSET_DEPRECATED`警告を開発者コンソールへ出力しますが、実行は継続します。旧Text Assetは少なくとも3.2系列では維持し、削除する場合は将来のメジャーバージョンで事前に告知します。移行先は[`kubohiroya/turbowarp-svg-text`](https://github.com/kubohiroya/turbowarp-svg-text)です。この機能拡張を組み込んだ3.2プロジェクトでは、旧Text Assetと新しいSVG Textを同じ台本内で併用できます。新規の台本では、名前付きスタイルを共有するSVG Textを使用してください。アプリ自身のメニューやタイトルで使用する内部テキスト表示は、この警告の対象外です。
 
-SVG Textは公開済みの`@kubohiroya/turbowarp-svg-text@0.2.1`を完全固定で利用します。台本のシーン定義より前に、背景色、文字色、フォント、相対フォントサイズ、配置、吹き出し方向を名前付きスタイルとして定義します。サイズ`100`は480×360ステージにおける標準14px相当で、ステージ寸法に比例して拡大・縮小します。
+SVG Textは公開済みの`@kubohiroya/turbowarp-svg-text@0.17.0`を、スタイル付きの吹き出しは`@kubohiroya/turbowarp-bubble@0.21.0`を完全固定で利用します（3.2.4以降。3.2.3までは吹き出しもSVG Text 0.2.1が描いていました）。台本のシーン定義より前に、背景色、文字色、フォント、相対フォントサイズ、配置、吹き出し方向を名前付きスタイルとして定義します。吹き出し方向は、同じ名前のBubbleスタイルの配置になります。サイズ`100`は480×360ステージにおける標準14px相当で、ステージ寸法に比例して拡大・縮小します。
 
 ```text
 svgTextStyle=title:#112233:#ffffff:Noto Sans JP:150:center:up

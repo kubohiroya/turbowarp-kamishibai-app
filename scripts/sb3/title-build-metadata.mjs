@@ -16,10 +16,7 @@ import {
 export const titleVersionPlaceholder = 'Version {{VERSION}} ({{BUILD_DATE}})';
 export const officialWebsiteFaviconPlaceholder = '{{OFFICIAL_WEBSITE_FAVICON}}';
 export const titleBuildDateEnvironmentVariable = 'KAMISHIBAI_BUILD_DATE';
-const assetManagerSetTextValueOpcodes = new Set([
-  'kubohiroyaassetmanager_setTextValue',
-  'tmposebundle_kubohiroyaassetmanager__setTextValue',
-]);
+const assetManagerSetTextValueOpcodes = new Set(['kubohiroyaassetcache_setTextValue']);
 
 function escapeXml(value) {
   return value

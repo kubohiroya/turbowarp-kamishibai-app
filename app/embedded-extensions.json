@@ -2,33 +2,18 @@
   "formatVersion": 1,
   "extensions": [
     {
-      "id": "kubohiroyaassetmanager",
-      "path": "extensions/kubohiroyaassetmanager.js",
+      "id": "kubohiroyaassetcache",
+      "path": "extensions/kubohiroyaassetcache.js",
       "mediaType": "text/javascript",
       "parameters": [],
       "encoding": "base64",
       "source": {
         "provider": "github",
-        "repository": "kubohiroya/turbowarp-asset-manager",
-        "ref": "main",
-        "resolvedCommit": "c55e65787eed21d2e70b96a28dd6705d118f9995",
-        "artifact": "dist/asset-manager.js",
-        "integrity": "sha256-EcTQdC7fHug/cRgZpA/FVy3tp7hhnoALWzEz86j9FYg="
-      }
-    },
-    {
-      "id": "text",
-      "path": "extensions/text.js",
-      "mediaType": "text/javascript",
-      "parameters": [],
-      "encoding": "base64",
-      "source": {
-        "provider": "github",
-        "repository": "TurboWarp/extensions",
-        "ref": "master",
-        "resolvedCommit": "9c0ae4f045dfb021cf329ea1ea6e595502c56a8a",
-        "artifact": "extensions/lab/text.js",
-        "integrity": "sha256-aNaVYu62vBeUDKn0+BwNZAO91mWs/xjiYVxXU7Jja98="
+        "repository": "kubohiroya/turbowarp-asset-cache",
+        "ref": "v0.10.0",
+        "resolvedCommit": "0c7698a8f6c3d174125c1da778a9d95e07b05df9",
+        "artifact": "dist/asset-cache.js",
+        "integrity": "sha256-zr0pep+i0kwsWNmgSHwhnavePc9qC425/R5kZbC06Ns="
       }
     },
     {
@@ -92,15 +77,29 @@
       "source": {
         "provider": "npm",
         "package": "@kubohiroya/turbowarp-svg-text",
-        "version": "0.2.1",
+        "version": "0.17.0",
         "artifact": "dist/svg-text.js",
-        "integrity": "sha256-8Ov7ERdL23h0i+wWrQz0BcycEnJlRU0uFORc9JniA1Y=",
+        "integrity": "sha256-6hrBpbB0Fp6fN3HugoLUO+wIyM7dTWSRX7wjTqHOfNE=",
         "apiManifest": {
           "artifact": "dist/extension-manifest.json",
           "path": "extensions/kubohiroyasvgtext.manifest.json",
           "formatVersion": 1,
-          "integrity": "sha256-nuzmQRfDNAcqv+v2Yl0WqrIYeWonTOTtgOWwT4vJceY="
+          "integrity": "sha256-/022MgRdy/nfCEVwIww9v3cu0THC1CluzYQ6oVeBbF0="
         }
+      }
+    },
+    {
+      "id": "kubohiroyabubble",
+      "path": "extensions/kubohiroyabubble.js",
+      "mediaType": "text/javascript",
+      "parameters": [],
+      "encoding": "base64",
+      "source": {
+        "provider": "npm",
+        "package": "@kubohiroya/turbowarp-bubble",
+        "version": "0.21.0",
+        "artifact": "dist/turbowarp-bubble.js",
+        "integrity": "sha256-qEqBqw7prFvAbHdwEtSHk3APiROGal13VUlNPtaUsck="
       }
     },
     {
@@ -117,18 +116,6 @@
         "artifact": "dist/async-input.js",
         "integrity": "sha256-6zHDw0WrUuxT1KrzarKONjZBLmgU3iyO4yv2BiyEPcM="
       }
-    }
-  ],
-  "extensionBundles": [
-    {
-      "id": "tmposebundle",
-      "name": "TMPose Extension Bundle",
-      "members": [
-        "kubohiroyaassetmanager",
-        "text",
-        "kubohiroyakamishibairuntime",
-        "kubohiroyasvgtext"
-      ]
     }
   ]
 }

@@ -15,11 +15,12 @@ const firstPartyFiles = [
   'test/turbowarp-vm.test.mjs',
 ];
 const vendoredExtensions = [
-  'app/extensions/kubohiroyaassetmanager.js',
+  'app/extensions/kubohiroyaassetcache.js',
   'app/extensions/kubohiroyaasyncinput.js',
   'app/extensions/kubohiroyaruntimeexpression.js',
   'app/extensions/kubohiroyatextlines.js',
-  'app/extensions/text.js',
+  'app/extensions/kubohiroyasvgtext.js',
+  'app/extensions/kubohiroyabubble.js',
   'app/extensions/kubohiroyatm.js',
 ];
 

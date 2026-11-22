@@ -61,7 +61,8 @@
   "author": "Hiroya Kubo",
   "license": "MPL-2.0",
   "dependencies": {
-    "@kubohiroya/turbowarp-svg-text": "0.2.1",
+    "@kubohiroya/turbowarp-bubble": "0.21.0",
+    "@kubohiroya/turbowarp-svg-text": "0.17.0",
     "fflate": "0.8.3"
   },
   "devDependencies": {
