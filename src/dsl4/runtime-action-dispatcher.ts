@@ -57,6 +57,11 @@ export function createDsl4RuntimeActionDispatcher(options: {
   writeVariable: (
     request: Readonly<{operation: 'set' | 'change' | 'toggle'; name: string; value?: unknown}>,
   ) => Readonly<{accepted: boolean; code: string}>;
+  /**
+   * Wait for the scene's recognition model before an action that recognizes. The model loads in
+   * the background from scene entry, so this returns at once unless it is still loading.
+   */
+  prepareRecognitionModel?: (context: Dsl4ActionDispatchContext) => unknown | Promise<unknown>;
 }) {
   if (!isRecord(options))
     throw new TypeError('Runtime action dispatcher options must be an object');
@@ -66,6 +71,10 @@ export function createDsl4RuntimeActionDispatcher(options: {
   const getRecognitionModel = requireFunction(options.getRecognitionModel, 'getRecognitionModel');
   const dispatchPose = requireFunction(options.dispatchPose, 'dispatchPose');
   const writeVariable = requireFunction(options.writeVariable, 'writeVariable');
+  const prepareRecognitionModel =
+    options.prepareRecognitionModel === undefined
+      ? () => undefined
+      : requireFunction(options.prepareRecognitionModel, 'prepareRecognitionModel');
   if (!isRecord(options.poseSelectionRecognition)) {
     throw new TypeError('poseSelectionRecognition must be an object');
   }
@@ -137,6 +146,8 @@ export function createDsl4RuntimeActionDispatcher(options: {
       return {sceneId: routes[selected] ?? '', reason: 'touchInput'};
     }
     if (command === 'poseInputToChangeScene') {
+      const modelReady = prepareRecognitionModel(context);
+      if (modelReady) await modelReady;
       const routes = args.routes as Record<string, string>;
       const selected = await invokePort(
         command,
@@ -154,6 +165,8 @@ export function createDsl4RuntimeActionDispatcher(options: {
       return {sceneId: routes[selected] ?? '', reason: 'poseInput'};
     }
     if (command === 'imageInputToChangeScene') {
+      const modelReady = prepareRecognitionModel(context);
+      if (modelReady) await modelReady;
       const routes = args.routes as Record<string, string>;
       const selected = await invokePort(
         command,
@@ -191,6 +204,7 @@ export function createDsl4RuntimeActionDispatcher(options: {
       return null;
     }
     if (command === 'pose') {
+      // A pose step waits for the model itself, inside its skippable pose wait.
       await dispatchPose({target, args}, context);
       return null;
     }

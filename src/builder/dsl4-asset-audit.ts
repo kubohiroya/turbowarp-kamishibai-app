@@ -95,6 +95,8 @@ export interface AssetDistributionAudit {
         all: AuditPhaseSummary;
         eager: AuditPhaseSummary;
         lazy: AuditPhaseSummary;
+        /** Recognition models the scene loads in the background, waited for only by recognition. */
+        background: AuditPhaseSummary;
         sceneRetained: AuditPhaseSummary;
       }>
     >
@@ -550,6 +552,7 @@ export function createDsl4AssetDistributionAudit({
         all: phase(scene.all ?? []),
         eager: phase(scene.eager ?? []),
         lazy: phase(scene.lazy ?? []),
+        background: phase(scene.background ?? []),
         sceneRetained: phase(scene.sceneRetained ?? []),
       },
     ]),
@@ -761,7 +764,7 @@ export function formatDsl4AssetDistributionAudit(audit: AssetDistributionAudit) 
   }
   for (const [sceneId, scene] of Object.entries(audit.scenes)) {
     lines.push(
-      `Scene ${sceneId}: ${scene.all.assets} assets (${scene.all.logicalBytes} logical bytes; lazy ${scene.lazy.logicalBytes})`,
+      `Scene ${sceneId}: ${scene.all.assets} assets (${scene.all.logicalBytes} logical bytes; lazy ${scene.lazy.logicalBytes}; background ${scene.background.logicalBytes})`,
     );
   }
   return `${lines.join('\n')}\n`;

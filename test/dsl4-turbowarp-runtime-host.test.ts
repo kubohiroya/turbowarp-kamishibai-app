@@ -4627,8 +4627,9 @@ test('attempts every partial cleanup and aggregates creation plus cleanup failur
 });
 
 test('reports a remote pose model as runtime.fail when the preview has no remote loader', async () => {
-  // The local preview bootstrap passes no loadRemoteAsset, so a scene that needs a remote pose
-  // directory fails at entry. The failure must reach onEvent so the preview can display it.
+  // The local preview bootstrap passes no loadRemoteAsset, so a remote pose directory cannot load.
+  // The scene starts loading it in the background; the recognition action that waits for it
+  // reports the failure, which must reach onEvent so the preview can display it.
   const project = await packagedProject(`
 kamishibai: '4.0'
 assets:
@@ -4646,7 +4647,10 @@ scenes:
   opening:
     recognitionModel: RemotePose
     actions:
-      - wait: 0
+      - poseInputToChangeScene:
+          Ready: ending
+  ending:
+    - wait: 0
 `);
   const runtimeComponent = await loadDsl4RuntimeComponent(project, frontend, {
     ...limits,
