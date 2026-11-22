@@ -1,5 +1,5 @@
 {
-  "name": "@kubohiroya/tmpose-kamishibai",
+  "name": "@kubohiroya/turbowarp-kamishibai-app",
   "version": "3.2.4",
   "private": false,
   "type": "module",
@@ -7,17 +7,18 @@
   "homepage": "https://kubohiroya.github.io/tmpose-kamishibai/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kubohiroya/tmpose-kamishibai.git"
+    "url": "git+https://github.com/kubohiroya/turbowarp-kamishibai-app.git"
   },
   "bugs": {
-    "url": "https://github.com/kubohiroya/tmpose-kamishibai/issues"
+    "url": "https://github.com/kubohiroya/turbowarp-kamishibai-app/issues"
   },
   "exports": {
     "./builder": "./src/builder/index.js",
     "./package.json": "./package.json"
   },
   "bin": {
-    "tmpose-kamishibai": "bin/tmpose-kamishibai.mjs"
+    "tmpose-kamishibai": "bin/tmpose-kamishibai.mjs",
+    "turbowarp-kamishibai": "bin/tmpose-kamishibai.mjs"
   },
   "files": [
     "bin/",
@@ -28,7 +29,8 @@
   ],
   "publishConfig": {
     "access": "public",
-    "registry": "https://registry.npmjs.org/"
+    "registry": "https://registry.npmjs.org/",
+    "tag": "legacy-3.2"
   },
   "packageManager": "pnpm@11.18.0",
   "scripts": {

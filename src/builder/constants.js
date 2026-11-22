@@ -1,4 +1,4 @@
-export const packageName = '@kubohiroya/tmpose-kamishibai';
+export const packageName = '@kubohiroya/turbowarp-kamishibai-app';
 export const packageVersion = '3.2.4';
 export const bundleManifestFormatVersion = 2;
 export const assetManifestFormatVersion = 1;

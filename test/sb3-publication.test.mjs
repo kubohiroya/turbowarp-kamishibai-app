@@ -51,7 +51,7 @@ test('links and documents the generated downloadable SB3', async () => {
   assert.match(
     readme,
     new RegExp(
-      `pnpm add --save-exact @kubohiroya/tmpose-kamishibai@${packageJson.version.replaceAll('.', '\\.')}`,
+      `pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@${packageJson.version.replaceAll('.', '\\.')}`,
       'u',
     ),
     'README installation must use the current fixed npm version.',
