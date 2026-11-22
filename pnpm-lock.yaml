@@ -13,9 +13,12 @@ importers:
 
   .:
     dependencies:
+      '@kubohiroya/turbowarp-bubble':
+        specifier: 0.21.0
+        version: 0.21.0
       '@kubohiroya/turbowarp-svg-text':
-        specifier: 0.2.1
-        version: 0.2.1
+        specifier: 0.17.0
+        version: 0.17.0
       fflate:
         specifier: 0.8.3
         version: 0.8.3
@@ -55,6 +58,14 @@ importers:
         version: 7.0.2
 
 packages:
+
+  '@cto.af/linebreak@4.0.3':
+    resolution: {integrity: sha512-GiyepYtGQMo4LDynuhyFr0/hBGv0SFNVKnPjHuhFMnkseCBCIMecaCkKL8V3cu9mRas1djpSWznxigw/irV5Lw==}
+    engines: {node: '>=20'}
+
+  '@cto.af/unicode-trie-runtime@3.2.9':
+    resolution: {integrity: sha512-H4FHtvIef/8NlU+NsQolcL9SKu+fYIPMZI++h6rQcM1IN7C/AwiCs9L8WRff+O4hDMamksAEuwBjet2S9uPt4w==}
+    engines: {node: '>=20'}
 
   '@eslint-community/eslint-utils@4.10.1':
     resolution: {integrity: sha512-cuadcxVFE8sDK6iWJbs8Sn0av2Nrh2QSGQhVlBW9AaAHqHwjWsZHT8LJ4hFGPh7ASBV2deFdM7H/DPjulmh8rg==}
@@ -112,8 +123,24 @@ packages:
     engines: {node: '>=22.12.0'}
     hasBin: true
 
-  '@kubohiroya/turbowarp-svg-text@0.2.1':
-    resolution: {integrity: sha512-N5Ainmm8l4IfTytfQGlKZWy/gOTkbJ1P3vTsbVmpKVlaIwt8BcFF8pzAQHrJYgtGm+VoBqV8bQrc7631bBG6oA==}
+  '@kubohiroya/turbowarp-bubble@0.21.0':
+    resolution: {integrity: sha512-MGEjk/71aOfNVPaP0BrrlfxYD9CRN+ca+aVQ1OtgN0x0NceYQB6ZBvKkLwe7qDWILmX9y3usS4nf/SWSbp9qXA==}
+    engines: {node: '>=24'}
+    peerDependencies:
+      '@kubohiroya/turbowarp-asset-cache': ^0.10.0
+      '@kubohiroya/turbowarp-async-input': ^0.14.0
+      '@kubohiroya/turbowarp-runtime-expression': ^0.12.0
+    peerDependenciesMeta:
+      '@kubohiroya/turbowarp-asset-cache':
+        optional: true
+      '@kubohiroya/turbowarp-async-input':
+        optional: true
+      '@kubohiroya/turbowarp-runtime-expression':
+        optional: true
+
+  '@kubohiroya/turbowarp-svg-text@0.17.0':
+    resolution: {integrity: sha512-oUBoYwz/lG+mLJOpYi9hJZ6xOn+Gy/wBrzUgzgnc8jSXNjmX03DljwJwSfueFUZpNt29e3NC7vBWL80gkhhJRw==}
+    engines: {node: '>=24'}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -865,6 +892,14 @@ packages:
 
 snapshots:
 
+  '@cto.af/linebreak@4.0.3':
+    dependencies:
+      '@cto.af/unicode-trie-runtime': 3.2.9
+
+  '@cto.af/unicode-trie-runtime@3.2.9':
+    dependencies:
+      fflate: 0.8.3
+
   '@eslint-community/eslint-utils@4.10.1(eslint@10.8.0(supports-color@7.2.0))':
     dependencies:
       eslint: 10.8.0(supports-color@7.2.0)
@@ -915,7 +950,12 @@ snapshots:
     dependencies:
       fflate: 0.8.3
 
-  '@kubohiroya/turbowarp-svg-text@0.2.1': {}
+  '@kubohiroya/turbowarp-bubble@0.21.0':
+    dependencies:
+      '@cto.af/linebreak': 4.0.3
+      '@kubohiroya/turbowarp-svg-text': 0.17.0
+
+  '@kubohiroya/turbowarp-svg-text@0.17.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:

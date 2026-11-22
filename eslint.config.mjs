@@ -13,12 +13,13 @@ export default [
       'node_modules/**',
       'tmp/**',
       // These files are immutable build artifacts synchronized from their upstream repositories.
-      'app/extensions/kubohiroyaassetmanager.js',
+      'app/extensions/kubohiroyaassetcache.js',
       'app/extensions/kubohiroyaasyncinput.js',
       'app/extensions/kubohiroyaruntimeexpression.js',
       'app/extensions/kubohiroyatextlines.js',
-      'app/extensions/text.js',
-      'app/extensions/tmpose.js',
+      'app/extensions/kubohiroyasvgtext.js',
+      'app/extensions/kubohiroyabubble.js',
+      'app/extensions/kubohiroyatm.js',
     ],
   },
   {

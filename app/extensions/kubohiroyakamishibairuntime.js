@@ -395,9 +395,9 @@
     const address = command.value.slice(separatorIndex + 1).trim();
     const result = callValidationApi(
       runtime,
-      'kubohiroyaassetmanager_validateProjectAssetAddress',
+      'kubohiroyaassetcache_validateProjectAssetAddress',
       {NAME: name, RESOURCE_ID: address},
-      'Asset Manager',
+      'Asset Cache',
       command,
     );
     if (!result.ok) {

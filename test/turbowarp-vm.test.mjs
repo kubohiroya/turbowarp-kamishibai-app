@@ -346,17 +346,15 @@ test('pins and loads the generated SB3 in the TurboWarp VM', async (context) => 
   assert.equal(uiItemBlocks.getBlock(createClone.next).opcode, 'data_setvariableto');
   assert.equal(
     applyCloneSkin.opcode,
-    'tmposebundle_kubohiroyaassetmanager__setThisSpriteSkin',
+    'kubohiroyaassetcache_setThisSpriteSkin',
     'assets are applied only after cloning the stable placeholder drawable',
   );
   assert.equal(showClone.opcode, 'looks_show');
   assert.equal(uiItemBlocks.getBlock(showClone.next).opcode, 'control_wait');
   assert.equal(
-    Object.values(uiItemBlocks._blocks).some(
-      (block) => block.opcode === 'tmposebundle_text__setText',
-    ),
+    Object.values(uiItemBlocks._blocks).some((block) => block.opcode === 'text_setText'),
     false,
-    'UiItem delegates text rendering to Asset Manager instead of cloning Animated Text state',
+    'UiItem delegates text rendering to Asset Cache instead of cloning Animated Text state',
   );
   assert.equal(
     harness.getSprite('UiItem').getCostumes()[0].assetId,
@@ -1404,10 +1402,14 @@ test('uses SVG Text actors alongside deprecated text assets in DSL 3.2', async (
   assert.deepEqual(harness.extensionState.svgTextStyles.get('title'), {
     alignment: 'center',
     backgroundColor: '#112233',
-    direction: 'up',
     font: 'Noto Sans JP',
     fontPercent: 150,
     textColor: '#ffffff',
+  });
+  // The bubble direction now belongs to the Bubble style of the same name.
+  assert.deepEqual(harness.extensionState.bubbleStyles.get('title'), {
+    placement: 'up',
+    textStyle: 'title',
   });
   assert.deepEqual(harness.getActorSvgText('Hero'), {
     style: 'title',
@@ -1482,10 +1484,7 @@ test('preserves SVG Text canonical, compass, and Scratch degree directions in DS
   );
 
   for (const [index, direction] of directions.entries()) {
-    assert.equal(
-      harness.extensionState.svgTextStyles.get(`direction${index}`).direction,
-      direction,
-    );
+    assert.equal(harness.extensionState.bubbleStyles.get(`direction${index}`).placement, direction);
   }
   assert.deepEqual(harness.extensionState.consoleErrors, []);
 });
@@ -1493,11 +1492,7 @@ test('preserves SVG Text canonical, compass, and Scratch degree directions in DS
 test('registers and displays a text asset through the production Asset Manager', async (context) => {
   const harness = await loadKamishibaiVm({productionAssetManager: true});
   context.after(() => harness.quit());
-  assert.equal(harness.vm.runtime.getOpcodeFunction('text_setText'), undefined);
-  assert.equal(
-    typeof harness.vm.runtime.getOpcodeFunction('tmposebundle_text__setText'),
-    'function',
-  );
+  assert.equal(typeof harness.vm.runtime.getOpcodeFunction('text_setText'), 'function');
   const actor = harness.vm.runtime.targets.find(
     (target) => target.isOriginal && target.sprite?.name === 'Actor',
   );
@@ -1962,7 +1957,7 @@ for (const command of ['say', 'think']) {
     assert.equal(harness.hasRuntimeVariable('skipMode'), false);
   });
 
-  test(`applies and clears an SVG Text style for a timed ${command} bubble`, async (context) => {
+  test(`applies and clears a Bubble style for a timed ${command} bubble`, async (context) => {
     const harness = await loadKamishibaiVm();
     context.after(() => harness.quit());
     startScript(
@@ -1971,20 +1966,28 @@ for (const command of ['say', 'think']) {
         declarations: ['svgTextStyle=baloonStyle:#ffffff:#222222:Noto Sans JP:120:left:up-right'],
       }),
     );
-    harness.runUntil(() => harness.getBubbleText('Hero') === 'message');
+    const actor = () => harness.getActor('Hero');
+    harness.runUntil(
+      () => harness.extensionState.styledBubbles.get(actor()?.id)?.message === 'message',
+    );
 
-    const actor = harness.getActor('Hero');
-    assert.deepEqual(harness.extensionState.svgTextBubbleUpdates.at(-1), {
+    assert.deepEqual(harness.extensionState.styledBubbleUpdates.at(-1), {
       message: 'message',
       style: 'baloonStyle',
-      targetId: actor.id,
+      targetId: actor().id,
       type: command,
     });
+    assert.deepEqual(harness.extensionState.bubbleStyles.get('baloonStyle'), {
+      placement: 'up-right',
+      textStyle: 'baloonStyle',
+    });
+    // A styled bubble is Bubble's own overlay; Scratch's native bubble stays empty.
+    assert.equal(harness.getBubbleText('Hero'), '');
 
     harness.step({milliseconds: 5000});
     harness.runUntil(() => harness.getBackdropName() === 'Title', {maxSteps: 50});
 
-    assert.equal(harness.getBubbleText('Hero'), '');
+    assert.equal(harness.extensionState.styledBubbles.has(actor().id), false);
     assert.equal(harness.hasRuntimeVariable('actionParam3'), false);
   });
 
@@ -1997,12 +2000,15 @@ for (const command of ['say', 'think']) {
         declarations: ['svgTextStyle=baloonStyle:#ffffff:#222222:Noto Sans JP:120:left:up-right'],
       }),
     );
-    harness.runUntil(() => harness.getBubbleText('Hero') === 'message');
+    const actor = () => harness.getActor('Hero');
+    harness.runUntil(
+      () => harness.extensionState.styledBubbles.get(actor()?.id)?.message === 'message',
+    );
 
     harness.pressKey('ArrowRight');
     harness.runUntil(() => harness.getBackdropName() === 'Title', {maxSteps: 50});
 
-    assert.equal(harness.getBubbleText('Hero'), '');
+    assert.equal(harness.extensionState.styledBubbles.has(actor().id), false);
     assert.equal(harness.hasRuntimeVariable('actionParam3'), false);
   });
 }

@@ -7,7 +7,6 @@ import {ESLint} from 'eslint';
 const projectRoot = new URL('../', import.meta.url);
 const expectedRules = ['eqeqeq', 'no-undef', 'no-unused-vars'];
 const firstPartyFiles = [
-  'app/extensions/kubohiroyaweblink.js',
   'bin/tmpose-kamishibai.mjs',
   'eslint.config.mjs',
   'scripts/build-site.mjs',
@@ -16,12 +15,13 @@ const firstPartyFiles = [
   'test/turbowarp-vm.test.mjs',
 ];
 const vendoredExtensions = [
-  'app/extensions/kubohiroyaassetmanager.js',
+  'app/extensions/kubohiroyaassetcache.js',
   'app/extensions/kubohiroyaasyncinput.js',
   'app/extensions/kubohiroyaruntimeexpression.js',
   'app/extensions/kubohiroyatextlines.js',
-  'app/extensions/text.js',
-  'app/extensions/tmpose.js',
+  'app/extensions/kubohiroyasvgtext.js',
+  'app/extensions/kubohiroyabubble.js',
+  'app/extensions/kubohiroyatm.js',
 ];
 
 test('applies static quality rules to every first-party code area', async () => {
@@ -51,7 +51,6 @@ test('excludes only upstream-synchronized extension artifacts from local linting
   for (const filename of vendoredExtensions) {
     assert.equal(await eslint.isPathIgnored(filename), true, `${filename} must remain vendored`);
   }
-  assert.equal(await eslint.isPathIgnored('app/extensions/kubohiroyaweblink.js'), false);
 });
 
 test('uses repository-wide lint and format commands', async () => {

@@ -16,11 +16,6 @@
           "type": "COLOR"
         },
         {
-          "id": "DIRECTION",
-          "type": "STRING",
-          "menu": "direction"
-        },
-        {
           "id": "FONT",
           "type": "STRING"
         },
@@ -39,34 +34,6 @@
       ]
     },
     {
-      "opcode": "say",
-      "blockType": "COMMAND",
-      "arguments": [
-        {
-          "id": "MESSAGE",
-          "type": "STRING"
-        },
-        {
-          "id": "SIZE",
-          "type": "NUMBER"
-        }
-      ]
-    },
-    {
-      "opcode": "sayWithStyle",
-      "blockType": "COMMAND",
-      "arguments": [
-        {
-          "id": "MESSAGE",
-          "type": "STRING"
-        },
-        {
-          "id": "STYLE",
-          "type": "STRING"
-        }
-      ]
-    },
-    {
       "opcode": "setText",
       "blockType": "COMMAND",
       "arguments": [
@@ -79,43 +46,11 @@
           "type": "STRING"
         }
       ]
-    },
-    {
-      "opcode": "think",
-      "blockType": "COMMAND",
-      "arguments": [
-        {
-          "id": "MESSAGE",
-          "type": "STRING"
-        },
-        {
-          "id": "SIZE",
-          "type": "NUMBER"
-        }
-      ]
-    },
-    {
-      "opcode": "thinkWithStyle",
-      "blockType": "COMMAND",
-      "arguments": [
-        {
-          "id": "MESSAGE",
-          "type": "STRING"
-        },
-        {
-          "id": "STYLE",
-          "type": "STRING"
-        }
-      ]
     }
   ],
   "menus": [
     {
       "id": "alignment",
-      "acceptReporters": true
-    },
-    {
-      "id": "direction",
       "acceptReporters": true
     }
   ]

@@ -45,57 +45,50 @@ test('loads project.json from an SB3 archive', async () => {
   });
 });
 
-test('bundles Animated Text and SVG Text with their embedded callers', () => {
+test('loads the successors of the former TMPose Bundle as separate extensions', () => {
   const project = loadKamishibaiProject();
   const memberIds = [
-    'kubohiroyaassetmanager',
+    'kubohiroyaassetcache',
     'text',
     'kubohiroyakamishibairuntime',
     'kubohiroyasvgtext',
+    'kubohiroyabubble',
   ];
-  assert(project.extensions.includes('tmposebundle'));
-  assert.equal(
-    memberIds.some((memberId) => project.extensions.includes(memberId)),
-    false,
-  );
-  assert.equal(
-    memberIds.some((memberId) => Object.hasOwn(project.extensionURLs, memberId)),
-    false,
-  );
-
-  const bundleUrl = project.extensionURLs.tmposebundle;
-  assert.match(bundleUrl, /^data:text\/javascript;base64,/u);
-  const bundleSource = Buffer.from(bundleUrl.slice(bundleUrl.indexOf(',') + 1), 'base64').toString(
-    'utf8',
-  );
-  for (const memberId of memberIds) assert(bundleSource.includes(`//   ID: ${memberId}`));
-  assert(bundleSource.includes("property === 'getOpcodeFunction'"));
+  assert.equal(project.extensions.includes('tmposebundle'), false);
+  assert.equal(Object.hasOwn(project.extensionURLs, 'tmposebundle'), false);
+  for (const memberId of memberIds) assert(project.extensions.includes(memberId), memberId);
+  assert.equal(project.extensions.includes('kubohiroyaassetmanager'), false);
+  // Animated Text is TurboWarp's own gallery extension, referenced rather than carried.
+  assert.equal(project.extensionURLs.text, 'https://extensions.turbowarp.org/lab/text.js');
+  for (const memberId of memberIds.filter((memberId) => memberId !== 'text')) {
+    const url = project.extensionURLs[memberId];
+    assert.match(url, /^data:text\/javascript;base64,/u, memberId);
+    const source = Buffer.from(url.slice(url.indexOf(',') + 1), 'base64').toString('utf8');
+    assert(source.includes(`// ID: ${memberId}`), memberId);
+  }
 
   const opcodes = project.targets.flatMap((target) =>
     Object.values(target.blocks ?? {}).map((block) => block.opcode),
   );
-  assert(
-    opcodes.includes('tmposebundle_kubohiroyaassetmanager__setThisSpriteSkin'),
-    'Asset Manager project blocks must use the bundle namespace.',
-  );
-  assert(
-    opcodes.includes('tmposebundle_text__animateText'),
-    'Animated Text project blocks must use the bundle namespace.',
-  );
-  assert(
-    opcodes.includes('tmposebundle_kubohiroyasvgtext__defineStyle'),
-    'SVG Text project blocks must use the bundle namespace.',
-  );
-  assert(
-    opcodes.includes('tmposebundle_kubohiroyasvgtext__setText'),
-    'SVG Text actor blocks must use the bundle namespace.',
+  for (const opcode of [
+    'kubohiroyaassetcache_setThisSpriteSkin',
+    'text_animateText',
+    'kubohiroyasvgtext_defineStyle',
+    'kubohiroyasvgtext_setText',
+    'kubohiroyabubble_defineBubbleStyle',
+    'kubohiroyabubble_setBubblePlacement',
+    'kubohiroyabubble_sayWithBubbleStyle',
+    'kubohiroyabubble_thinkWithBubbleStyle',
+    'kubohiroyabubble_closeBubble',
+  ]) {
+    assert(opcodes.includes(opcode), opcode);
+  }
+  assert.equal(
+    opcodes.some((opcode) => /^(?:tmposebundle|kubohiroyaassetmanager)_/u.test(opcode)),
+    false,
   );
   assert.equal(
-    opcodes.some((opcode) =>
-      /^(?:kubohiroyaassetmanager|text|kubohiroyakamishibairuntime|kubohiroyasvgtext)_/u.test(
-        opcode,
-      ),
-    ),
+    opcodes.some((opcode) => /^kubohiroyasvgtext_(?:say|think)WithStyle$/u.test(opcode)),
     false,
   );
 });

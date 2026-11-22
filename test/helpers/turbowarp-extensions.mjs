@@ -5,15 +5,8 @@ import {runInNewContext} from 'node:vm';
 const require = createRequire(import.meta.url);
 const BlockType = require('scratch-vm/src/extension-support/block-type');
 const Cast = require('scratch-vm/src/util/cast');
-const bundledExtensionId = 'tmposebundle';
-const bundledMemberIds = [
-  'kubohiroyaassetmanager',
-  'text',
-  'kubohiroyakamishibairuntime',
-  'kubohiroyasvgtext',
-];
-const assetManagerSource = readFileSync(
-  new URL('../../app/extensions/kubohiroyaassetmanager.js', import.meta.url),
+const assetCacheSource = readFileSync(
+  new URL('../../app/extensions/kubohiroyaassetcache.js', import.meta.url),
   'utf8',
 );
 const kamishibaiRuntimeSource = readFileSync(
@@ -50,147 +43,6 @@ function register(vm, id, ExtensionClass) {
   vm.extensionManager.addBuiltinExtension(id, ExtensionClass);
 }
 
-function rewriteBundledOpcode(opcode) {
-  if (typeof opcode !== 'string') return opcode;
-  for (const memberId of bundledMemberIds) {
-    const prefix = `${memberId}_`;
-    if (opcode.startsWith(prefix)) {
-      return `${bundledExtensionId}_${memberId}__${opcode.slice(prefix.length)}`;
-    }
-  }
-  return opcode;
-}
-
-function createBundledRuntime(runtime, memberId) {
-  return new Proxy(runtime, {
-    get(target, property) {
-      if (property === 'getOpcodeFunction') {
-        return (opcode, ...args) => target.getOpcodeFunction(rewriteBundledOpcode(opcode), ...args);
-      }
-      if (property === 'startHats') {
-        return (opcode, ...args) => {
-          const prefix = `${memberId}_`;
-          const rewritten =
-            typeof opcode === 'string' && opcode.startsWith(prefix)
-              ? `${bundledExtensionId}_${memberId}__${opcode.slice(prefix.length)}`
-              : opcode;
-          return target.startHats(rewritten, ...args);
-        };
-      }
-      const value = Reflect.get(target, property, target);
-      return typeof value === 'function' ? value.bind(target) : value;
-    },
-  });
-}
-
-function createBundledVm(vm, runtime) {
-  return new Proxy(vm, {
-    get(target, property) {
-      if (property === 'runtime') return runtime;
-      const value = Reflect.get(target, property, target);
-      return typeof value === 'function' ? value.bind(target) : value;
-    },
-  });
-}
-
-function createTestBundleExtensionClass(memberDefinitions, onComponent) {
-  return class TestBundleExtension {
-    constructor() {
-      this.components = new Map();
-      for (const {ExtensionClass, id, runtime} of memberDefinitions) {
-        const component = new ExtensionClass(runtime);
-        this.components.set(id, component);
-        onComponent(id, component);
-      }
-    }
-
-    addDelegate(name, component, originalName) {
-      this[name] = (...args) => component[originalName](...args);
-    }
-
-    getInfo() {
-      const result = {
-        id: bundledExtensionId,
-        name: 'TMPose Extension Bundle',
-        blocks: [],
-        menus: {},
-        customFieldTypes: {},
-      };
-      for (const memberId of bundledMemberIds) {
-        const component = this.components.get(memberId);
-        const info = component.getInfo();
-        const namespace = `${memberId}__`;
-        const customFieldTypes = info.customFieldTypes ?? {};
-        for (const [fieldName, fieldInfo] of Object.entries(customFieldTypes)) {
-          result.customFieldTypes[`${namespace}${fieldName}`] = fieldInfo;
-        }
-        for (const blockInfo of info.blocks ?? []) {
-          if (blockInfo === '---') {
-            result.blocks.push(blockInfo);
-            continue;
-          }
-          const block = {...blockInfo};
-          if (block.arguments) {
-            block.arguments = Object.fromEntries(
-              Object.entries(block.arguments).map(([argumentName, argumentInfo]) => {
-                const argument = {...argumentInfo};
-                if (typeof argument.menu === 'string')
-                  argument.menu = `${namespace}${argument.menu}`;
-                if (
-                  typeof argument.type === 'string' &&
-                  Object.hasOwn(customFieldTypes, argument.type)
-                ) {
-                  argument.type = `${namespace}${argument.type}`;
-                }
-                return [argumentName, argument];
-              }),
-            );
-          }
-          if (block.blockType === BlockType.LABEL) {
-            result.blocks.push(block);
-            continue;
-          }
-          if (block.blockType === BlockType.BUTTON) {
-            const delegateName = `${namespace}button__${block.func}`;
-            this.addDelegate(delegateName, component, block.func);
-            block.func = delegateName;
-            result.blocks.push(block);
-            continue;
-          }
-          block.opcode = `${namespace}${block.opcode}`;
-          if (block.blockType !== BlockType.EVENT) {
-            const originalName = block.func || blockInfo.opcode;
-            block.func = block.opcode;
-            this.addDelegate(block.opcode, component, originalName);
-          } else {
-            delete block.func;
-          }
-          result.blocks.push(block);
-        }
-        for (const [menuName, menuInfo] of Object.entries(info.menus ?? {})) {
-          const bundledMenuName = `${namespace}${menuName}`;
-          if (typeof menuInfo === 'string') {
-            const delegateName = `${namespace}menu__${menuName}`;
-            this.addDelegate(delegateName, component, menuInfo);
-            result.menus[bundledMenuName] = {items: delegateName};
-          } else if (Array.isArray(menuInfo)) {
-            result.menus[bundledMenuName] = [...menuInfo];
-          } else {
-            const menu = {...menuInfo};
-            if (typeof menu.items === 'string') {
-              const delegateName = `${namespace}menu__${menuName}`;
-              this.addDelegate(delegateName, component, menu.items);
-              menu.items = delegateName;
-            }
-            result.menus[bundledMenuName] = menu;
-          }
-        }
-      }
-      return result;
-    }
-  };
-}
-
 function createProductionAssetManagerClass(vm, onCreate) {
   let registeredExtension = null;
   const Scratch = {
@@ -212,7 +64,7 @@ function createProductionAssetManagerClass(vm, onCreate) {
         : value;
     },
   };
-  runInNewContext(assetManagerSource, {
+  runInNewContext(assetCacheSource, {
     AbortSignal,
     Audio: class {},
     Blob,
@@ -227,7 +79,7 @@ function createProductionAssetManagerClass(vm, onCreate) {
     URL,
   });
   if (!registeredExtension) {
-    throw new Error('Production Asset Manager did not register itself.');
+    throw new Error('Production Asset Cache did not register itself.');
   }
   const ProductionAssetManager = registeredExtension.constructor;
   return class {
@@ -291,6 +143,7 @@ export function registerKamishibaiTestExtensions(
     assetRegistrations: [],
     asyncInput: null,
     assets: new Map(),
+    bubbleStyles: new Map(),
     bubbleUpdates: [],
     consoleErrors: [],
     displayedAssets: new Map(),
@@ -311,8 +164,9 @@ export function registerKamishibaiTestExtensions(
     runtimeVariableWrites: [],
     svgText: null,
     svgTextActors: new Map(),
-    svgTextBubbleUpdates: [],
     svgTextStyles: new Map(),
+    styledBubbleUpdates: [],
+    styledBubbles: new Map(),
     timers: new Map(),
     tempVariables: null,
     textColors: new Map(),
@@ -473,6 +327,7 @@ export function registerKamishibaiTestExtensions(
   class AssetManagerExtension {
     constructor(runtime) {
       this.runtime = runtime;
+      state.assetManager = this;
       const resetState = () => {
         state.actorSequences.clear();
         state.actorSkins.clear();
@@ -488,7 +343,7 @@ export function registerKamishibaiTestExtensions(
       runtime.on('PROJECT_STOP_ALL', resetState);
     }
     getInfo() {
-      return extensionInfo('kubohiroyaassetmanager', [
+      return extensionInfo('kubohiroyaassetcache', [
         block('isLoaded', BlockType.BOOLEAN, ['NAME']),
         block('playSound', BlockType.COMMAND, ['NAME']),
         block('playSoundUntilDone', BlockType.COMMAND, ['NAME']),
@@ -688,9 +543,10 @@ export function registerKamishibaiTestExtensions(
     }
   }
 
+  // Teachable Machine 4.4.0 (kubohiroyatm): only the blocks the app uses.
   class PoseExtension {
     getInfo() {
-      return extensionInfo('tmpose', [
+      return extensionInfo('kubohiroyatm', [
         block('currentPoseReporter', BlockType.REPORTER),
         block('hidePreview'),
         block('isModelLoaded', BlockType.BOOLEAN),
@@ -705,9 +561,9 @@ export function registerKamishibaiTestExtensions(
         block('setPreviewPosition', BlockType.COMMAND, ['POSITION']),
         block('showPreview'),
         block('startCamera'),
-        block('startPredict'),
+        block('startRecognition'),
         block('stopCamera'),
-        block('stopPredict'),
+        block('stopRecognition'),
       ]);
     }
     currentPoseReporter() {
@@ -738,9 +594,9 @@ export function registerKamishibaiTestExtensions(
     setPreviewPosition() {}
     showPreview() {}
     startCamera() {}
-    startPredict() {}
+    startRecognition() {}
     stopCamera() {}
-    stopPredict() {}
+    stopRecognition() {}
   }
 
   class LocalStorageExtension {
@@ -998,8 +854,10 @@ export function registerKamishibaiTestExtensions(
     }
   }
 
+  // SVG Text 0.17.0: named text styles and SVG text actors. Bubbles belong to Bubble.
   class SvgTextExtension {
     constructor(runtime) {
+      state.svgText = this;
       runtime.on('targetWasRemoved', (target) => state.svgTextActors.delete(target.id));
     }
     getInfo() {
@@ -1011,10 +869,7 @@ export function registerKamishibaiTestExtensions(
           'FONT',
           'SIZE',
           'ALIGN',
-          'DIRECTION',
         ]),
-        block('sayWithStyle', BlockType.COMMAND, ['MESSAGE', 'STYLE']),
-        block('thinkWithStyle', BlockType.COMMAND, ['MESSAGE', 'STYLE']),
         block('setText', BlockType.COMMAND, ['TEXT', 'STYLE']),
       ]);
     }
@@ -1022,7 +877,6 @@ export function registerKamishibaiTestExtensions(
       state.svgTextStyles.set(Cast.toString(args.STYLE).trim() || 'default', {
         alignment: Cast.toString(args.ALIGN),
         backgroundColor: Cast.toString(args.BACKGROUND),
-        direction: Cast.toString(args.DIRECTION),
         font: Cast.toString(args.FONT),
         fontPercent: Cast.toNumber(args.SIZE),
         textColor: Cast.toString(args.TEXT_COLOR),
@@ -1034,37 +888,74 @@ export function registerKamishibaiTestExtensions(
         text: Cast.toString(args.TEXT).replace(/\\r\\n|\\n|\\r/gu, '\n'),
       });
     }
+  }
+
+  // Bubble 0.21.0: only the blocks the app uses. A styled bubble is an overlay of its own,
+  // so it stays open until closeBubble, whatever Scratch's native bubble does.
+  class BubbleExtension {
+    constructor(runtime) {
+      runtime.on('targetWasRemoved', (target) => state.styledBubbles.delete(target.id));
+    }
+    getInfo() {
+      return extensionInfo('kubohiroyabubble', [
+        block('defineBubbleStyle', BlockType.COMMAND, ['STYLE', 'TEXT_STYLE']),
+        block('setBubblePlacement', BlockType.COMMAND, ['PLACEMENT', 'STYLE']),
+        block('sayWithBubbleStyle', BlockType.COMMAND, ['MESSAGE', 'STYLE']),
+        block('thinkWithBubbleStyle', BlockType.COMMAND, ['MESSAGE', 'STYLE']),
+        block('closeBubble'),
+      ]);
+    }
+    defineBubbleStyle(args) {
+      const name = Cast.toString(args.STYLE).trim();
+      state.bubbleStyles.set(name, {
+        ...state.bubbleStyles.get(name),
+        textStyle: Cast.toString(args.TEXT_STYLE).trim(),
+      });
+    }
+    setBubblePlacement(args) {
+      const name = Cast.toString(args.STYLE).trim();
+      state.bubbleStyles.set(name, {
+        ...state.bubbleStyles.get(name),
+        placement: Cast.toString(args.PLACEMENT),
+      });
+    }
     showBubble(type, args, util) {
-      const message = Cast.toString(args.MESSAGE).replace(/\\r\\n|\\n|\\r/gu, '\n');
-      state.svgTextBubbleUpdates.push({
-        message,
-        style: Cast.toString(args.STYLE).trim() || 'default',
+      const bubble = {
+        message: Cast.toString(args.MESSAGE).replace(/\\r\\n|\\n|\\r/gu, '\n'),
+        style: Cast.toString(args.STYLE).trim(),
         targetId: util.target.id,
         type,
-      });
-      vm.runtime.getOpcodeFunction(`looks_${type}`)({MESSAGE: message}, util);
+      };
+      state.styledBubbleUpdates.push(bubble);
+      state.styledBubbles.set(util.target.id, bubble);
     }
-    sayWithStyle(args, util) {
+    sayWithBubbleStyle(args, util) {
       this.showBubble('say', args, util);
     }
-    thinkWithStyle(args, util) {
+    thinkWithBubbleStyle(args, util) {
       this.showBubble('think', args, util);
+    }
+    closeBubble(args, util) {
+      state.styledBubbles.delete(util.target.id);
     }
   }
 
-  class WebLinkExtension {
+  // TurboWarp gallery Network (true-fantom/network.js): only the block the app uses.
+  class NetworkExtension {
     getInfo() {
-      return extensionInfo('kubohiroyaweblink', [block('openUrl', BlockType.COMMAND, ['URL'])]);
+      return extensionInfo('truefantomnetwork', [
+        block('open_link_block', BlockType.COMMAND, ['USER_URL']),
+      ]);
     }
-    openUrl(args) {
-      state.openedUrls.push(Cast.toString(args.URL));
+    open_link_block(args) {
+      state.openedUrls.push(Cast.toString(args.USER_URL));
     }
   }
 
   register(vm, 'sipcconsole', ConsoleExtension);
   register(vm, 'lmsTempVars2', TempVariablesExtension);
   register(vm, 'strings', StringsExtension);
-  register(vm, 'tmpose', PoseExtension);
+  register(vm, 'kubohiroyatm', PoseExtension);
   register(vm, 'localstorage', LocalStorageExtension);
   register(vm, 'kubohiroyatextlines', TextLinesExtension);
   register(
@@ -1080,45 +971,27 @@ export function registerKamishibaiTestExtensions(
   register(vm, 'lmsTimers', TimersExtension);
   register(vm, 'files', FilesExtension);
   register(vm, 'translate', TranslateExtension);
-  register(vm, 'kubohiroyaweblink', WebLinkExtension);
+  register(vm, 'truefantomnetwork', NetworkExtension);
 
-  const memberRuntimes = new Map(
-    bundledMemberIds.map((memberId) => [memberId, createBundledRuntime(vm.runtime, memberId)]),
+  register(
+    vm,
+    'kubohiroyaassetcache',
+    productionAssetManager
+      ? createProductionAssetManagerClass(vm, (extension) => {
+          state.assetManager = extension;
+        })
+      : AssetManagerExtension,
   );
-  const memberVm = (memberId) => createBundledVm(vm, memberRuntimes.get(memberId));
-  const AssetManagerClass = productionAssetManager
-    ? createProductionAssetManagerClass(memberVm('kubohiroyaassetmanager'), () => {})
-    : AssetManagerExtension;
-  const KamishibaiRuntimeClass = createProductionExtensionClass(
-    memberVm('kubohiroyakamishibairuntime'),
-    kamishibaiRuntimeSource,
+  register(vm, 'text', TextExtension);
+  register(
+    vm,
+    'kubohiroyakamishibairuntime',
+    createProductionExtensionClass(vm, kamishibaiRuntimeSource, (extension) => {
+      state.kamishibaiRuntime = extension;
+    }),
   );
-  const BundleExtension = createTestBundleExtensionClass(
-    [
-      {
-        ExtensionClass: AssetManagerClass,
-        id: 'kubohiroyaassetmanager',
-        runtime: memberRuntimes.get('kubohiroyaassetmanager'),
-      },
-      {ExtensionClass: TextExtension, id: 'text', runtime: memberRuntimes.get('text')},
-      {
-        ExtensionClass: KamishibaiRuntimeClass,
-        id: 'kubohiroyakamishibairuntime',
-        runtime: memberRuntimes.get('kubohiroyakamishibairuntime'),
-      },
-      {
-        ExtensionClass: SvgTextExtension,
-        id: 'kubohiroyasvgtext',
-        runtime: memberRuntimes.get('kubohiroyasvgtext'),
-      },
-    ],
-    (memberId, component) => {
-      if (memberId === 'kubohiroyaassetmanager') state.assetManager = component;
-      if (memberId === 'kubohiroyakamishibairuntime') state.kamishibaiRuntime = component;
-      if (memberId === 'kubohiroyasvgtext') state.svgText = component;
-    },
-  );
-  register(vm, bundledExtensionId, BundleExtension);
+  register(vm, 'kubohiroyasvgtext', SvgTextExtension);
+  register(vm, 'kubohiroyabubble', BubbleExtension);
 
   return state;
 }
