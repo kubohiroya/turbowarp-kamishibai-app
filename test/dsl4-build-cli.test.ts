@@ -18,6 +18,8 @@ import {
   parseDsl4ExternalSourceManifestSource,
 } from '../src/dsl4/index.js';
 import {readSb3} from '../src/builder/sb3.js';
+import {loadDsl4PoseNetProjectBundle} from '../src/dsl4/platform/posenet-bundle.js';
+import {createDsl4PoseNetRemoteDescriptor} from '../src/dsl4/platform/posenet-remote.js';
 import {sha256} from '../src/builder/hash.js';
 import {thrown} from './helpers/thrown-error.ts';
 import {captureWrites, cliResult, parsedOptions} from './helpers/cli-command.ts';
@@ -449,6 +451,90 @@ test('replaces the Standard authoring runtime with the generated playback profil
     assert.doesNotMatch(source, /showOpenFilePicker|showDirectoryPicker/u);
     assert.doesNotMatch(source, /buildDistributionSb3|initializeNonEmbeddedPreview/u);
     assert.match(source, /playback runtime cannot open a non-embedded authoring project/u);
+    // Without an offline profile the work fetches PoseNet from the site instead of carrying it.
+    assert.deepEqual(
+      loadDsl4PoseNetProjectBundle(outputProject),
+      createDsl4PoseNetRemoteDescriptor(),
+    );
+  });
+});
+
+test('embeds PoseNet model data in a Standard work whose asset profile forbids the network', async () => {
+  await withFixture(async (fixture) => {
+    const project = baseProject();
+    project.extensions = ['kubohiroyakamishibai4'];
+    project.extensionURLs = {
+      kubohiroyakamishibai4: 'data:text/javascript;base64,YXV0aG9yaW5n',
+    };
+    await writeFile(
+      fixture.baseSb3Path,
+      Buffer.from(zipSync({'project.json': strToU8(`${JSON.stringify(project)}\n`)})),
+    );
+    const profileArguments = async (network: 'allowed' | 'forbidden') => {
+      const assetConfigPath = path.join(fixture.directory, `${network}.assets.json`);
+      const assetLockPath = path.join(fixture.directory, `${network}.assets.lock.json`);
+      const openingBytes = Buffer.from('<svg/>');
+      const integrity = `sha256-${sha256(openingBytes)}`;
+      const assetConfig = {
+        formatVersion: 1,
+        profiles: {venue: {network, defaultDelivery: 'embedded'}},
+        providers: {OpeningImage: {remote: {url: 'https://cdn.example.com/opening.svg'}}},
+      };
+      const assetLock = {
+        formatVersion: 1,
+        assets: {
+          OpeningImage: {
+            kind: 'backdrop',
+            contentIntegrity: integrity,
+            contentType: 'image/svg+xml',
+            size: openingBytes.length,
+            providers: {
+              embedded: {file: 'opening.svg'},
+              remote: {
+                url: 'https://cdn.example.com/opening.svg',
+                transportIntegrity: integrity,
+                contentType: 'image/svg+xml',
+                size: openingBytes.length,
+              },
+            },
+          },
+        },
+      };
+      await writeFile(assetConfigPath, `${JSON.stringify(assetConfig)}\n`);
+      await writeFile(assetLockPath, `${JSON.stringify(assetLock)}\n`);
+      return [
+        '--asset-config',
+        assetConfigPath,
+        '--asset-lock',
+        assetLockPath,
+        '--asset-profile',
+        'venue',
+        '--max-asset-config-bytes',
+        '16384',
+        '--max-asset-lock-bytes',
+        '16384',
+      ];
+    };
+    const build = async (network: 'allowed' | 'forbidden') => {
+      const result = await runCli(
+        cliArguments(fixture, `${network}.sb3`, await profileArguments(network)),
+        {stdout: captureWrites()},
+      );
+      return readSb3(await readFile(outputPathOf(result, `the ${network} build`))).project;
+    };
+    const offline = loadDsl4PoseNetProjectBundle(await build('forbidden')) as {
+      encoding: string;
+      files: {size: number}[];
+    };
+    assert.equal(offline.encoding, 'base64');
+    assert.equal(
+      offline.files.reduce((total, file) => total + file.size, 0),
+      5_082_500,
+    );
+    assert.deepEqual(
+      loadDsl4PoseNetProjectBundle(await build('allowed')),
+      createDsl4PoseNetRemoteDescriptor(),
+    );
   });
 });
 

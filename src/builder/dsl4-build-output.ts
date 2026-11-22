@@ -8,6 +8,7 @@ import {
   loadDsl4BinaryEntryRuntimeComponent,
   loadDsl4RuntimeComponent,
 } from '../dsl4/runtime-artifact-loader.js';
+import {createDsl4PoseNetRemoteDescriptor} from '../dsl4/platform/posenet-remote.js';
 import type {Dsl4SourceFrontend} from '../dsl4/source-frontend.js';
 import type {Dsl4SubtleCrypto} from '../dsl4/subtle-crypto.js';
 import {installBundleTransactionally} from './atomic-output.js';
@@ -155,14 +156,20 @@ export async function buildDsl4RuntimeComponentFile(options: {
     Array.isArray(baseProject.extensions) &&
     baseProject.extensions.includes('kubohiroyakamishibai4') &&
     typeof baseProject.extensionURLs?.kubohiroyakamishibai4 === 'string';
-  const [runtimeExtensionSource, poseNetBundle] = usesStandardRuntime
-    ? await Promise.all([
-        resolveDsl4BuildFeatureFlags(options.featureFlags).runtimeFeatureFlags.dsl4NarrativeControl
-          ? readDsl4NarrativeRuntimeExtensionSource()
-          : readDsl4PlaybackRuntimeExtensionSource(),
-        readDsl4PlaybackPoseNetBundle({subtleCrypto: options.subtleCrypto}),
-      ])
-    : [undefined, undefined];
+  const runtimeExtensionSource = usesStandardRuntime
+    ? await (resolveDsl4BuildFeatureFlags(options.featureFlags).runtimeFeatureFlags
+        .dsl4NarrativeControl
+        ? readDsl4NarrativeRuntimeExtensionSource()
+        : readDsl4PlaybackRuntimeExtensionSource())
+    : undefined;
+  // Works fetch PoseNet from the Kamishibai site and share it through Cache Storage; a build whose
+  // asset profile forbids the network embeds the model data instead.
+  const poseNetBundle = usesStandardRuntime
+    ? ({network}: {network: 'allowed' | 'forbidden'}) =>
+        network === 'forbidden'
+          ? readDsl4PlaybackPoseNetBundle({subtleCrypto: options.subtleCrypto})
+          : Promise.resolve(createDsl4PoseNetRemoteDescriptor())
+    : undefined;
   const buildOptions = {
     baseSb3Bytes,
     projectRoot,

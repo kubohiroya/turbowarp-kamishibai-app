@@ -8,7 +8,10 @@ import path from 'node:path';
 import {chromium} from 'playwright-core';
 import {build} from 'vite';
 import {test} from 'vitest';
-import {createDsl4PoseNetProjectBundleFromLoader} from '../../dist/dsl4/platform/posenet-bundle.js';
+import {
+  createDsl4PoseNetRemoteDescriptor,
+  dsl4PoseNetRemoteBaseUrl,
+} from '../../dist/dsl4/platform/posenet-remote.js';
 
 const require = createRequire(import.meta.url);
 
@@ -29,9 +32,21 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
     },
   });
   assert(built);
-  const poseNet = await createDsl4PoseNetProjectBundleFromLoader(async (file) =>
-    readFile(
-      require.resolve(`@kubohiroya/turbowarp-teachable-machine/posenet-assets/${file.path}`),
+  // The project names PoseNet the way the Standard SB3 does: by digest, on the Kamishibai site.
+  const poseNet = createDsl4PoseNetRemoteDescriptor();
+  const poseNetSite = new Map<string, Buffer>(
+    await Promise.all(
+      poseNet.files.map(
+        async (file) =>
+          [
+            `${dsl4PoseNetRemoteBaseUrl}sha256-${file.sha256}`,
+            await readFile(
+              require.resolve(
+                `@kubohiroya/turbowarp-teachable-machine/posenet-assets/${file.path}`,
+              ),
+            ),
+          ] as const,
+      ),
     ),
   );
   const resources = new Map<string, {bytes: Uint8Array | string; type: string}>([
@@ -127,6 +142,24 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
       }
       return route.continue();
     });
+    // Registered last, so it answers before the catch-all: the Pages site, served from the package.
+    const poseNetRequests: string[] = [];
+    await context.route(`${dsl4PoseNetRemoteBaseUrl}**`, (route) => {
+      const url = route.request().url();
+      poseNetRequests.push(url);
+      const body = poseNetSite.get(url);
+      return body
+        ? route.fulfill({
+            status: 200,
+            body,
+            headers: {
+              'access-control-allow-origin': '*',
+              'content-type': 'application/octet-stream',
+              'cross-origin-resource-policy': 'cross-origin',
+            },
+          })
+        : route.fulfill({status: 404, body: 'missing'});
+    });
     await page.goto(origin);
     await page.waitForFunction('globalThis.kamishibaiComputeProbe !== undefined');
     assert.equal(await page.locator('#stage [data-stage-control]').count(), 0);
@@ -201,12 +234,15 @@ test('recognizes a real pose model with selectable WebGPU, WASM, and JavaScript 
     await withoutSimd.close();
     assert.deepEqual(errors, []);
     assert.deepEqual(remote, []);
+    // Every recognition run, the reload, and the second page share one download through Cache Storage.
+    assert.deepEqual([...poseNetRequests].sort(), [...poseNetSite.keys()].sort());
     const report = {
       browser: browser.version(),
       results,
       simdFallbacks,
       errors,
       remoteRequests: remote,
+      poseNetRequests,
       devicePreferencePersisted: true,
       sharedRuntimeReused: reused,
       stageControlsEntry: true,

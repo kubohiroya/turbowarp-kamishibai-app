@@ -231,7 +231,11 @@ export async function buildDsl4RuntimeComponent(options: {
   maxAssetConfigBytes?: number;
   maxAssetLockBytes?: number;
   runtimeExtensionSource?: string;
-  poseNetBundle?: unknown;
+  /**
+   * PoseNet model data to store with the work: a descriptor, or a function that picks one once the
+   * asset profile is known (`network: 'forbidden'` builds must embed the model data).
+   */
+  poseNetBundle?: unknown | ((context: {network: 'allowed' | 'forbidden'}) => Promise<unknown>);
   /** `source` (default) keeps the YAML; `compiled` stores only the validated Story IR. */
   distributionProfile?: Dsl4DistributionProfile;
   /** Opt-in raw file storage for local embedded-document editing; never synthesizes legacy originals. */
@@ -468,6 +472,13 @@ export async function buildDsl4RuntimeComponent(options: {
     }
   }
 
+  const resolvedPoseNetBundle =
+    typeof poseNetBundle === 'function'
+      ? await (poseNetBundle as (context: {network: 'allowed' | 'forbidden'}) => Promise<unknown>)({
+          network: assetDistribution?.network ?? 'allowed',
+        })
+      : poseNetBundle;
+
   const snapshot = await loadDsl4LocalAssetSnapshot(projectRoot, storyDocument, {
     maxFileBytes: maxAssetFileBytes,
     maxFiles: maxAssetFiles,
@@ -530,7 +541,7 @@ export async function buildDsl4RuntimeComponent(options: {
     subtleCrypto,
     ...(assetDistribution === undefined ? {} : {assetDistribution}),
     ...(runtimeExtensionSource === undefined ? {} : {runtimeExtensionSource}),
-    ...(poseNetBundle === undefined ? {} : {poseNetBundle}),
+    ...(resolvedPoseNetBundle === undefined ? {} : {poseNetBundle: resolvedPoseNetBundle}),
   };
   let embedded = buildFeatureFlags.dsl4RootBinaryEntryPackaging
     ? await embedDsl4BinaryEntryRuntimeComponentInSb3(

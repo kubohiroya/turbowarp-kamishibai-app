@@ -11,6 +11,7 @@ import {
 import {renderSiteVersion} from './site-version.ts';
 import {buildReleasePlayer} from './build-release-player.ts';
 import {preparePublishedSite} from './sb3/dsl4-published-assets.ts';
+import {writePoseNetSiteAssets} from './sb3/posenet-site-assets.ts';
 
 await preparePublishedSite();
 const {recommendedDownload, renderDownloadCards} = await import('./download-catalog.ts');
@@ -121,6 +122,9 @@ await prepareOutputDirectory();
 await copySharedSiteNavigationAssets();
 await renderSiteNavigation();
 await renderSiteMetadata();
+console.log(
+  `Published PoseNet model files: ${JSON.stringify(await writePoseNetSiteAssets(outputPath))}`,
+);
 const releaseBuilds = await Promise.all(
   downloadableReleases.map(async (release) => {
     const build = await buildDownloadableReleaseSb3(release, {

@@ -18,6 +18,7 @@ import type {DownloadCatalogEntry} from './download-catalog.ts';
 import {siteVersionPlaceholder} from './site-version.ts';
 import {downloadableReleases} from './sb3/downloadable-releases.ts';
 import {readTitleBuildMetadataFromSb3} from './sb3/title-build-metadata.ts';
+import {readPublishedPoseNetDigests} from './sb3/posenet-site-assets.ts';
 
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const outputDirectory = path.join(projectRoot, 'site-dist');
@@ -382,6 +383,19 @@ async function verifyDownloads(releaseBuilds: readonly SiteReleaseBuild[] = []) 
   return results;
 }
 
+/** Every PoseNet file an earlier release published must still be served at its digest path. */
+async function verifyPoseNetAssets() {
+  const published = await readPublishedPoseNetDigests();
+  for (const {sha256, size, path: name} of published) {
+    const bytes = await readFile(path.join(outputDirectory, 'posenet', `sha256-${sha256}`));
+    assert(
+      bytes.byteLength === size && createHash('sha256').update(bytes).digest('hex') === sha256,
+      `The site must publish PoseNet ${name} at posenet/sha256-${sha256}`,
+    );
+  }
+  return published.length;
+}
+
 export async function verifyBuild({
   releaseBuilds,
 }: {releaseBuilds?: readonly SiteReleaseBuild[]} = {}) {
@@ -401,10 +415,12 @@ export async function verifyBuild({
   await verifyLocalReferences(licensesIndexPath, 'img', 'src');
   await verifyLocalReferences(licensesIndexPath, 'a', 'href');
   await access(path.join(outputDirectory, 'images/image01.png'));
+  const poseNetFileCount = await verifyPoseNetAssets();
 
   console.log(
     `Verified favicon links and site headers in ${faviconHtmlCount}/${siteHeaderHtmlCount} HTML file(s), ` +
       `${downloadResults.map(({filename, size}) => `${filename} (${size} bytes)`).join(', ')}, ` +
+      `${poseNetFileCount} PoseNet model file(s), ` +
       'the external documentation link, and the legacy /docs/ redirect.',
   );
 }

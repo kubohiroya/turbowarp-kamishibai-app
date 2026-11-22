@@ -40,10 +40,11 @@ import {
   collectDsl4BrowserDroppedFiles,
   selectDsl4BrowserStorySource,
 } from '../src/dsl4/platform/browser-story-file-loader.js';
+import {loadDsl4PoseNetProjectBundle} from '../src/dsl4/platform/posenet-bundle.js';
 import {
-  loadDsl4PoseNetProjectBundle,
-  loadDsl4PoseNetProjectBundleData,
-} from '../src/dsl4/platform/posenet-bundle.js';
+  createDsl4PoseNetRemoteDescriptor,
+  validateDsl4PoseNetRemoteDescriptor,
+} from '../src/dsl4/platform/posenet-remote.js';
 import {dsl4RuntimeApplicationMenuDefaultIcons} from '../src/dsl4/platform/runtime-application-menu.js';
 import {
   type BrowserFileHandle,
@@ -226,9 +227,9 @@ const dispatch = require('scratch-vm/src/dispatch/central-dispatch');
 const vmLog = require('scratch-vm/src/util/log');
 const bundleExtensionId = 'kubohiroyakamishibai4';
 const runtimeExtensionId = 'kubohiroyakamishibairuntime4';
-// project.json carries the whole bundle as one data: URL. Camera Source 0.17.1 adds about 442 KB
-// after base64 encoding; the frozen rc.33 project is 13,076,255 bytes.
-const currentRuntimeProjectJsonMaximumBytes = 18_000_000;
+// project.json carries the whole bundle as one data: URL. Since 4.0.3 PoseNet is fetched from the
+// site rather than embedded, which took about 6.8 MB of base64 out of it (4.0.2: 15.3 MB).
+const currentRuntimeProjectJsonMaximumBytes = 10_000_000;
 const turbowarpVmCommit = 'c4823421cb7c17d8d8a89878851ce1668c26a21f';
 const schema = JSON.parse(
   await readFile(new URL('../schema/dsl-4.schema.json', import.meta.url), 'utf8'),
@@ -916,7 +917,7 @@ test('explains how to reload unsandboxed when the release runtime is allowed san
   assert.match(sandboxedLoad('en'), /check "Run without sandbox"/u);
 });
 
-test('keeps PoseNet model data out of the current generated runtime extension', async () => {
+test('keeps PoseNet model data out of the current generated runtime extension and project', async () => {
   const result = await buildCurrentRuntimeRelease();
   const archive = unzipSync(result.archive);
   const projectBytes = entryOf(archive, 'project.json');
@@ -934,11 +935,8 @@ test('keeps PoseNet model data out of the current generated runtime extension', 
   )
     .toString('base64')
     .slice(0, 256);
-  const poseNetBundle = await loadDsl4PoseNetProjectBundleData(
+  const poseNetDescriptor = validateDsl4PoseNetRemoteDescriptor(
     loadDsl4PoseNetProjectBundle(project),
-    {
-      subtleCrypto: webcrypto.subtle,
-    },
   );
   // The embedded WebGPU/WASM backends increase the runtime size; a leaked PoseNet shard
   // still exceeds this ceiling by megabytes. Model bytes belong only in their explicit descriptor.
@@ -948,11 +946,10 @@ test('keeps PoseNet model data out of the current generated runtime extension', 
     `runtime extension must stay below 8,000,000 bytes; received ${extensionSource.byteLength}`,
   );
   assert.equal(extensionSource.includes(shardPrefix), false);
-  assert.equal(storedMember(runtimeStorage, 'poseNet').encoding, 'base64');
-  assert.equal(
-    poseNetBundle.files.reduce((total, file) => total + file.bytes.byteLength, 0),
-    5_082_500,
-  );
+  assert.equal(storedMember(runtimeStorage, 'poseNet').encoding, 'remote');
+  // The Standard SB3 fetches PoseNet from the site; no model bytes ride in project.json.
+  assert.deepEqual(poseNetDescriptor, createDsl4PoseNetRemoteDescriptor());
+  assert.equal(Buffer.from(projectBytes).includes(shardPrefix), false);
   assert.equal(
     projectBytes.byteLength < currentRuntimeProjectJsonMaximumBytes,
     true,
