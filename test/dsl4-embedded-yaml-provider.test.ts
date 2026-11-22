@@ -7,6 +7,8 @@ import {
   createKamishibaiEmbeddedYamlProvider,
   registerKamishibaiEmbeddedYamlProvider,
 } from '../src/dsl4/embedded-yaml-provider.js';
+import {createKamishibaiEmbeddedYamlProvider as createKamishibaiEmbeddedYamlProviderCore} from '../src/dsl4/embedded-yaml-provider-core.js';
+import editorSchema from '../schema/dsl-4-editor.schema.json' with {type: 'json'};
 import {installDsl4EmbeddedYamlHat} from '../src/dsl4/embedded-yaml-hat.js';
 import schema from '../schema/dsl-4.schema.json' with {type: 'json'};
 import {createDsl4ProductionSourceFrontend} from '../src/builder/dsl4-source-frontend.js';
@@ -98,6 +100,25 @@ test('the owner exposes a stable story reference, filename and bundled schema wi
   provider.dispose?.();
   assert.deepEqual(provider.list(), []);
   assert.throws(() => provider.open('story'), /ended/);
+});
+test('the editor schema is attached by default and left out by the playback runtime', async () => {
+  const {vm} = await fixture();
+  const defaultProvider = createKamishibaiEmbeddedYamlProvider(vm);
+  assert.equal(defaultProvider.list()[0]?.schema?.schema, editorSchema);
+  assert.equal(defaultProvider.list()[0]?.schema?.id, editorSchema.$id);
+  defaultProvider.dispose?.();
+
+  for (const provider of [
+    createKamishibaiEmbeddedYamlProviderCore(vm),
+    createKamishibaiEmbeddedYamlProviderCore(vm, {editorSchema: null}),
+    createKamishibaiEmbeddedYamlProvider(vm, {editorSchema: null}),
+  ]) {
+    const [metadata] = provider.list();
+    assert.equal(metadata?.documentId, 'story');
+    assert.equal(metadata?.available, true);
+    assert.equal('schema' in metadata!, false, 'a document without schema hints stays editable');
+    provider.dispose?.();
+  }
 });
 test('cached runtime registration survives project reset while stale snapshots are invalidated', async () => {
   const {vm, runtime} = await fixture();

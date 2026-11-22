@@ -15,7 +15,7 @@ import {
 import {
   registerKamishibaiEmbeddedYamlProvider,
   buildKamishibaiDocumentSourceProject,
-} from '../../dist/dsl4/embedded-yaml-provider.js';
+} from '../../dist/dsl4/embedded-yaml-provider-core.js';
 import {resolveKamishibaiDocumentSourceProject} from '../../dist/dsl4/document-source-runtime.js';
 import {documentSourceEnabledAtStartup} from '../../dist/dsl4/document-source.js';
 import {getRuntimeControlsDock} from '@kubohiroya/turbowarp-app-shell';
@@ -48,6 +48,8 @@ import {
 } from '@kubohiroya/turbowarp-runtime-adapter';
 
 import schema from '../../schema/dsl-4.schema.json' with {type: 'json'};
+// Only the authoring profile references it, so the playback bundle drops the 150 KB schema.
+import editorSchema from '../../schema/dsl-4-editor.schema.json' with {type: 'json'};
 
 import {
   createDsl4ProductionSourceFrontend,
@@ -124,7 +126,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.2';
+const extensionVersion = '4.0.3';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -764,6 +766,8 @@ class KamishibaiDsl4RuntimeExtension {
     this.setStageCursor('pointer');
     registerKamishibaiEmbeddedYamlProvider(Scratch.vm, {
       sourceFrontend: this.frontend,
+      // Editing happens in the authoring runtime; playback keeps editable documents without hints.
+      editorSchema: DSL4_AUTHORING_PROFILE ? editorSchema : null,
       // Explicit Editor requests use the host's fetch; playback keeps the extension's own.
       ...(typeof globalThis.fetch === 'function' ? {fetch: globalThis.fetch.bind(globalThis)} : {}),
     });

@@ -1,6 +1,6 @@
 {
   "name": "@kubohiroya/turbowarp-kamishibai-app",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "private": false,
   "type": "module",
   "description": "TurboWarp-Kamishibai — an AI-powered interactive storytelling system built on the TurboWarp ecosystem, using Teachable Machine recognition as story input",
