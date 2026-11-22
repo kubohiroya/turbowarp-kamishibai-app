@@ -48,6 +48,8 @@ test('indexes every direct dependency in the comprehensive DSL 4.0 fixture', asy
       eager: ['Beach', 'HeroHappy'],
       lazy: ['OpeningSound'],
       background: [],
+      // The opening moves on to the rescue scene, whose model loads once the opening is ready.
+      prefetch: ['救助Pose'],
       sceneRetained: [],
     },
     rescue: {
@@ -55,6 +57,7 @@ test('indexes every direct dependency in the comprehensive DSL 4.0 fixture', asy
       eager: ['ClockTicking', 'HeroHappy', 'HeroHelp', 'Success'],
       lazy: ['Ocean'],
       background: ['救助Pose'],
+      prefetch: [],
       sceneRetained: ['救助Pose'],
     },
     seaRoute: {
@@ -62,9 +65,18 @@ test('indexes every direct dependency in the comprehensive DSL 4.0 fixture', asy
       eager: [],
       lazy: [],
       background: ['救助Pose'],
+      prefetch: [],
       sceneRetained: ['救助Pose'],
     },
-    ending: {all: ['Beach'], eager: ['Beach'], lazy: [], background: [], sceneRetained: []},
+    ending: {
+      all: ['Beach'],
+      eager: ['Beach'],
+      lazy: [],
+      background: [],
+      // Touching the caption replays the rescue scene.
+      prefetch: ['救助Pose'],
+      sceneRetained: [],
+    },
   });
 });
 
@@ -161,6 +173,7 @@ scenes:
     eager: [],
     lazy: ['SceneBackdrop'],
     background: [],
+    prefetch: [],
     sceneRetained: [],
   });
   assert.equal(index.startup.includes('Unused'), false);
@@ -185,6 +198,7 @@ scenes:
     eager: ['Alpha', 'Zed'],
     lazy: [],
     background: [],
+    prefetch: [],
     sceneRetained: [],
   });
 });
@@ -226,6 +240,7 @@ scenes:
     eager: [],
     lazy: ['HeroVoice', 'TalkTick'],
     background: [],
+    prefetch: [],
     sceneRetained: [],
   });
 });
@@ -282,6 +297,7 @@ scenes:
     eager: [],
     lazy: ['TalkTick'],
     background: [],
+    prefetch: [],
     sceneRetained: [],
   });
   assert.deepEqual(index.scenes.second, {
@@ -289,6 +305,7 @@ scenes:
     eager: [],
     lazy: ['ActionTick'],
     background: [],
+    prefetch: [],
     sceneRetained: [],
   });
 });
@@ -331,6 +348,7 @@ scenes:
     eager: [],
     lazy: ['Next1', 'Next2'],
     background: [],
+    prefetch: [],
     sceneRetained: [],
   });
   assert.deepEqual(requireDefined(index.scenes.second, 'the second scene').all, []);
@@ -365,6 +383,7 @@ scenes:
     eager: [],
     lazy: ['Face', 'Finish', 'Lip', 'Tick', 'Voice'],
     background: [],
+    prefetch: [],
     sceneRetained: [],
   });
 });
@@ -431,11 +450,61 @@ scenes:
     'RescuePose',
   ]);
   assert.deepEqual(requireDefined(index.scenes.rescue, 'the rescue scene').lazy, []);
+  // The rescue scene moves on to the sea, so the sea model loads after the rescue model.
+  assert.deepEqual(requireDefined(index.scenes.rescue, 'the rescue scene').prefetch, ['SeaPose']);
   assert.deepEqual(requireDefined(index.scenes.sea, 'the sea scene'), {
     all: ['SeaPose'],
     eager: [],
     lazy: [],
     background: ['SeaPose'],
+    prefetch: [],
     sceneRetained: ['SeaPose'],
   });
+});
+
+test('prefetches the models of the scenes a scene can move to next', () => {
+  const storyDocument = parse(`
+kamishibai: '4.0'
+assets:
+  APose: {kind: recognitionModel, file: a}
+  BPose: {kind: recognitionModel, file: b}
+  CPose: {kind: recognitionModel, file: c}
+  DPose: {kind: recognitionModel, file: d}
+variables: {score: 0}
+branches:
+  judge:
+    - if: 'score > 1'
+      goto: b
+    - else: d
+scenes:
+  a:
+    recognitionModel: APose
+    actions:
+      - poseInputToChangeScene:
+          routes: {up: b, down: c}
+  b:
+    recognitionModel: BPose
+    actions:
+      - branch: judge
+  c:
+    recognitionModel: CPose
+    actions:
+      - goto: a
+  d:
+    recognitionModel: DPose
+    actions: []
+  e: []
+`);
+  const index = createDsl4AssetDependencyIndex(storyDocument);
+  const prefetch = (sceneId: string) =>
+    requireDefined(index.scenes[sceneId], `the ${sceneId} scene`).prefetch;
+  // Input routes name the next scenes; the following scene in order is not one, since a scene
+  // that ends by moving never runs into it.
+  assert.deepEqual(prefetch('a'), ['BPose', 'CPose']);
+  // Every outcome of a branch counts; a scene's own model is never prefetched for itself.
+  assert.deepEqual(prefetch('b'), ['DPose']);
+  assert.deepEqual(prefetch('c'), ['APose']);
+  // A scene that runs to its end continues into the following scene.
+  assert.deepEqual(prefetch('d'), []);
+  assert.deepEqual(index.scenes.e?.prefetch, []);
 });

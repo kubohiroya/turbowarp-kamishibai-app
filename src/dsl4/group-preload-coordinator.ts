@@ -3,7 +3,11 @@ import {
   createDsl4AssetGroupLifecycle,
   createDsl4DefaultAssetGroups,
 } from './asset-group-lifecycle.js';
-import type {Dsl4AssetPreloadLifecycle, Readiness} from './asset-preload-coordinator.js';
+import {
+  lifecycleError,
+  type Dsl4AssetPreloadLifecycle,
+  type Readiness,
+} from './asset-preload-coordinator.js';
 
 /** Give the controller timing authority while groups exclusively own materialized assets. */
 export function createDsl4GroupPreloadCoordinator({
@@ -23,10 +27,16 @@ export function createDsl4GroupPreloadCoordinator({
 }) {
   const prefix = `segment:${segmentId}`;
   const index = createDsl4AssetDependencyIndex(storyDocument);
+  // Recognition models load in the background beside the scene groups, so a scene never waits for
+  // them at its entry: the coordinator owns them itself, outside the group lifecycle.
+  const backgroundAssetIds = new Set(
+    Object.values(index.scenes).flatMap((scene) => scene.background),
+  );
   const definitions = createDsl4DefaultAssetGroups(storyDocument, segmentId).map((group) => ({
     ...group,
-    assetIds:
-      group.id === `${prefix}:shared`
+    assetIds: group.id.startsWith(`${prefix}:scene:`)
+      ? group.assetIds.filter((id) => !backgroundAssetIds.has(id))
+      : group.id === `${prefix}:shared`
         ? group.assetIds.filter((id) => !excludedStartupAssetIds.includes(id))
         : group.id.startsWith(`${prefix}:retained:`)
           ? [
@@ -105,10 +115,114 @@ export function createDsl4GroupPreloadCoordinator({
       onEvent('assets.loading.hide', {sceneId: ctx.sceneId});
     }
   }
+  type BackgroundLoad = {sceneId: string; abort: AbortController; promise: Promise<void>};
+  // Recognition models loading in the background, and those already loaded, by asset id.
+  const background = new Map<string, BackgroundLoad>();
+  const loadedBackground = new Map<string, string>();
+  /** Identifies the latest scene to start background loads, so a stale one starts no prefetch. */
+  let backgroundToken = 0;
+  function prepareBackground(
+    sceneId: string,
+    assetId: string,
+    ctx: ReturnType<typeof context>,
+  ): Promise<void> {
+    try {
+      return Promise.resolve(
+        lifecycle.prepare(Object.freeze({phase: 'scene', sceneId, assetIds: [assetId]}), ctx),
+      ).then(() => {});
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+  function releaseBackground(assetIds: readonly string[], reason: string, sceneId: string | null) {
+    if (!assetIds.length) return;
+    cleanup = cleanup.then(async () => {
+      try {
+        await lifecycle.releaseAssets(Object.freeze({assetIds: [...assetIds], reason, sceneId}));
+      } catch (error) {
+        reportCleanupError(error, sceneId);
+      }
+    });
+    void cleanup.catch(() => {});
+  }
+  /** Stop the background loads a scene does not need; loaded models stay until the scene commits. */
+  function stopBackground(keep: ReadonlySet<string>, reason: string) {
+    const stopped: string[] = [];
+    for (const [assetId, load] of background) {
+      if (keep.has(assetId)) continue;
+      background.delete(assetId);
+      load.abort.abort(reason);
+      stopped.push(assetId);
+    }
+    releaseBackground(stopped, reason, null);
+  }
+  /** Load one recognition model in the background, or join its load if one is running. */
+  function loadBackground(
+    sceneId: string,
+    generation: number,
+    assetId: string,
+    prefetch: boolean,
+  ): Promise<void> {
+    if (loadedBackground.has(assetId)) return Promise.resolve();
+    const running = background.get(assetId);
+    if (running) return running.promise.catch(() => {});
+    const abort = new AbortController();
+    const load: BackgroundLoad = {sceneId, abort, promise: Promise.resolve()};
+    background.set(assetId, load);
+    onEvent('assets.background.start', {sceneId, assetIds: [assetId], prefetch});
+    load.promise = prepareBackground(sceneId, assetId, context(abort.signal, generation, sceneId));
+    return load.promise.then(
+      () => {
+        if (background.get(assetId) !== load) return;
+        background.delete(assetId);
+        loadedBackground.set(assetId, sceneId);
+        onEvent('assets.background.ready', {sceneId, assetIds: [assetId], prefetch});
+      },
+      (error) => {
+        if (background.get(assetId) !== load) return;
+        background.delete(assetId);
+        // The recognition action that needs the model reports the failure when it waits.
+        onEvent('assets.background.error', {
+          sceneId,
+          assetIds: [assetId],
+          prefetch,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      },
+    );
+  }
+  /**
+   * Start loading a scene's recognition models without holding up the scene. Once they have
+   * settled, the models of the scenes it can move to next load too.
+   */
+  function startBackground(sceneId: string, generation: number) {
+    const scene = index.scenes[sceneId];
+    const own = scene?.background ?? [];
+    const prefetch = scene?.prefetch ?? [];
+    stopBackground(new Set([...own, ...prefetch]), 'scene-superseded');
+    const token = ++backgroundToken;
+    const loads = own.map((assetId) => loadBackground(sceneId, generation, assetId, false));
+    void Promise.all(loads).then(() => {
+      if (token !== backgroundToken) return;
+      for (const assetId of prefetch) void loadBackground(sceneId, generation, assetId, true);
+    });
+  }
+  /** Release loaded models that neither the committed scene nor the scenes after it use. */
+  function commitBackground(sceneId: string) {
+    const scene = index.scenes[sceneId];
+    const keep = new Set([...(scene?.background ?? []), ...(scene?.prefetch ?? [])]);
+    const unused = [...loadedBackground.keys()].filter((assetId) => !keep.has(assetId));
+    for (const assetId of unused) loadedBackground.delete(assetId);
+    releaseBackground(unused, 'scene-committed', sceneId);
+  }
   function release(reason: string) {
     if (releasing) return releasing;
     releaseRequired = true;
     cancel(reason);
+    for (const load of background.values()) load.abort.abort(reason);
+    background.clear();
+    loadedBackground.clear();
+    backgroundToken += 1;
     releasing = (async () => {
       const errors: unknown[] = [];
       try {
@@ -187,6 +301,7 @@ export function createDsl4GroupPreloadCoordinator({
     },
     beginScene(sceneId: string, generation: number) {
       cancel('scene-superseded');
+      startBackground(sceneId, generation);
       const abort = new AbortController();
       const candidate: Preparation = {
         phase: 'scene',
@@ -224,6 +339,41 @@ export function createDsl4GroupPreloadCoordinator({
         ? pending.promise
         : Promise.resolve({ok: true, prepared: false});
     },
+    /**
+     * Wait until a recognition model is ready. Returns at once when it already is; joins its
+     * background load while that is still running; loads it now if nothing started it.
+     */
+    async waitForSceneAsset(
+      sceneId: string,
+      assetId: string,
+      generation: number,
+      signal: AbortSignal,
+    ): Promise<Readiness> {
+      if (loadedBackground.has(assetId)) return Object.freeze({ok: true, prepared: false});
+      const waiting = background.has(assetId);
+      if (waiting) onEvent('assets.background.wait.start', {sceneId, assetIds: [assetId]});
+      try {
+        // The lifecycle joins a prepare of the same asset that is already running.
+        await prepareBackground(sceneId, assetId, context(signal, generation, sceneId));
+        if (signal.aborted) return Object.freeze({ok: false, cancelled: true});
+        // A model loaded while the coordinator is being released belongs to that release.
+        if (!releaseRequired) loadedBackground.set(assetId, sceneId);
+        return Object.freeze({ok: true, prepared: true});
+      } catch (error) {
+        if (signal.aborted) return Object.freeze({ok: false, cancelled: true});
+        return Object.freeze({
+          ok: false,
+          cancelled: false,
+          error: lifecycleError(
+            error,
+            'K4-ASSET-PREPARE-001',
+            `Recognition model ${assetId} could not be prepared`,
+          ),
+        });
+      } finally {
+        if (waiting) onEvent('assets.background.wait.end', {sceneId, assetIds: [assetId]});
+      }
+    },
     async commitScene(sceneId: string, _reason: string) {
       if (!pending || pending.sceneId !== sceneId) throw new Error('No prepared asset group scene');
       const candidate = pending;
@@ -243,6 +393,7 @@ export function createDsl4GroupPreloadCoordinator({
       );
       committed = next;
       pending = null;
+      commitBackground(sceneId);
       return result;
     },
     cancel,

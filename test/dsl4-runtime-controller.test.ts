@@ -3747,3 +3747,60 @@ test('a pose action reports the failure of its background model load', async () 
   assert.match(JSON.stringify(state.diagnostic), /RescuePose|model files are missing/u);
   assert(traceOf(controller).some(({type}) => type === 'assets.background.error'));
 });
+
+test('prefetches the next scene model once the current scene model is ready', async () => {
+  const prepared: string[][] = [];
+  const models = new Map<string, ReturnType<typeof deferred<void>>>([
+    ['RescuePose', deferred<void>()],
+    ['SeaPose', deferred<void>()],
+  ]);
+  const help = deferred<void>();
+  const events: string[] = [];
+  const controller = createDsl4RuntimeController({
+    storyDocument: backgroundModelStory(),
+    port: {
+      stage: async (payload: PortPayload) => {
+        events.push(`stage:${String(payload.backdrop)}`);
+      },
+      waitForPose: async (payload: PortPayload) => {
+        events.push(`pose:${String(payload.pose)}`);
+        if (payload.pose === 'help') await help.promise;
+      },
+    },
+    assetLifecycle: {
+      async prepare(payload: PortPayload) {
+        const assetIds = (payload.assetIds as string[]).slice();
+        prepared.push(assetIds);
+        await Promise.all(assetIds.map((assetId) => models.get(assetId)?.promise));
+      },
+      async setLoading() {},
+      async releaseAssets() {},
+      async release() {},
+    },
+  });
+  const run = controller.start();
+  await waitFor(() => events.includes('stage:Beach'), 'the scene did not start');
+  // The next scene's model waits for the current scene's model, so they never compete.
+  assert.equal(prepared.flat().includes('SeaPose'), false);
+
+  models.get('RescuePose')!.resolve();
+  await waitFor(() => events.includes('pose:help'), 'the pose did not start');
+  await waitFor(
+    () => prepared.flat().includes('SeaPose'),
+    'the next scene model did not start loading during the current scene',
+  );
+  assert.equal(events.includes('stage:Ocean'), false, 'the prefetch runs before the next scene');
+  assert(
+    traceOf(controller).some(
+      ({type, details}) =>
+        type === 'assets.background.start' &&
+        (details as {prefetch?: boolean}).prefetch === true &&
+        JSON.stringify((details as {assetIds?: unknown}).assetIds) === '["SeaPose"]',
+    ),
+  );
+
+  models.get('SeaPose')!.resolve();
+  help.resolve();
+  await run;
+  assert.equal(controller.getState().status, 'finished');
+});

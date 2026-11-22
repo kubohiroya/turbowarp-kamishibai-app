@@ -3129,6 +3129,12 @@ test(
         );
       }
       assert.equal(host.getSnapshot().status, 'connected');
+      // The page acknowledges its runtime in a separate request, which can arrive just after the
+      // stage appears.
+      const readyDeadline = Date.now() + 10_000;
+      while (host.getSnapshot().browserRuntimeReady !== true && Date.now() < readyDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
       assert.equal(host.getSnapshot().browserRuntimeReady, true);
       assert.equal(await client.evaluate('location.hash'), '');
       assert.equal(
