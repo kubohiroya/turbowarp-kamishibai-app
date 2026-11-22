@@ -14,13 +14,15 @@ TMPose紙芝居は、TurboWarpとTMPoseを利用し、参加者がカメラの�
 
 ## npmパッケージ
 
-[`@kubohiroya/tmpose-kamishibai`](https://www.npmjs.com/package/@kubohiroya/tmpose-kamishibai)は、外部の画像・音声をベースSB3へ組み込み、台本の`asset=`行をプロジェクト内参照へ変換するCLIとJavaScript APIを提供します。
+[`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app)の3.2系列（dist-tag `legacy-3.2`）は、外部の画像・音声をベースSB3へ組み込み、台本の`asset=`行をプロジェクト内参照へ変換するCLIとJavaScript APIを提供します。
 
 検証済みバージョンを固定して導入します。
 
 ```bash
-pnpm add --save-exact @kubohiroya/tmpose-kamishibai@3.2.4
+pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@3.2.4
 ```
+
+3.2.3までは`@kubohiroya/tmpose-kamishibai`の名前で公開していました。3.2.4から、4.x系列と同じパッケージ名で公開します。npmの`latest`は4.x系列を指すため、3.2系列は版を固定するか`legacy-3.2`を指定して導入してください。コマンド名`tmpose-kamishibai`は互換のために残し、`turbowarp-kamishibai`でも実行できます。
 
 ```bash
 pnpm exec tmpose-kamishibai build-sb3 \
