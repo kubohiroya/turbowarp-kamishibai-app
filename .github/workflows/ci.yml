@@ -35,10 +35,31 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Normal CI checks the PR contract; full validation is opt-in for release work.
+      # A pull request that changes the package version is a release: it gets the full release
+      # validation here, before the merge, and Release reuses that result for the same tree
+      # instead of finding a failure only after main is tagged.
+      - name: Detect a release pull request
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          FULL_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.full }}
+        run: |
+          set -euo pipefail
+          full=false
+          if [ "$FULL_REQUESTED" = true ]; then
+            full=true
+          elif [ -n "${BASE_SHA:-}" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+            base="$(git show "$BASE_SHA:package.json" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).version))')"
+            head="$(node -p "require('./package.json').version")"
+            if [ "$base" != "$head" ]; then full=true; fi
+            echo "package version: $base -> $head"
+          fi
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+      # Normal CI checks the PR contract; release pull requests and explicit requests run the full validation.
       - name: Run PR checks
         id: pr_checks
-        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.full }}
+        if: ${{ steps.scope.outputs.full != 'true' }}
         run: pnpm verify:pr
       - name: Collect failed release source diagnostics
         if: ${{ failure() && steps.pr_checks.outcome == 'failure' }}
@@ -121,8 +142,23 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
       - name: Run full release checks
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.full }}
+        if: ${{ steps.scope.outputs.full == 'true' }}
         run: pnpm verify:full
+      # Record the exact tree the full validation passed. Release compares it with the tag's tree
+      # and skips repeating the same checks; any difference makes Release run them itself.
+      - name: Record the fully verified tree
+        if: ${{ steps.scope.outputs.full == 'true' }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/verified"
+          git rev-parse 'HEAD^{tree}' > "$RUNNER_TEMP/verified/tree.txt"
+          cat "$RUNNER_TEMP/verified/tree.txt"
+      - name: Upload the fully verified tree
+        if: ${{ steps.scope.outputs.full == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: verified-full-tree
+          path: ${{ runner.temp }}/verified/tree.txt
+          retention-days: 30
 
   # Keep branch protection's required `test` status independent of the verification job.
   # Fail this gate unless verification succeeded, including when it was cancelled or skipped.
