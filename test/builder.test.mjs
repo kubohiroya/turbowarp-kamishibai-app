@@ -934,7 +934,7 @@ test('exposes one CLI contract and a fixed installable package version', async (
   const packageJson = JSON.parse(await readFile(path.join(projectRoot, 'package.json'), 'utf8'));
   assert.equal(packageJson.name, '@kubohiroya/turbowarp-kamishibai-app');
   assert.equal(packageJson.publishConfig.tag, 'legacy-3.2');
-  assert.equal(packageJson.version, '3.2.4');
+  assert.equal(packageJson.version, '3.2.5');
   assert.equal(packageVersion, packageJson.version);
   assert.equal(packageJson.private, false);
   assert.equal(packageJson.exports['./builder'], './src/builder/index.js');

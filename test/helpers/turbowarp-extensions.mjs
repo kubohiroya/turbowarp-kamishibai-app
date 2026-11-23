@@ -890,7 +890,7 @@ export function registerKamishibaiTestExtensions(
     }
   }
 
-  // Bubble 0.21.0: only the blocks the app uses. A styled bubble is an overlay of its own,
+  // Bubble 0.22.0: only the blocks the app uses. A styled bubble is an overlay of its own,
   // so it stays open until closeBubble, whatever Scratch's native bubble does.
   class BubbleExtension {
     constructor(runtime) {

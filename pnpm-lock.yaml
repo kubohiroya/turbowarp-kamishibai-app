@@ -14,8 +14,8 @@ importers:
   .:
     dependencies:
       '@kubohiroya/turbowarp-bubble':
-        specifier: 0.21.0
-        version: 0.21.0
+        specifier: 0.22.0
+        version: 0.22.0
       '@kubohiroya/turbowarp-svg-text':
         specifier: 0.17.0
         version: 0.17.0
@@ -123,12 +123,12 @@ packages:
     engines: {node: '>=22.12.0'}
     hasBin: true
 
-  '@kubohiroya/turbowarp-bubble@0.21.0':
-    resolution: {integrity: sha512-MGEjk/71aOfNVPaP0BrrlfxYD9CRN+ca+aVQ1OtgN0x0NceYQB6ZBvKkLwe7qDWILmX9y3usS4nf/SWSbp9qXA==}
+  '@kubohiroya/turbowarp-bubble@0.22.0':
+    resolution: {integrity: sha512-RCg27WE6lwm1xt9W6QVHKYTlSA0AItT8lKOjvX4GdYcZmrPO3EJl8WnSGt4psYwfNVgSQK58/j1ZIQaF09dydw==}
     engines: {node: '>=24'}
     peerDependencies:
       '@kubohiroya/turbowarp-asset-cache': ^0.10.0
-      '@kubohiroya/turbowarp-async-input': ^0.14.0
+      '@kubohiroya/turbowarp-async-input': ^0.15.0
       '@kubohiroya/turbowarp-runtime-expression': ^0.12.0
     peerDependenciesMeta:
       '@kubohiroya/turbowarp-asset-cache':
@@ -950,7 +950,7 @@ snapshots:
     dependencies:
       fflate: 0.8.3
 
-  '@kubohiroya/turbowarp-bubble@0.21.0':
+  '@kubohiroya/turbowarp-bubble@0.22.0':
     dependencies:
       '@cto.af/linebreak': 4.0.3
       '@kubohiroya/turbowarp-svg-text': 0.17.0

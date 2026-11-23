@@ -1,6 +1,6 @@
 {
   "name": "@kubohiroya/turbowarp-kamishibai-app",
-  "version": "3.2.4",
+  "version": "3.2.5",
   "private": false,
   "type": "module",
   "description": "TMPose紙芝居 — ポーズで進めるAIインタラクティブ紙芝居",
@@ -63,7 +63,7 @@
   "author": "Hiroya Kubo",
   "license": "MPL-2.0",
   "dependencies": {
-    "@kubohiroya/turbowarp-bubble": "0.21.0",
+    "@kubohiroya/turbowarp-bubble": "0.22.0",
     "@kubohiroya/turbowarp-svg-text": "0.17.0",
     "fflate": "0.8.3"
   },
