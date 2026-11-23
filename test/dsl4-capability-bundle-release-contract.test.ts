@@ -364,7 +364,7 @@ test('pins a deterministic release, publication, and rollback sequence', async (
     immutableStates: ['frozen', 'published'],
     npmDistTag: 'latest',
     githubPrerelease: false,
-    recommendedStableVersion: '4.0.11',
+    recommendedStableVersion: '4.0.12',
   });
 
   for (const evidencePath of contract.evidence) {
