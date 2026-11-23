@@ -1190,7 +1190,7 @@ const remedies: readonly Dsl4ErrorRemedyEntry[] = [
     ],
   },
   {
-    when: /^K4-BLOCK-SOURCE-(?:MISSING|PATH|LABEL|GRAPH|PROJECT|FRAGMENT)-001$/u,
+    when: /^K4-BLOCK-SOURCE-(?:MISSING|PATH|LABEL|PROJECT|FRAGMENT)-001$/u,
     on: 'outer',
     title: ['台本ブロックの指定を直してください', 'Fix the script block’s reference'],
     explanation: [

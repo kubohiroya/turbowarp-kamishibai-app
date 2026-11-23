@@ -134,7 +134,8 @@ export function usage() {
     [--asset-config FILE --asset-lock FILE --asset-profile PROFILE \\
      --max-asset-config-bytes N --max-asset-lock-bytes N] \\
     [--max-project-bytes N] [--max-project-json-bytes N] \\
-    [--distribution-profile source|compiled] [--embedded-source-documents] [options]
+    [--distribution-profile source|compiled] [--embedded-source-documents] \\
+    [--seal-asset-sources] [options]
 
   turbowarp-kamishibai migrate-embedded-yaml --input OLD.sb3 --output NEW.sb3 \\
     [--entry-file story.k4.yml] [--report REPORT.json] [--document-map PATHS.json]
@@ -236,6 +237,11 @@ DSL 4.0 build-dsl4 options:
   --asset-profile PROFILE         Explicit asset distribution profile
   --max-asset-config-bytes N      Maximum asset config bytes
   --max-asset-lock-bytes N        Maximum asset lock bytes
+  --seal-asset-sources            Declare the work finished. Without it the work stays
+                                  half-finished and its unpinned remote sources may still be
+                                  edited, so an opener can complete it; with it every remote
+                                  source is fixed and a later change is an error. Sources the
+                                  author pinned with integrity are fixed either way.
   --distribution-profile PROFILE  source (default) keeps the YAML; compiled stores only the
                                   validated Story IR (source omission, not secrecy)
 
@@ -1210,6 +1216,7 @@ function parseBuildDsl4Arguments(rest: string[]): Dsl4CliOptions {
     '--enable-source-includes',
     '--enable-root-binary-entries',
     '--embedded-source-documents',
+    '--seal-asset-sources',
     '--history-navigation-available',
     '--replace-existing',
   ]);
@@ -1338,6 +1345,7 @@ function parseBuildDsl4Arguments(rest: string[]): Dsl4CliOptions {
         }
       : {}),
     ...(flags.has('--embedded-source-documents') ? {embeddedSourceDocuments: true} : {}),
+    ...(flags.has('--seal-asset-sources') ? {sealAssetSources: true} : {}),
     historyNavigationAvailable: flags.has('--history-navigation-available'),
     replaceExisting: flags.has('--replace-existing'),
     ...(distributionProfile === 'compiled' ? {distributionProfile} : {}),
