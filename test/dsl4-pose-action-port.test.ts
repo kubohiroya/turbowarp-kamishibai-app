@@ -851,3 +851,20 @@ test('dispose is idempotent, cancels active work, and makes the port final', asy
     (error) => thrown(error).code === 'K4-POSE-PORT-005',
   );
 });
+
+test('claims the preview where the story placed it', async () => {
+  const {pose, clock, port} = setup({previewPosition: 'bottom-right'});
+  const pending = port.waitForPose(sequencePayload(), actionContext());
+  await flush();
+  pose.confidence.set('help', 1);
+  clock.advance(1000);
+  await pending;
+  assert.deepEqual(pose.preview, [['position', 'bottom-right'], ['show'], ['hide']]);
+});
+
+test('refuses a preview position the source frontend never validated', () => {
+  assert.throws(
+    () => setup({previewPosition: 'top-center'}),
+    /pose action preview position must be one of/u,
+  );
+});

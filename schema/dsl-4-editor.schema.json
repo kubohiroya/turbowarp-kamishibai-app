@@ -2293,6 +2293,15 @@
             "unmirrored"
           ]
         },
+        "position": {
+          "$ref": "#/$defs/posePreviewPosition"
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.2
+        },
         "overlay": {
           "$ref": "#/$defs/poseOverlay"
         },
@@ -2300,6 +2309,18 @@
           "$ref": "#/$defs/posePreviewControls"
         }
       }
+    },
+    "posePreviewPosition": {
+      "type": "string",
+      "enum": [
+        "full-stage",
+        "top-left",
+        "top-right",
+        "bottom-left",
+        "bottom-right",
+        "center"
+      ],
+      "default": "full-stage"
     },
     "poseKeypointName": {
       "type": "string",
@@ -8276,6 +8297,29 @@
             }
           ]
         },
+        "position": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/editorAction_posePreviewPosition"
+            },
+            {
+              "$ref": "#/$defs/editorScopedNarrative_reference"
+            }
+          ]
+        },
+        "opacity": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.2
+            },
+            {
+              "$ref": "#/$defs/editorScopedNarrative_reference"
+            }
+          ]
+        },
         "overlay": {
           "$ref": "#/$defs/editorAction_poseOverlay"
         },
@@ -8283,6 +8327,25 @@
           "$ref": "#/$defs/editorAction_posePreviewControls"
         }
       }
+    },
+    "editorAction_posePreviewPosition": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "full-stage",
+            "top-left",
+            "top-right",
+            "bottom-left",
+            "bottom-right",
+            "center"
+          ],
+          "default": "full-stage"
+        },
+        {
+          "$ref": "#/$defs/editorScopedNarrative_reference"
+        }
+      ]
     },
     "editorAction_poseKeypointName": {
       "anyOf": [

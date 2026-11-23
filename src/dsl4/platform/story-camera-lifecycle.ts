@@ -1,11 +1,16 @@
 import {type Dsl4CompositionMethod, validateCompositionMethods} from './composition-contract.js';
+import {
+  dsl4DefaultPosePreviewOpacity,
+  dsl4DefaultPosePreviewPosition,
+  validateDsl4PosePreviewOpacity,
+  validateDsl4PosePreviewPosition,
+} from './pose-preview-placement.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 const recognitionCommands = new Set(['pose', 'poseInputToChangeScene', 'imageInputToChangeScene']);
-const dsl32FullStagePreviewOpacity = 0.2;
 
 export function storyUsesPoseRecognition(storyDocument: unknown) {
   if (!isRecord(storyDocument) || !Array.isArray(storyDocument.scenes)) return false;
@@ -45,6 +50,16 @@ export function createDsl4StoryCameraLifecycle(options: unknown) {
   if (options.setBusy !== undefined && typeof options.setBusy !== 'function') {
     throw new TypeError('setBusy must be a function');
   }
+  // The story owns the placement because the preview it prepares is the one every pose action
+  // shows: a scene cannot be handed a preview the story did not ask for.
+  const previewPosition =
+    options.previewPosition === undefined
+      ? dsl4DefaultPosePreviewPosition
+      : validateDsl4PosePreviewPosition(options.previewPosition, 'story camera preview position');
+  const previewOpacity =
+    options.previewOpacity === undefined
+      ? dsl4DefaultPosePreviewOpacity
+      : validateDsl4PosePreviewOpacity(options.previewOpacity, 'story camera preview opacity');
   if (options.onCleanupError !== undefined && typeof options.onCleanupError !== 'function') {
     throw new TypeError('onCleanupError must be a function');
   }
@@ -176,8 +191,8 @@ export function createDsl4StoryCameraLifecycle(options: unknown) {
     if (!desired) return stopCameraResources();
     if (!previewPrepared) {
       composition.hidePreview();
-      composition.setPreviewOpacity(dsl32FullStagePreviewOpacity);
-      composition.setPreviewPosition('full-stage');
+      composition.setPreviewOpacity(previewOpacity);
+      composition.setPreviewPosition(previewPosition);
       previewPrepared = true;
     }
     if (!composition.isCameraRunning()) {

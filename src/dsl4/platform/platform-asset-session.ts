@@ -37,6 +37,7 @@ import {
   createDsl4StoryCameraLifecycle,
   storyUsesPoseRecognition,
 } from './story-camera-lifecycle.js';
+import {readDsl4PosePreviewPlacement} from './pose-preview-placement.js';
 import {encodeDsl4StoryPathSegment} from '../story-path.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -600,6 +601,7 @@ export function createDsl4PlatformAssetSession(options: {
     const recognition = isRecord(storyDocument.recognition) ? storyDocument.recognition : {};
     const posePreview = isRecord(recognition.preview) ? recognition.preview : {};
     const poseOverlay = isRecord(posePreview.overlay) ? posePreview.overlay : null;
+    const posePreviewPlacement = readDsl4PosePreviewPlacement(posePreview);
     const modelInitialization = isRecord(recognition.modelInitialization)
       ? recognition.modelInitialization
       : {};
@@ -677,6 +679,8 @@ export function createDsl4PlatformAssetSession(options: {
     const storyCameraLifecycle = storyUsesPoseRecognition(runtimeComponent.storyDocument)
       ? createDsl4StoryCameraLifecycle({
           composition: tmComposition,
+          previewPosition: posePreviewPlacement.position,
+          previewOpacity: posePreviewPlacement.opacity,
           ...(options.onCameraCleanupError === undefined
             ? {}
             : {onCleanupError: options.onCameraCleanupError}),
@@ -703,6 +707,7 @@ export function createDsl4PlatformAssetSession(options: {
       tmComposition,
       asyncInputComposition,
       getPoseModelLabels: (poseModel) => tmPlatform.adapter.getPoseModelLabels(poseModel),
+      previewPosition: posePreviewPlacement.position,
       playSound: (sound, playOptions) => assetManagerComposition.playSound(sound, playOptions),
       stopSound: (sound) => assetManagerComposition.stopSound(sound),
       ...(options.poseSchedule === undefined
