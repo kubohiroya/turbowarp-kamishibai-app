@@ -122,6 +122,8 @@ const argumentFields: Readonly<Record<string, string>> = {
   X: 'x',
   Y: 'y',
   SCALE: 'scale',
+  ROTATION: 'rotation',
+  DIRECTION: 'direction',
   EASING: 'easing',
   LAYER: 'layer',
   STEPS: 'steps',
@@ -129,6 +131,7 @@ const argumentFields: Readonly<Record<string, string>> = {
   STYLE: 'style',
 };
 const optionalInputs: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  show: {ROTATION: 'rotation', DIRECTION: 'direction'},
   stopBgm: {SECONDS: 'seconds'},
   setBgmVolume: {SECONDS: 'seconds'},
   moveTo: {EASING: 'easing'},

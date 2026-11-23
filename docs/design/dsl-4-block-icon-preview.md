@@ -44,11 +44,11 @@ Teachable Machineは後続のbundle memberとして初期化されるため、�
 
 ## 導入と切戻し
 
-asset のプレビューは、対応する Editor と編集用 runtime で既定 ON。場面・動作のプレビューは既定 OFF で、起動 URL の `twPlusBlockPreview=1` または読み込み前の `globalThis.TW_BLOCK_ICON_PREVIEWS = true` で有効化する。`src/dsl4/block-icon-preview-feature-flags.ts` が起動時に一度だけ設定を読む。編集用 runtime の authoring profile とプレビュー登録 API が必要。
+asset・場面・動作のプレビューは、対応する Editor と編集用 runtime で既定 ON。`src/dsl4/block-icon-preview-feature-flags.ts` が起動時に一度だけ設定を読み、起動 URL の `twPlusBlockPreview=0` または読み込み前の `globalThis.TW_BLOCK_ICON_PREVIEWS = false` でだけ切り戻す。起動前の真偽値を URL より優先する。編集用 runtime の authoring profile とプレビュー登録 API が必要で、未対応の Editor では従来フォームのままとなる。
 
-asset のプレビューを切り戻すには、起動 URL に `twPlusBlockPreview=0` を指定するか、読み込み前に `globalThis.TW_BLOCK_ICON_PREVIEWS = false` を設定して Editor を再読み込みする。asset では起動前の真偽値を URL より優先する。場面・動作のプレビューを切り戻すには有効化指定を外して再読み込みする。コードを戻す場合は該当変更を revert し、元の YAML から編集用 SB3 を再生成する。
+プレビューを切り戻すには、起動 URL に `twPlusBlockPreview=0` を指定するか、読み込み前に `globalThis.TW_BLOCK_ICON_PREVIEWS = false` を設定して Editor を再読み込みする。asset と場面・動作をこの指定で分けられない。コードを戻す場合は該当変更を revert し、元の YAML から編集用 SB3 を再生成する。
 
-回帰確認では、プレビュー設定を指定せずに asset アイコンを開いてフォームと素材が表示されることを確認する。次に `twPlusBlockPreview=0` で開き直し、asset アイコンからフォームだけが開くことを確認する。場面・動作のプレビューは `twPlusBlockPreview=1` で確認する。
+回帰確認では、プレビュー設定を指定せずに asset アイコンと場面アイコンを開き、フォームと素材・場面の再生が表示されることを確認する。次に `twPlusBlockPreview=0` で開き直し、どちらのアイコンからもフォームだけが開くことを確認する。
 
 Asset Cacheの対応版を将来採用するときは、runtime注入と購読の検証を維持してパッチ指定・lock・パッチファイルを一組で外す。今回、依存パッケージやEditorのnpm公開・Pages配信は行わない。
 

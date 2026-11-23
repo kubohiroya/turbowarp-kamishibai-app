@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {test, vi} from 'vitest';
 import {
   dsl4BlockPreviewDraftChanges,
+  dsl4BlockPreviewMode,
   dsl4PreviewDragPosition,
   dsl4PreviewDragScale,
   installDsl4BlockIconPreviews,
@@ -66,7 +67,15 @@ test('drag geometry maps responsive canvas pixels and scales around an asymmetri
   assert.throws(() => dsl4PreviewDragPosition({x: 0, y: 0}, {x: 1, y: 1}, {width: 0, height: 10}));
 });
 
-function fixture(command = 'moveTo', draft: Draft = {inputs: {X: {value: 30, changed: false}}}) {
+function fixture(
+  command = 'moveTo',
+  draft: Draft = {inputs: {X: {value: 30, changed: false}}},
+  views: Record<string, {state: string}> = {
+    X: {state: 'editable'},
+    Y: {state: 'editable'},
+    SCALE: {state: 'editable'},
+  },
+) {
   const document = createFakeDocument();
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -84,13 +93,7 @@ function fixture(command = 'moveTo', draft: Draft = {inputs: {X: {value: 30, cha
       for (const listener of listeners) listener();
     },
     getState: () => state,
-    getFixedInputView: () => ({
-      inputs: {
-        X: {state: 'editable'},
-        Y: {state: 'editable'},
-        SCALE: {state: 'editable'},
-      },
-    }),
+    getFixedInputView: () => ({inputs: views}),
     subscribe(listener) {
       listeners.add(listener);
       return () => {
@@ -654,6 +657,319 @@ test('hover waits for intent, owns an isolated still request and aborts it when 
     assert.equal(release.mock.calls.length, 1);
     assert.equal(document.body.children.length, 1);
     dispose();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('a shared scene pane shows the selected action at once; a single block replays it', () => {
+  assert.equal(dsl4BlockPreviewMode('scene'), 'scene');
+  assert.equal(dsl4BlockPreviewMode('scene', {shared: true}), 'scene');
+  for (const command of ['moveTo', 'say', 'think', 'sayText', 'thinkText']) {
+    assert.equal(dsl4BlockPreviewMode(command), 'action', command);
+    assert.equal(dsl4BlockPreviewMode(command, {shared: true}), 'still', command);
+  }
+  for (const command of ['show', 'setSkin', 'stage', 'wait', 'goto', 'hide', 'setLayer'])
+    for (const shared of [false, true])
+      assert.equal(dsl4BlockPreviewMode(command, {shared}), 'still', command);
+});
+
+function contextMenu(element: FakeElement, x: number, y: number) {
+  const event = {
+    type: 'contextmenu',
+    clientX: x,
+    clientY: y,
+    preventDefault() {},
+    stopPropagation() {},
+  } as MouseEvent;
+  for (const listener of element.listeners.get('contextmenu') ?? [])
+    (listener as unknown as (event: MouseEvent) => void)(event);
+}
+
+/** The stage parts the scale gesture drives: the bounds box, the menu item and the panel. */
+async function scaleFixture(command: 'show' | 'moveTo') {
+  const initial: Draft = {
+    inputs: {
+      X: {value: 0, changed: false},
+      Y: {value: 0, changed: false},
+      ...(command === 'show'
+        ? {
+            SCALE: {value: 100, changed: false},
+            ROTATION: {value: '', changed: false},
+            DIRECTION: {value: '', changed: false},
+          }
+        : {}),
+    },
+  };
+  const f = fixture(command, initial, {
+    X: {state: 'editable'},
+    Y: {state: 'editable'},
+    // `move actor` has neither a scale nor a rotation argument to edit.
+    ...(command === 'show'
+      ? {SCALE: {state: 'editable'}, ROTATION: {state: 'editable'}, DIRECTION: {state: 'editable'}}
+      : {}),
+  });
+  const actor = {
+    x: 0,
+    y: 0,
+    size: 100,
+    direction: 90,
+    rotationStyle: 'all around',
+    drawableID: 1,
+    setXY(x: number, y: number) {
+      this.x = x;
+      this.y = y;
+    },
+    setSize(size: number) {
+      this.size = size;
+    },
+    setDirection(direction: number) {
+      this.direction = direction;
+    },
+    setRotationStyle(style: string) {
+      this.rotationStyle = style;
+    },
+  };
+  const canvas = f.document.createElement('canvas');
+  canvas.setBoundingClientRect({left: 100, top: 200, width: 240, height: 180});
+  const stop = vi.fn();
+  f.requests[0]!.result.resolve({
+    canvas: canvas as unknown as HTMLCanvasElement,
+    runtime: {
+      renderer: {
+        getNativeSize: () => [480, 360],
+        getBounds: () => ({left: -30, right: 50, top: 80, bottom: -20}),
+      },
+    },
+    getActor: () => actor,
+    stop,
+    dispose() {},
+  });
+  await settle();
+  const root = f.container.children[0]!;
+  const viewport = root.children[1]!;
+  const box = viewport.children[1]!;
+  const menu = viewport.children[2]!;
+  const panel = root.children[2]!;
+  box.setBoundingClientRect({left: 205, top: 250, width: 40, height: 50});
+  const buttons = panel.children[3]!;
+  return {
+    f,
+    actor,
+    stop,
+    box,
+    menu,
+    panel,
+    item: menu.children[0]!,
+    rotationItem: menu.children[1]!,
+    submenu: menu.children[2]!,
+    slider: panel.children[1]!,
+    readout: panel.children[2]!,
+    reset: buttons.children[0]!,
+    cancel: buttons.children[1]!,
+    save: buttons.children[2]!,
+    status: root.children[0]!.children[2]!,
+  };
+}
+
+test('right clicking the actor scales it by drag and slider, and only 保存 writes the argument', async () => {
+  vi.useFakeTimers();
+  try {
+    const s = await scaleFixture('show');
+    assert.equal(s.panel.hidden, true);
+    contextMenu(s.box, 240, 280);
+    assert.equal(s.menu.style.display, 'block');
+    assert.equal(s.item.disabled, false);
+    assert.equal(s.item.textContent, '拡大縮小');
+
+    s.item.click();
+    assert.equal(s.menu.style.display, 'none');
+    assert.equal(s.panel.hidden, false);
+    // Opening the panel freezes the frame so the running scene cannot overwrite the size.
+    assert.equal(s.stop.mock.calls.length, 1);
+    assert.equal(s.slider.value, '100');
+    assert.equal(s.readout.textContent, '100%');
+
+    // Dragging anywhere on the actor now scales, without touching the draft.
+    pointer(s.box, 'pointerdown', 225, 275);
+    pointer(s.box, 'pointermove', 230, 260);
+    assert.equal(s.actor.size, 200);
+    assert.equal(s.slider.value, '200');
+    pointer(s.box, 'pointerup', 230, 260);
+    assert.deepEqual((s.f.context.getDraft().inputs as Record<string, unknown>).SCALE, {
+      value: 100,
+      changed: false,
+    });
+    assert.equal(s.f.requests.length, 1);
+
+    s.slider.value = '150';
+    s.slider.dispatch('input');
+    assert.equal(s.actor.size, 150);
+    assert.equal(s.readout.textContent, '150%');
+
+    s.reset.click();
+    assert.equal(s.actor.size, 100);
+
+    s.slider.value = '250';
+    s.slider.dispatch('input');
+    s.save.click();
+    assert.equal(s.panel.hidden, true);
+    assert.deepEqual((s.f.context.getDraft().inputs as Record<string, unknown>).SCALE, {
+      value: 250,
+      changed: true,
+    });
+    assert.equal(
+      s.status.textContent,
+      '引数に反映しました。台本へはダイアログの保存で反映します。',
+    );
+    s.f.dispose();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('cancelling the scale panel restores the size and leaves the argument alone', async () => {
+  vi.useFakeTimers();
+  try {
+    const s = await scaleFixture('show');
+    contextMenu(s.box, 240, 280);
+    s.item.click();
+    s.slider.value = '320';
+    s.slider.dispatch('input');
+    assert.equal(s.actor.size, 320);
+    s.cancel.click();
+    assert.equal(s.actor.size, 100);
+    assert.equal(s.panel.hidden, true);
+    assert.deepEqual((s.f.context.getDraft().inputs as Record<string, unknown>).SCALE, {
+      value: 100,
+      changed: false,
+    });
+    assert.equal(s.status.textContent, '変更を取り消しました。');
+    s.f.dispose();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('a block without a scale argument explains where the size is set instead', async () => {
+  vi.useFakeTimers();
+  try {
+    const s = await scaleFixture('moveTo');
+    contextMenu(s.box, 240, 280);
+    assert.equal(s.item.disabled, true);
+    assert.equal(s.status.textContent, '大きさは直前のshow actorで設定します。');
+    s.item.click();
+    assert.equal(s.panel.hidden, true);
+    s.f.dispose();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('the rotation submenu previews a style, turns the actor by drag and saves both arguments', async () => {
+  vi.useFakeTimers();
+  try {
+    const s = await scaleFixture('show');
+    contextMenu(s.box, 240, 280);
+    assert.equal(s.rotationItem.textContent, '回転');
+    assert.equal(s.rotationItem.disabled, false);
+    assert.equal(s.submenu.hidden, true);
+
+    s.rotationItem.click();
+    assert.equal(s.submenu.hidden, false);
+    assert.deepEqual(
+      s.submenu.children.map((child) => child.textContent),
+      ['自由に回転', '左右のみ', '回転しない'],
+    );
+
+    // Choosing a style shows it at once and opens the angle panel.
+    s.submenu.children[1]!.click();
+    assert.equal(s.menu.style.display, 'none');
+    assert.equal(s.panel.hidden, false);
+    assert.equal(s.actor.rotationStyle, 'left-right');
+    assert.equal(s.slider.value, '90');
+
+    // Dragging around the actor's own centre turns it; the draft stays untouched.
+    pointer(s.box, 'pointerdown', 225, 275);
+    pointer(s.box, 'pointermove', 220, 250);
+    assert.equal(s.actor.direction, 0);
+    pointer(s.box, 'pointerup', 220, 250);
+    assert.deepEqual((s.f.context.getDraft().inputs as Record<string, unknown>).ROTATION, {
+      value: '',
+      changed: false,
+    });
+
+    s.slider.value = '-45';
+    s.slider.dispatch('input');
+    assert.equal(s.actor.direction, -45);
+    assert.equal(s.readout.textContent, '-45度');
+
+    s.save.click();
+    assert.equal(s.panel.hidden, true);
+    const draft = s.f.context.getDraft().inputs as Record<string, unknown>;
+    assert.deepEqual(draft.ROTATION, {value: 'leftRight', changed: true});
+    assert.deepEqual(draft.DIRECTION, {value: -45, changed: true});
+    s.f.dispose();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('cancelling rotation restores the actor’s own style and angle', async () => {
+  vi.useFakeTimers();
+  try {
+    const s = await scaleFixture('show');
+    contextMenu(s.box, 240, 280);
+    s.rotationItem.click();
+    s.submenu.children[0]!.click();
+    assert.equal(s.actor.rotationStyle, 'all around');
+    s.slider.value = '180';
+    s.slider.dispatch('input');
+    assert.equal(s.actor.direction, 180);
+
+    s.cancel.click();
+    assert.equal(s.actor.direction, 90);
+    assert.equal(s.panel.hidden, true);
+    const draft = s.f.context.getDraft().inputs as Record<string, unknown>;
+    assert.deepEqual(draft.ROTATION, {value: '', changed: false});
+    assert.deepEqual(draft.DIRECTION, {value: '', changed: false});
+    s.f.dispose();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('“回転しない” keeps the angle out of reach and still saves the style', async () => {
+  vi.useFakeTimers();
+  try {
+    const s = await scaleFixture('show');
+    contextMenu(s.box, 240, 280);
+    s.rotationItem.click();
+    s.submenu.children[2]!.click();
+    assert.equal(s.actor.rotationStyle, "don't rotate");
+    assert.equal(s.slider.disabled, true);
+    pointer(s.box, 'pointerdown', 225, 275);
+    pointer(s.box, 'pointermove', 220, 250);
+    assert.equal(s.actor.direction, 90);
+    s.save.click();
+    const draft = s.f.context.getDraft().inputs as Record<string, unknown>;
+    assert.deepEqual(draft.ROTATION, {value: 'none', changed: true});
+    assert.deepEqual(draft.DIRECTION, {value: 90, changed: true});
+    s.f.dispose();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('a block without rotation arguments says so instead of offering the submenu', async () => {
+  vi.useFakeTimers();
+  try {
+    const s = await scaleFixture('moveTo');
+    contextMenu(s.box, 240, 280);
+    assert.equal(s.rotationItem.disabled, true);
+    s.rotationItem.click();
+    assert.equal(s.panel.hidden, true);
+    s.f.dispose();
   } finally {
     vi.useRealTimers();
   }

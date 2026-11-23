@@ -107,13 +107,20 @@ export const dsl4TurboWarpCoreActionBlockSpecs = Object.freeze([
   block('imageInputToChangeScene', 'wait for image label routes [ROUTES]', [
     argument('ROUTES', 'string', '{"label":"next"}'),
   ]),
-  block('show', 'show actor [TARGET] skin [SKIN] x [X] y [Y] scale [SCALE] %', [
-    argument('TARGET', 'string', 'Actor'),
-    argument('SKIN', 'string', 'Skin'),
-    argument('X', 'number', 0),
-    argument('Y', 'number', 0),
-    argument('SCALE', 'number', 100),
-  ]),
+  block(
+    'show',
+    'show actor [TARGET] skin [SKIN] x [X] y [Y] scale [SCALE] % rotation [ROTATION] direction [DIRECTION]',
+    [
+      argument('TARGET', 'string', 'Actor'),
+      argument('SKIN', 'string', 'Skin'),
+      argument('X', 'number', 0),
+      argument('Y', 'number', 0),
+      argument('SCALE', 'number', 100),
+      // Blank rotation and direction keep the actor as it is, so older blocks stay unchanged.
+      argument('ROTATION', 'string', '', 'dsl4RotationStyle'),
+      argument('DIRECTION', 'string', ''),
+    ],
+  ),
   block('hide', 'hide actor [TARGET]', [argument('TARGET', 'string', 'Actor')]),
   block('setTransparency', 'set actor [TARGET] transparency spec [SPEC]', [
     argument('TARGET', 'string', 'Actor'),
@@ -263,6 +270,12 @@ export function validateBlockArguments(
           (spec.command === 'audio' || spec.command === 'audioControl') &&
           ['FADEIN', 'VOLUME', 'FADEOUT'].includes(name) &&
           !Object.hasOwn(args, name)
+        ) &&
+        // Projects authored before the rotation inputs existed carry neither of them.
+        !(
+          spec.command === 'show' &&
+          ['ROTATION', 'DIRECTION'].includes(name) &&
+          !Object.hasOwn(args, name)
         ),
     );
   const actual = Object.keys(args).sort();
@@ -411,13 +424,18 @@ export function sourceValueForBlock(
     case 'poseInputToChangeScene':
     case 'imageInputToChangeScene':
       return {routes: parseJson(args.ROUTES, limits)};
-    case 'show':
+    case 'show': {
+      const rotation = String(args.ROTATION ?? '').trim();
+      const direction = String(args.DIRECTION ?? '').trim();
       return {
         skin: String(args.SKIN),
         x: numberValue(args.X, 'X'),
         y: numberValue(args.Y, 'Y'),
         scale: numberValue(args.SCALE, 'SCALE'),
+        ...(rotation === '' ? {} : {rotation}),
+        ...(direction === '' ? {} : {direction: numberValue(direction, 'DIRECTION')}),
       };
+    }
     case 'hide':
       return {};
     case 'setTransparency':

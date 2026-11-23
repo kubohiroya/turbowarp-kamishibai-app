@@ -2357,6 +2357,10 @@
         }
       ]
     },
+    "rotationStyle": {
+      "description": "How the actor shows its direction: freely, mirrored only, or never.",
+      "enum": ["allAround", "leftRight", "none"]
+    },
     "showArgs": {
       "type": "object",
       "additionalProperties": false,
@@ -2367,6 +2371,8 @@
         "x": {"type": "number"},
         "y": {"type": "number"},
         "scale": {"type": "number", "exclusiveMinimum": 0},
+        "rotation": {"$ref": "#/$defs/rotationStyle"},
+        "direction": {"type": "number"},
         "transition": {"$ref": "#/$defs/visualTransition"}
       }
     },

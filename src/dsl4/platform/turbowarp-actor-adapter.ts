@@ -11,6 +11,12 @@ import {
 } from '../content-run.js';
 import {normalizeDsl4BubbleMotions} from '../bubble-motion.js';
 import {applyDsl4MoveEasing, dsl4MoveEasingNames, isDsl4MoveEasing} from '../move-easing.js';
+import {
+  dsl4RotationStyleNames,
+  isDsl4RotationStyle,
+  normalizeDsl4Direction,
+  scratchDsl4RotationStyle,
+} from '../rotation-style.js';
 
 const defaultFrameMilliseconds = 1000 / 60;
 
@@ -181,7 +187,35 @@ function validateActor(value: unknown) {
     setXY: (x: number, y: number) => void;
     setSize: (size: number) => void;
     setVisible: (visible: boolean) => void;
+    setDirection?: (direction: number) => void;
+    setRotationStyle?: (style: string) => void;
   };
+}
+
+/** Rotation and direction are optional; what the action leaves out stays as the actor has it. */
+function applyActorRotation(
+  actor: ReturnType<typeof validateActor>,
+  value: Readonly<Record<string, unknown>>,
+) {
+  if (Object.hasOwn(value, 'rotation')) {
+    const style = value.rotation;
+    if (!isDsl4RotationStyle(style)) {
+      throw adapterError(
+        'K4-TW-ACTOR-002',
+        `showActor.rotation must be one of ${dsl4RotationStyleNames.join(', ')}`,
+      );
+    }
+    if (typeof actor.setRotationStyle !== 'function') {
+      throw adapterError('K4-TW-ACTOR-002', 'TurboWarp actor must provide setRotationStyle');
+    }
+    actor.setRotationStyle(scratchDsl4RotationStyle(style));
+  }
+  if (!Object.hasOwn(value, 'direction')) return;
+  const direction = normalizeDsl4Direction(finiteNumber(value.direction, 'showActor.direction'));
+  if (typeof actor.setDirection !== 'function') {
+    throw adapterError('K4-TW-ACTOR-002', 'TurboWarp actor must provide setDirection');
+  }
+  actor.setDirection(direction);
 }
 
 function validateEffectActor(value: unknown) {
@@ -763,13 +797,17 @@ export function createDsl4TurboWarpActorPlatform(options: {
   const host = Object.freeze({
     showActor(target: unknown, transform: unknown) {
       const actor = validateActor(target);
-      const value = validateSpec(transform, ['x', 'y', 'scale'], 'showActor');
+      const value = validateSpec(transform, ['x', 'y', 'scale'], 'showActor', [
+        'rotation',
+        'direction',
+      ]);
       const x = finiteNumber(value.x, 'showActor.x');
       const y = finiteNumber(value.y, 'showActor.y');
       const scale = finiteNumber(value.scale, 'showActor.scale');
       if (scale <= 0) throw adapterError('K4-TW-ACTOR-002', 'showActor.scale must be positive');
       actor.setXY(x, y);
       actor.setSize(scale);
+      applyActorRotation(actor, value);
       actor.setVisible(true);
     },
 

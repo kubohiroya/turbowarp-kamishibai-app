@@ -866,3 +866,55 @@ test('validates every actor action dependency before use', () => {
     /resolveActor/u,
   );
 });
+
+test('show carries an optional rotation style and angle, and refuses an unknown style', async () => {
+  const fake = fakeComposition();
+  const presentation = fakeHost();
+  const actor = Object.freeze({id: 'hero-target', isStage: false});
+  const port = actorPort({
+    composition: fake.composition,
+    host: presentation.host,
+    resolveActor: () => actor,
+  });
+
+  await port.show(
+    {target: 'Hero', skin: 'HeroHappy', x: 0, y: 0, scale: 100, rotation: 'none'},
+    actionContext(),
+  );
+  await port.show(
+    {target: 'Hero', skin: 'HeroHappy', x: 0, y: 0, scale: 100, direction: -45},
+    actionContext(),
+  );
+  assert.deepEqual(
+    presentation.calls.filter(([name]) => name === 'showActor'),
+    [
+      ['showActor', 'hero-target', {x: 0, y: 0, scale: 100, rotation: 'none'}, 'opening'],
+      ['showActor', 'hero-target', {x: 0, y: 0, scale: 100, direction: -45}, 'opening'],
+    ],
+  );
+
+  await assert.rejects(
+    () =>
+      port.show(
+        {target: 'Hero', skin: 'HeroHappy', x: 0, y: 0, scale: 100, rotation: 'mirror'},
+        actionContext(),
+      ),
+    /rotation must be one of allAround, leftRight, none/u,
+  );
+  await assert.rejects(
+    () =>
+      port.show(
+        {target: 'Hero', skin: 'HeroHappy', x: 0, y: 0, scale: 100, direction: 'sideways'},
+        actionContext(),
+      ),
+    /direction/u,
+  );
+  await assert.rejects(
+    () =>
+      port.show(
+        {target: 'Hero', skin: 'HeroHappy', x: 0, y: 0, scale: 100, spin: 1},
+        actionContext(),
+      ),
+    /show payload/u,
+  );
+});

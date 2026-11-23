@@ -3,6 +3,7 @@ import {validateCompositionMethods} from './composition-contract.js';
 
 import {normalizeDsl4BubbleMotions} from '../bubble-motion.js';
 import {dsl4MoveEasingNames, isDsl4MoveEasing} from '../move-easing.js';
+import {dsl4RotationStyleNames, isDsl4RotationStyle} from '../rotation-style.js';
 import {createDsl4OrderedCursorNotifier} from './ordered-cursor-notifier.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -603,14 +604,11 @@ export function createDsl4ActorActionPort(options: {
 
   return Object.freeze({
     async show(payload: unknown, context: unknown) {
-      const value =
-        isRecord(payload) && Object.hasOwn(payload, 'transition')
-          ? validatePayloadShape(
-              payload,
-              ['target', 'skin', 'x', 'y', 'scale', 'transition'],
-              'show',
-            )
-          : validatePayloadShape(payload, ['target', 'skin', 'x', 'y', 'scale'], 'show');
+      const value = validatePayloadShape(payload, ['target', 'skin', 'x', 'y', 'scale'], 'show', [
+        'rotation',
+        'direction',
+        'transition',
+      ]);
       const target = requireNonEmptyString(value.target, 'target', 'show');
       const skin = requireNonEmptyString(value.skin, 'skin', 'show');
       const x = requireFiniteNumber(value.x, 'x', 'show');
@@ -619,6 +617,16 @@ export function createDsl4ActorActionPort(options: {
       if (scale <= 0) {
         throw portError('K4-ACTOR-PORT-001', 'show.scale must be greater than zero');
       }
+      // Rotation is optional; absent values leave the actor's own rotation untouched.
+      if (Object.hasOwn(value, 'rotation') && !isDsl4RotationStyle(value.rotation)) {
+        throw portError(
+          'K4-ACTOR-PORT-001',
+          `show.rotation must be one of ${dsl4RotationStyleNames.join(', ')}`,
+        );
+      }
+      const direction = Object.hasOwn(value, 'direction')
+        ? requireFiniteNumber(value.direction, 'direction', 'show')
+        : undefined;
       const signal = validateContext(context);
       if (signal.aborted) throw abortError();
       requireImageAsset(skin);
@@ -627,7 +635,18 @@ export function createDsl4ActorActionPort(options: {
       await runCancellable(() => stopActorLoop?.(target), signal);
       await runCancellable(() => composition.applyToTarget(skin, actor), signal);
       await runCancellable(
-        () => host.showActor(actor, Object.freeze({x, y, scale}), actionContext),
+        () =>
+          host.showActor(
+            actor,
+            Object.freeze({
+              x,
+              y,
+              scale,
+              ...(Object.hasOwn(value, 'rotation') ? {rotation: value.rotation} : {}),
+              ...(direction === undefined ? {} : {direction}),
+            }),
+            actionContext,
+          ),
         signal,
       );
       if (isRecord(value.transition) && value.transition.effect === 'crossfade') {

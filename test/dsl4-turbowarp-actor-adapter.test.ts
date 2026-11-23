@@ -31,6 +31,10 @@ interface FakeTarget {
   setSize(size: number): void;
   setVisible(visible: boolean): void;
   setEffect(effect: string, value: number): void;
+  direction?: number;
+  rotationStyle?: string;
+  setDirection?(direction: number): void;
+  setRotationStyle?(style: string): void;
   goToFront(): void;
   goToBack(): void;
   goForwardLayers(count: number): void;
@@ -53,12 +57,15 @@ function fakeActor({
   name,
   x = 0,
   y = 0,
+  rotation = true,
 }: {
   id?: string;
   actorName?: string | null;
   name?: string;
   x?: number;
   y?: number;
+  /** A host too old to turn its actors leaves these methods out. */
+  rotation?: boolean;
 } = {}) {
   const calls: RecordedCall[] = [];
   const target: FakeTarget = {
@@ -89,6 +96,18 @@ function fakeActor({
     setEffect(effect: string, value: number) {
       calls.push(['setEffect', effect, value]);
     },
+    ...(rotation
+      ? {
+          setDirection(direction: number) {
+            calls.push(['setDirection', direction]);
+            target.direction = direction;
+          },
+          setRotationStyle(style: string) {
+            calls.push(['setRotationStyle', style]);
+            target.rotationStyle = style;
+          },
+        }
+      : {}),
     goToFront() {
       calls.push(['goToFront']);
     },
@@ -1304,4 +1323,79 @@ test('keeps platform instances and their schedulers isolated', async () => {
   assert.deepEqual(secondRuntime.bubbleCalls, [['second', 'second']]);
   secondClock.advance(1000);
   await secondPending;
+});
+
+test('showing an actor applies the rotation style and angle, and only when the action asks', () => {
+  const hero = fakeActor();
+  const fake = fakeRuntime([{id: 'stage', isStage: true}, hero.target]);
+  const clock = manualScheduler();
+  const platform = createDsl4TurboWarpActorPlatform({
+    runtimeHost: fake.runtimeHost,
+    bubbleComposition: fake.bubbleComposition,
+    scheduler: clock.scheduler,
+  });
+  const resolved = platform.resolveActor('Hero');
+
+  platform.host.showActor(resolved, {x: 0, y: 0, scale: 100});
+  assert.equal(
+    hero.calls.some(([name]) => name === 'setRotationStyle' || name === 'setDirection'),
+    false,
+  );
+
+  platform.host.showActor(resolved, {
+    x: 0,
+    y: 0,
+    scale: 100,
+    rotation: 'leftRight',
+    direction: 450,
+  });
+  assert.deepEqual(hero.calls.slice(-5), [
+    ['setXY', 0, 0],
+    ['setSize', 100],
+    ['setRotationStyle', 'left-right'],
+    ['setDirection', 90],
+    ['setVisible', true],
+  ]);
+
+  platform.host.showActor(resolved, {x: 0, y: 0, scale: 100, rotation: 'none'});
+  assert.deepEqual(hero.calls.slice(-2), [
+    ['setRotationStyle', "don't rotate"],
+    ['setVisible', true],
+  ]);
+
+  assert.throws(
+    () => platform.host.showActor(resolved, {x: 0, y: 0, scale: 100, rotation: 'mirror'}),
+    /rotation must be one of allAround, leftRight, none/u,
+  );
+  assert.throws(
+    () => platform.host.showActor(resolved, {x: 0, y: 0, scale: 100, direction: Number.NaN}),
+    /direction/u,
+  );
+});
+
+test('an actor whose host cannot turn it reports the missing capability', () => {
+  const hero = fakeActor({rotation: false});
+  const fake = fakeRuntime([{id: 'stage', isStage: true}, hero.target]);
+  const clock = manualScheduler();
+  const platform = createDsl4TurboWarpActorPlatform({
+    runtimeHost: fake.runtimeHost,
+    bubbleComposition: fake.bubbleComposition,
+    scheduler: clock.scheduler,
+  });
+  const resolved = platform.resolveActor('Hero');
+  assert.throws(
+    () => platform.host.showActor(resolved, {x: 0, y: 0, scale: 100, rotation: 'allAround'}),
+    /setRotationStyle/u,
+  );
+  assert.throws(
+    () => platform.host.showActor(resolved, {x: 0, y: 0, scale: 100, direction: 0}),
+    /setDirection/u,
+  );
+  // Without rotation in the action, an older host keeps working untouched.
+  platform.host.showActor(resolved, {x: 1, y: 2, scale: 50});
+  assert.deepEqual(hero.calls.slice(-3), [
+    ['setXY', 1, 2],
+    ['setSize', 50],
+    ['setVisible', true],
+  ]);
 });
