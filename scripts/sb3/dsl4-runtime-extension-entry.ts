@@ -68,6 +68,7 @@ import {
   type Dsl4TMRuntimeSite,
 } from '../../dist/dsl4/platform/tm-runtime-owner.js';
 import {createDsl4PackagedBinaryRuntimeBridge} from '../../dist/dsl4/platform/packaged-binary-runtime.js';
+import type {Dsl4PlaybackRuntimeSite} from '../../dist/dsl4/platform/playback-runtime-remote.js';
 import {createDsl4RuntimeErrorIndicator} from '../../dist/dsl4/platform/runtime-error-indicator.js';
 import {createDsl4BlockErrorLocation} from '../../dist/dsl4/platform/block-error-location.js';
 import {createDsl4RuntimeBlockDiagnosticLocator} from '../../dist/dsl4/platform/runtime-block-diagnostic.js';
@@ -132,7 +133,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.9';
+const extensionVersion = '4.0.10';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -559,6 +560,8 @@ declare const DSL4_OFFICIAL_WEBSITE_ICON: string;
 declare const DSL4_AUTHORING_PROFILE: boolean;
 declare const DSL4_NARRATIVE_CONTROL: boolean;
 declare const DSL4_TM_RUNTIME: Dsl4TMRuntimeSite;
+/** The playback runtime of this release, set only in the authoring profile. */
+declare const DSL4_PLAYBACK_RUNTIME: Dsl4PlaybackRuntimeSite | null;
 declare const Scratch: RuntimeEntryScratch;
 
 /**
@@ -2318,6 +2321,7 @@ if (DSL4_AUTHORING_PROFILE) {
   installDsl4RuntimeAuthoringProfile(KamishibaiDsl4RuntimeExtension, {
     narrativeControlEnabled: productionFeatureFlags.dsl4NarrativeControl,
     runtimeVersion: extensionVersion,
+    playbackRuntime: DSL4_PLAYBACK_RUNTIME,
     limits,
     resolveRuntimeMount,
     resolveBundledTMRuntime,
