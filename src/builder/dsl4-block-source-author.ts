@@ -15,7 +15,6 @@ import {
 } from '../dsl4/turbowarp-yaml-json-block-source.js';
 import {
   createDsl4StructuredBlockSourceDeclaration,
-  createDsl4BlockAuthoringExtensionSource,
   dsl4BlockAuthoringExtensionId,
   dsl4LabeledBlockSourceHatOpcode,
   dsl4ConfigBlockSourceHatOpcode,
@@ -28,9 +27,9 @@ import {serializeDsl4CanonicalDocument} from './dsl4-validate.js';
 
 import {fixedZipTimestamp} from './constants.js';
 import {
-  createDsl4BlockAuthoringEditorDefinitions,
-  createDsl4CoreActionBlockEditorDefinitions,
-} from './dsl4-block-authoring-editors.js';
+  createDsl4BlockAuthoringProjectExtensionSource,
+  wrapDsl4AuthoredRuntimeSource,
+} from './dsl4-catalog-extensions.js';
 import {Sb3BuilderError} from './errors.js';
 
 /** The block ids one declaration takes. Ids only have to be unique inside their own target. */
@@ -101,25 +100,7 @@ function removeRetiredSourceBlocks(url: unknown): unknown {
     );
   }
   const source = Buffer.from(url.slice(prefix.length), 'base64').toString('utf8');
-  // Keep metadata and bundled notices visible at the top of TurboWarp's security dialog.
-  const header = source.match(/^(?:\s*\/\/[^\r\n]*\r?\n)*/u)?.[0] ?? '';
-  const wrapped = `${header}(function(Scratch){
-    const scoped = Object.create(Scratch);
-    const extensions = Object.create(Scratch.extensions);
-    Object.defineProperty(extensions, 'register', {value(extension){
-      const getInfo = extension.getInfo.bind(extension);
-      extension.getInfo = function(){
-        const info = getInfo();
-        return {...info, blocks: info.blocks.filter(block =>
-          !block || typeof block.opcode !== 'string' ||
-          !/^(?:kubohiroyakamishibairuntime4__)?(?:whenDsl4Source|dsl4SourceFromYamlJson)$/.test(block.opcode))};
-      };
-      return Scratch.extensions.register(extension);
-    }});
-    Object.defineProperty(scoped, 'extensions', {configurable: true, value: extensions});
-    (function(Scratch){\n${source.slice(header.length)}\n})(scoped);
-  })(Scratch);`;
-  return prefix + Buffer.from(wrapped).toString('base64');
+  return prefix + Buffer.from(wrapDsl4AuthoredRuntimeSource(source)).toString('base64');
 }
 
 /** Install inert declarations in a copy of the base; never replace existing authoring work. */
@@ -262,17 +243,10 @@ function writeAuthoredProject(
         ),
       ),
       [dsl4BlockAuthoringExtensionId]: `data:text/javascript;base64,${Buffer.from(
-        createDsl4BlockAuthoringExtensionSource(
-          [
-            ...createDsl4BlockAuthoringEditorDefinitions(dsl4BlockAuthoringExtensionId, {
-              narrativeControlEnabled,
-            }),
-            ...createDsl4CoreActionBlockEditorDefinitions(form, {
-              narrativeControlEnabled,
-            }),
-          ],
-          {sourceSections, narrativeControlEnabled},
-        ),
+        createDsl4BlockAuthoringProjectExtensionSource(form, {
+          sourceSections,
+          narrativeControlEnabled,
+        }),
       ).toString('base64')}`,
     },
     targets: (project.targets as Record<string, unknown>[]).map((target) =>
