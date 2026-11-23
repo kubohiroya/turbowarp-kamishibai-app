@@ -1,5 +1,10 @@
 import {validateCompositionMethods} from './composition-contract.js';
 import {createDsl4PoseStateEvent} from '../pose-feedback-policy.js';
+import {
+  type Dsl4PosePreviewPosition,
+  dsl4DefaultPosePreviewPosition,
+  validateDsl4PosePreviewPosition,
+} from './pose-preview-placement.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -255,6 +260,8 @@ export function createDsl4PoseActionPort(options: {
     payload: Readonly<{visible: boolean; source: string; cursor: string}>,
   ) => unknown | Promise<unknown>;
   ensureCameraStarted?: () => Promise<unknown>;
+  /** Where `recognition.preview.position` puts the preview; the DSL 3.2 full stage by default. */
+  previewPosition?: Dsl4PosePreviewPosition;
   onPoseState?: (
     event: Readonly<{
       phase: 'waiting' | 'charging' | 'completed' | 'cancelled';
@@ -304,6 +311,10 @@ export function createDsl4PoseActionPort(options: {
   if (ensureCameraStarted !== undefined && typeof ensureCameraStarted !== 'function') {
     throw new TypeError('ensureCameraStarted must be a function');
   }
+  const previewPosition =
+    options.previewPosition === undefined
+      ? dsl4DefaultPosePreviewPosition
+      : validateDsl4PosePreviewPosition(options.previewPosition, 'pose action preview position');
 
   let released = false;
   let activeSequence: null | {
@@ -331,7 +342,7 @@ export function createDsl4PoseActionPort(options: {
 
   function claimPreview(owner: unknown) {
     previewOwners.add(owner);
-    tmComposition.setPreviewPosition('full-stage');
+    tmComposition.setPreviewPosition(previewPosition);
   }
 
   function showClaimedPreview(owner: unknown) {

@@ -121,7 +121,11 @@ test('the approved comprehensive DSL 4.0 example satisfies schema and semantics'
   });
   assert.deepEqual(storyOf(result).recognition.feedback, {mode: 'scratchMirror'});
   assert.deepEqual(storyOf(result).recognition.navigation, {allowSkip: false});
-  assert.deepEqual(storyOf(result).recognition.preview, {mirroring: 'mirrored'});
+  assert.deepEqual(storyOf(result).recognition.preview, {
+    mirroring: 'mirrored',
+    position: 'full-stage',
+    opacity: 0.2,
+  });
   assert.equal(sceneAt(storyOf(result), 0).posePreview, null);
   assert.deepEqual(sceneAt(storyOf(result), 1).posePreview, {mirroring: 'unmirrored'});
   assert.equal(sceneAt(storyOf(result), 2).posePreview, null);
@@ -1075,7 +1079,11 @@ test('normalizes pose policy defaults and rejects unknown keys, values, or types
     parallel: false,
   });
   assert.deepEqual(storyOf(valid).recognition.navigation, {allowSkip: false});
-  assert.deepEqual(storyOf(valid).recognition.preview, {mirroring: 'mirrored'});
+  assert.deepEqual(storyOf(valid).recognition.preview, {
+    mirroring: 'mirrored',
+    position: 'full-stage',
+    opacity: 0.2,
+  });
 
   const silent = frontend.parse(
     [
@@ -1107,6 +1115,11 @@ test('normalizes pose policy defaults and rejects unknown keys, values, or types
     ['preview', '    mirroring: reversed\n'],
     ['preview', '    mirroring: mirrored\n    extra: true\n'],
     ['preview', '    mirroring: true\n'],
+    ['preview', '    mirroring: mirrored\n    position: top-center\n'],
+    ['preview', '    mirroring: mirrored\n    position: 0\n'],
+    ['preview', '    mirroring: mirrored\n    opacity: 1.5\n'],
+    ['preview', '    mirroring: mirrored\n    opacity: -0.1\n'],
+    ['preview', "    mirroring: mirrored\n    opacity: '0.5'\n"],
   ]) {
     const source = base.replace('scenes:', `  ${policy[0]}:\n${policy[1]}scenes:`);
     const result = frontend.parse(source);
@@ -1135,7 +1148,11 @@ test('normalizes a scene pose preview override and maps its source position', ()
   ].join('\n');
   const valid = frontend.parse(source, {sourceId: 'pose-preview.kamishibai.yaml'});
   assert.equal(valid.ok, true, JSON.stringify(valid.diagnostics));
-  assert.deepEqual(storyOf(valid).recognition.preview, {mirroring: 'unmirrored'});
+  assert.deepEqual(storyOf(valid).recognition.preview, {
+    mirroring: 'unmirrored',
+    position: 'full-stage',
+    opacity: 0.2,
+  });
   assert.deepEqual(sceneAt(storyOf(valid), 0).posePreview, {mirroring: 'mirrored'});
   assert.equal(sceneAt(storyOf(valid), 1).posePreview, null);
   assert.equal(
@@ -1155,6 +1172,44 @@ test('normalizes a scene pose preview override and maps its source position', ()
     assert.ok(invalid.diagnostics.some(({code}) => code.startsWith('K4-SCHEMA')));
     assert.ok(invalid.diagnostics.every(({range}) => range.start.line > 0));
   }
+});
+
+test('accepts a story preview placement and maps its source positions', () => {
+  const source = [
+    "kamishibai: '4.0'",
+    'recognition:',
+    '  preview:',
+    '    mirroring: mirrored',
+    '    position: bottom-right',
+    '    opacity: 0.75',
+    'scenes:',
+    '  opening: []',
+  ].join('\n');
+  const result = frontend.parse(source, {sourceId: 'preview-placement.kamishibai.yaml'});
+  assert.equal(result.ok, true, JSON.stringify(result.diagnostics));
+  assert.deepEqual(storyOf(result).recognition.preview, {
+    mirroring: 'mirrored',
+    position: 'bottom-right',
+    opacity: 0.75,
+  });
+  assert.equal(
+    entry(entry(storyOf(result).sourceMap, '/recognition/preview/position'), 'start').line,
+    5,
+  );
+  assert.equal(
+    entry(entry(storyOf(result).sourceMap, '/recognition/preview/opacity'), 'start').line,
+    6,
+  );
+
+  const edges = frontend.parse(
+    source.replace('    position: bottom-right\n', '').replace('0.75', '0'),
+  );
+  assert.equal(edges.ok, true, JSON.stringify(edges.diagnostics));
+  assert.deepEqual(storyOf(edges).recognition.preview, {
+    mirroring: 'mirrored',
+    position: 'full-stage',
+    opacity: 0,
+  });
 });
 
 test('normalizes pose overlay styles and confidence controls with source ranges', () => {

@@ -1501,3 +1501,54 @@ for (const asynchronous of [false, true])
     await cleanup.dispose();
     assert.equal(calls, 2);
   });
+
+test('prepares the camera preview the way the story asked for it', async () => {
+  const component = runtimeComponent();
+  component.storyDocument = {
+    ...component.storyDocument,
+    recognition: {preview: {mirroring: 'mirrored', position: 'bottom-right', opacity: 0.75}},
+    scenes: [{id: 'opening', actions: [{command: 'pose', args: {}}]}],
+  };
+  const log: LogEntry[] = [];
+  const placement: unknown[][] = [];
+  let running = false;
+  const setup = options(component, log, {
+    tm: {
+      setPreviewOpacity(opacity: unknown) {
+        placement.push(['opacity', opacity]);
+      },
+      setPreviewPosition(position: unknown) {
+        placement.push(['position', position]);
+      },
+      async startCamera() {
+        running = true;
+      },
+      isCameraRunning: () => running,
+      stopCamera() {
+        running = false;
+      },
+    },
+  });
+  const session = createDsl4PlatformAssetSession(setup.value);
+  assert.equal(await session.storyCameraLifecycle!.start(), true);
+  assert.deepEqual(placement, [
+    ['opacity', 0.75],
+    ['position', 'bottom-right'],
+  ]);
+  await session.dispose();
+});
+
+test('refuses a story preview placement outside the schema range', () => {
+  const component = runtimeComponent();
+  component.storyDocument = {
+    ...component.storyDocument,
+    recognition: {preview: {mirroring: 'mirrored', opacity: 2}},
+    scenes: [{id: 'opening', actions: [{command: 'pose', args: {}}]}],
+  };
+  const log: LogEntry[] = [];
+  const setup = options(component, log, {tm: {setPreviewOpacity() {}}});
+  assert.throws(
+    () => createDsl4PlatformAssetSession(setup.value),
+    /recognition\.preview\.opacity must be a finite number from 0 to 1/u,
+  );
+});
