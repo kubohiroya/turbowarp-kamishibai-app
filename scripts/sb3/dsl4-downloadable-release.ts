@@ -14,6 +14,7 @@ import {
   createDsl4TeachableMachineExtensionSource,
   readDsl4TeachableMachineRuntimeSite,
 } from './teachable-machine-runtime.ts';
+import {dsl4PlaybackRuntimeSite} from './playback-runtime-site.ts';
 import {installDsl4PackagedRuntimeComponent} from '../../dist/builder/dsl4-source.js';
 import {createDsl4ProductionSourceFrontend} from '../../dist/builder/dsl4-source-frontend.js';
 import {dsl4StandardProductionFeatureFlags} from '../../dist/dsl4/feature-flags.js';
@@ -567,6 +568,15 @@ async function buildDsl4RuntimeExtensionSource(profile: string, narrativeControl
       `data:image/svg+xml;base64,${applicationMenuIconFiles[index]?.toString('base64')}`,
     ]),
   );
+  // A work built in the editor carries the playback runtime of the same release, so the authoring
+  // runtime records which bytes that is.
+  const playbackRuntime =
+    profile === 'authoring'
+      ? dsl4PlaybackRuntimeSite(
+          packageMetadata.version,
+          await createDsl4RuntimeBundleSource({profile: 'playback', narrativeControlEnabled}),
+        )
+      : null;
   // The Teachable Machine member owns the only TensorFlow graph; model creation starts after bundle registration.
   const result = await build({
     root: projectRoot,
@@ -580,6 +590,7 @@ async function buildDsl4RuntimeExtensionSource(profile: string, narrativeControl
       DSL4_AUTHORING_PROFILE: JSON.stringify(profile === 'authoring'),
       DSL4_NARRATIVE_CONTROL: JSON.stringify(narrativeControlEnabled),
       DSL4_TM_RUNTIME: JSON.stringify(await readDsl4TeachableMachineRuntimeSite()),
+      DSL4_PLAYBACK_RUNTIME: JSON.stringify(playbackRuntime),
     },
     build: {
       write: false,

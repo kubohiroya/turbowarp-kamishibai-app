@@ -188,6 +188,39 @@ test('builds and verifies a standalone story SB3 without mutating the open proje
   okResult(verified, 'the verified distribution');
 });
 
+test('installs the given playback runtime in place of the runtime the open project carries', async () => {
+  const component = await runtimeComponent();
+  const project = {
+    ...menuProject(),
+    extensionURLs: {kubohiroyakamishibai4: 'data:text/javascript;base64,YXV0aG9yaW5n'},
+  };
+  const playback = '// Name: Kamishibai DSL 4.0 Runtime\n// ID: kubohiroyakamishibai4\n// 再生\n';
+  const build = (runtimeExtensionSource: string | undefined) =>
+    createDsl4BrowserDistributionSb3({
+      projectFiles: {'project.json': strToU8(JSON.stringify(project))},
+      runtimeComponent: component,
+      sourceFrontend: frontend,
+      maxSourceBytes,
+      maxAssetFiles,
+      maxTotalAssetBytes,
+      subtleCrypto: webcrypto.subtle,
+      runtimeExtensionSource,
+    });
+  const urlOf = (result: {bytes: Uint8Array}) =>
+    (
+      JSON.parse(
+        strFromU8(requireDefined(unzipSync(result.bytes)['project.json'], 'the built project')),
+      ) as {extensionURLs: Record<string, string>}
+    ).extensionURLs.kubohiroyakamishibai4;
+
+  assert.equal(
+    urlOf(await build(playback)),
+    `data:text/javascript;base64,${Buffer.from(playback).toString('base64')}`,
+  );
+  assert.equal(urlOf(await build(undefined)), project.extensionURLs.kubohiroyakamishibai4);
+  await assert.rejects(build('console.log(1)'), TypeError);
+});
+
 test('builds the same verified distribution without its YAML under the compiled profile', async () => {
   const component = await runtimeComponent();
   const project = menuProject();

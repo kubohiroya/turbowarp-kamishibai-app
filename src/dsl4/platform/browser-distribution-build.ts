@@ -300,6 +300,47 @@ function ensureProductionStageContract(project: Dsl4BrowserDistributionProject) 
   }
 }
 
+const standardRuntimeExtensionId = 'kubohiroyakamishibai4';
+const runtimeExtensionDataUrlPrefix = 'data:text/javascript;base64,';
+
+function base64(bytes: Uint8Array) {
+  let binary = '';
+  // Chunks keep String.fromCharCode's argument list below engine limits.
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  }
+  return btoa(binary);
+}
+
+/** Replace the Standard runtime extension the project carries with `source`. */
+function installRuntimeExtensionSource(project: Record<string, unknown>, source: unknown) {
+  if (source === undefined) return;
+  if (
+    typeof source !== 'string' ||
+    source.length > 16 * 1024 * 1024 ||
+    !source.startsWith('// Name: Kamishibai DSL 4.0 Runtime') ||
+    !source.includes(`\n// ID: ${standardRuntimeExtensionId}\n`)
+  ) {
+    throw new TypeError(
+      'runtimeExtensionSource must be a bounded DSL 4.0 composite runtime source string',
+    );
+  }
+  const urls = project.extensionURLs;
+  if (
+    !Array.isArray(project.extensions) ||
+    !project.extensions.includes(standardRuntimeExtensionId) ||
+    !isRecord(urls) ||
+    typeof urls[standardRuntimeExtensionId] !== 'string'
+  ) {
+    fail(
+      'K4-RUNTIME-EXTENSION-PROFILE-001',
+      'The project does not contain the Standard DSL 4.0 runtime extension',
+    );
+  }
+  urls[standardRuntimeExtensionId] =
+    runtimeExtensionDataUrlPrefix + base64(new TextEncoder().encode(source));
+}
+
 function installDistributionComponent(
   project: Dsl4BrowserDistributionProject,
   component: Dsl4BrowserDistributionRuntimeComponent,
@@ -352,6 +393,11 @@ export async function createDsl4BrowserDistributionSb3(options: {
   /** `source` (default) keeps the YAML; `compiled` stores only the validated Story IR. */
   distributionProfile?: Dsl4DistributionProfile;
   subtleCrypto?: Dsl4SubtleCrypto | undefined;
+  /**
+   * The playback runtime to install in place of the editor's authoring runtime. Without it the
+   * work keeps the runtime the open project carries.
+   */
+  runtimeExtensionSource?: string | undefined;
 }) {
   if (!isRecord(options)) throw new TypeError('browser distribution build options are required');
   if (!isRecord(options.sourceFrontend) || typeof options.sourceFrontend.parse !== 'function') {
@@ -411,6 +457,7 @@ export async function createDsl4BrowserDistributionSb3(options: {
     component,
     (artifactResult as unknown as Dsl4BrowserDistributionArtifactResult).artifact,
   );
+  installRuntimeExtensionSource(outputProject, options.runtimeExtensionSource);
   const loadOptions = {
     maxSourceBytes,
     maxAssetFiles,

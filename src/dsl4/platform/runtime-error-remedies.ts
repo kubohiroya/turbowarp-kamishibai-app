@@ -1495,6 +1495,21 @@ const remedies: readonly Dsl4ErrorRemedyEntry[] = [
     ],
   },
   {
+    when: /^K4-PLAYBACK-RUNTIME-001$/u,
+    title: [
+      '再生用のランタイムを取得できませんでした',
+      'The playback runtime could not be fetched',
+    ],
+    explanation: [
+      '配布用SB3を作るときに、紙芝居アプリのサイトから再生用のランタイムを取得できないか、中身を確かめられませんでした。作品は制作用のランタイムのまま作られ、動きは同じですが大きくなります。',
+      'While building the distribution SB3, the playback runtime could not be fetched from the Kamishibai site or verified. The work keeps the authoring runtime: it plays the same but is larger.',
+    ],
+    recovery: [
+      'ネットワークにつながっていることを確かめてから、配布用SB3をもう一度作ってください。',
+      'Check the network connection, then build the distribution SB3 again.',
+    ],
+  },
+  {
     when: /^K4-(?:ARTIFACT|COMPILED|PUBLICATION|REGISTRY|BINARY-BACKING|PLATFORM|PACKAGER|BROWSER-BUILD|CONTENT-RUN|DIAGNOSTIC-POLICY)/u,
     title: ['作品の成果物を読み込めませんでした', 'The built story could not be loaded'],
     explanation: [

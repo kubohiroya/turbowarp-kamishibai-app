@@ -22,6 +22,10 @@ import {
   collectDsl4BrowserDroppedFiles,
   collectDsl4BrowserDirectoryFiles,
 } from '../../dist/dsl4/platform/browser-story-file-loader.js';
+import {
+  type Dsl4PlaybackRuntimeSite,
+  fetchDsl4PlaybackRuntime,
+} from '../../dist/dsl4/platform/playback-runtime-remote.js';
 import {createDsl4RuntimeSourceChooser} from '../../dist/dsl4/platform/runtime-source-chooser.js';
 import {createDsl4TurboWarpPreviewSessionFactory} from '../../dist/dsl4/platform/turbowarp-preview-session.js';
 import {
@@ -107,9 +111,15 @@ export function installDsl4RuntimeAuthoringProfile(
     createRemoteAssetLoader,
     createProjectTMRuntime,
     createTransitionPort,
+    playbackRuntime = null,
     narrativeControlEnabled = dsl4NonEmbeddedDevelopmentFeatureFlags.dsl4NarrativeControl,
   }: {
     runtimeVersion: string;
+    /**
+     * The playback runtime a built work carries instead of this authoring runtime. Without it, or
+     * when it cannot be fetched and verified, the work keeps the authoring runtime.
+     */
+    playbackRuntime?: Dsl4PlaybackRuntimeSite | null;
     narrativeControlEnabled?: boolean;
     // The runtime entry owns the limits; naming its record keeps every field here.
     limits: Readonly<{
@@ -657,6 +667,22 @@ export function installDsl4RuntimeAuthoringProfile(
           Object.defineProperty(error, 'code', {value: 'K4-BROWSER-BUILD-GENERATION-CHANGED'});
           throw error;
         }
+        // The audience needs no editing tools, so the work carries the smaller playback runtime.
+        // Without it the work is still complete, only larger, so a failed fetch is not fatal.
+        let runtimeExtensionSource: string | undefined;
+        if (playbackRuntime) {
+          try {
+            runtimeExtensionSource = await fetchDsl4PlaybackRuntime(playbackRuntime, {
+              fetch: globalThis.fetch?.bind(globalThis),
+              subtleCrypto: globalThis.crypto?.subtle,
+            });
+          } catch (error) {
+            log.warn(
+              'distribution-build keeps the authoring runtime: the playback runtime is unavailable.',
+              loggedError(error),
+            );
+          }
+        }
         const built = await createDsl4BrowserDistributionSb3({
           projectFiles,
           runtimeComponent,
@@ -666,6 +692,7 @@ export function installDsl4RuntimeAuthoringProfile(
           maxTotalAssetBytes: limits.maxTotalAssetBytes,
           distributionProfile,
           subtleCrypto: globalThis.crypto?.subtle,
+          runtimeExtensionSource,
         });
         const confirmed = await this.previewShell.prepareDistributionBuild();
         if (confirmed.integrity !== prepared.integrity) {
