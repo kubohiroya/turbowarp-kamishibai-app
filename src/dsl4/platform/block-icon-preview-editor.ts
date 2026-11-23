@@ -71,10 +71,25 @@ interface PreviewRuntime {
     signal: AbortSignal;
   }): Promise<PreviewHandle>;
 }
+/** What the dialog is showing: in a scene's dialog, the block picked in the tree on the left. */
+export interface Dsl4BlockPreviewSelected {
+  snapshot: Snapshot;
+  context: Context;
+  depth: number;
+}
+export interface Dsl4BlockPreviewSelection {
+  get(): Dsl4BlockPreviewSelected;
+  subscribe(listener: () => void): () => void;
+}
 interface PreviewDefinition {
   extensionId: string;
   opcodes: string[];
-  mount(container: HTMLElement, context: Context, snapshot: Snapshot): () => void;
+  mount(
+    container: HTMLElement,
+    context: Context,
+    snapshot: Snapshot,
+    selection?: Dsl4BlockPreviewSelection,
+  ): () => void;
   hover?(anchor: HTMLElement | SVGElement, snapshot: Snapshot): () => void;
 }
 interface RegistrationAPI {
@@ -1027,16 +1042,46 @@ export function installDsl4BlockIconPreviews({
     return release;
   }
   const resolveBlockly = createBlockViewProvider(Scratch);
-  function mount(container: HTMLElement, context: Context, snapshot: Snapshot) {
-    return ownView(
+  function mount(
+    container: HTMLElement,
+    context: Context,
+    snapshot: Snapshot,
+    selection?: Dsl4BlockPreviewSelection,
+  ) {
+    const open = (target: Dsl4BlockPreviewSelected) =>
       mountDsl4BlockIconPreview({
         container,
-        context,
-        snapshot,
+        context: target.context,
+        snapshot: target.snapshot,
         runtime,
+        // A pane showing another block than the one the dialog opened follows the tree, so it
+        // shows that position at once instead of replaying the action.
+        shared: target.depth > 0 || target.snapshot.blockId !== snapshot.blockId,
         ...(resolveBlockly ? {resolveBlockly} : {}),
-      }),
-    );
+      });
+    if (!selection) return ownView(open({snapshot, context, depth: 0}));
+    let release: (() => void) | undefined;
+    let shown = '';
+    const follow = () => {
+      let target: Dsl4BlockPreviewSelected;
+      try {
+        target = selection.get();
+      } catch {
+        return;
+      }
+      if (target.snapshot.blockId === shown) return;
+      shown = target.snapshot.blockId;
+      const previous = release;
+      release = undefined;
+      previous?.();
+      release = open(target);
+    };
+    follow();
+    const unsubscribe = selection.subscribe(follow);
+    return ownView(() => {
+      unsubscribe();
+      release?.();
+    });
   }
   function hover(anchor: HTMLElement | SVGElement, snapshot: Snapshot) {
     const document = anchor.ownerDocument;

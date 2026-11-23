@@ -974,3 +974,100 @@ test('a block without rotation arguments says so instead of offering the submenu
     vi.useRealTimers();
   }
 });
+
+test('the shared pane follows the dialog selection and releases the pane it replaces', async () => {
+  const document = createFakeDocument();
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  const opened: Parameters<MountOptions['runtime']['open']>[0][] = [];
+  const previews: ReturnType<typeof vi.fn>[] = [];
+  const runtime: MountOptions['runtime'] = {
+    open(options) {
+      opened.push(options);
+      const dispose = vi.fn();
+      previews.push(dispose);
+      const canvas = document.createElement('canvas');
+      return Promise.resolve({
+        runtime: {},
+        canvas: canvas as unknown as HTMLCanvasElement,
+        stop() {},
+        dispose,
+      });
+    },
+  };
+  const state = {status: 'editing', issues: [] as {message: string}[]};
+  const context = (blockId: string): MountOptions['context'] => ({
+    getDraft: () => ({inputs: {}}),
+    setDraft() {},
+    getState: () => state,
+    getFixedInputView: () => ({inputs: {}}),
+    subscribe: () => () => {},
+    // The dialog hands each node its own context; the pane must use the selected one.
+    ...({blockId} as unknown as object),
+  });
+  const scene = {
+    snapshot: {...snapshot, blockId: 'scene-1', opcode: 'kubohiroyakamishibaiauthoring4_scene'},
+    context: context('scene-1'),
+    depth: 0,
+  };
+  const action = {
+    snapshot: {...snapshot, blockId: 'say-1', opcode: 'kubohiroyakamishibairuntime4_say'},
+    context: context('say-1'),
+    depth: 1,
+  };
+  let selected = scene;
+  const listeners = new Set<() => void>();
+  const api = {
+    apiVersion: 1,
+    registerPreview: vi.fn((_definition: unknown) => () => {}),
+  };
+  const dispose = installDsl4BlockIconPreviews({
+    Scratch: {vm: {}, gui: {blockEditors: api}},
+    sourceFrontend: dsl4TestSourceFrontend,
+    createRuntime: () => runtime,
+  });
+  type Registered = {
+    opcodes: string[];
+    mount: (
+      container: unknown,
+      context: unknown,
+      snapshot: unknown,
+      selection: unknown,
+    ) => () => void;
+  };
+  const definition = api.registerPreview.mock.calls
+    .map(([entry]) => entry as Registered)
+    .find((entry) => entry.opcodes.includes('kubohiroyakamishibaiauthoring4_scene'))!;
+  const release = definition.mount(container, scene.context, scene.snapshot, {
+    get: () => selected,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  });
+  await settle();
+  assert.equal(opened.length, 1);
+  assert.equal(opened[0]!.snapshot.blockId, 'scene-1');
+  assert.equal(opened[0]!.mode, 'scene');
+
+  selected = action;
+  for (const listener of [...listeners]) listener();
+  await settle();
+  // The pane for the scene is released, and the nested action shows its position at once.
+  assert.equal(previews[0]!.mock.calls.length, 1);
+  assert.equal(opened.length, 2);
+  assert.equal(opened[1]!.snapshot.blockId, 'say-1');
+  assert.equal(opened[1]!.mode, 'still');
+
+  // Re-announcing the same selection keeps the pane as it is.
+  for (const listener of [...listeners]) listener();
+  await settle();
+  assert.equal(opened.length, 2);
+
+  release();
+  await settle();
+  assert.equal(previews[1]!.mock.calls.length, 1);
+  assert.equal(listeners.size, 0);
+  assert.equal(container.children.length, 0);
+  dispose();
+});
