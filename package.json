@@ -165,7 +165,7 @@
     "fake-indexeddb": "6.2.8",
     "gh-pages": "^6.3.0",
     "globals": "17.14.0",
-    "playwright-core": "1.65.0",
+    "playwright-core": "1.65.1",
     "prettier": "^3.9.9",
     "scratch-parser": "6.0.1",
     "scratch-render-fonts": "github:kubohiroya/scratch-render-fonts#7b6768fc6dfef6b343a06f992587b74807043961",
