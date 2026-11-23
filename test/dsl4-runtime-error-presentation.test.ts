@@ -281,6 +281,18 @@ test('a specific code is explained before the family it belongs to', () => {
   );
 });
 
+test('an unsupported block or connection is not reported as an unresolved script name', () => {
+  // GRAPH-001 is raised for blocks and connections a script cannot hold, such as an "if" block
+  // connected into a script. It must point at the connection, not at a file name or label.
+  const graph = createRuntimeErrorPresentation({code: 'K4-BLOCK-SOURCE-GRAPH-001'}, 'ja');
+  assert.match(graph.explanation, /台本として読み取れない/u);
+  assert.match(graph.recovery, /接続/u);
+  assert.match(graph.recovery, /対応ブロック/u);
+  assert.doesNotMatch(graph.explanation, /ファイル名か見出し/u);
+  const missing = createRuntimeErrorPresentation({code: 'K4-BLOCK-SOURCE-MISSING-001'}, 'ja');
+  assert.match(missing.explanation, /ファイル名か見出し/u);
+});
+
 test('an unexplained failure keeps the cause open and still lists what to try', () => {
   for (const locale of ['ja', 'en'] as const) {
     const view = createRuntimeErrorPresentation({code: 'K4-NOT-IN-THE-CATALOG'}, locale);
