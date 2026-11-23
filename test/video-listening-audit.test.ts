@@ -318,9 +318,10 @@ test('waits for ready, rejects synthetic input, and records obstruction changes 
     await ready(page);
     await page.locator(start).evaluate((button) => (button as HTMLButtonElement).click());
     assert.equal(await page.evaluate('auditFixture.starts'), 0);
-    assert.equal(
-      await page.evaluate('__speakerAudit.inputDiagnostics().events.at(-1).reason'),
-      'untrusted-input',
+    // An availability change can be recorded after the rejection, so wait for the rejection
+    // itself instead of reading whichever event happens to be last.
+    await page.waitForFunction(
+      '__speakerAudit.inputDiagnostics().events.some(e=>e.reason==="untrusted-input")',
     );
     await page.evaluate(
       `const rect=document.querySelector('#speaker-listening-audit button').getBoundingClientRect();const cover=document.createElement('div');cover.id='obstruction';cover.style.cssText='position:fixed;z-index:2147483647;background:red;left:'+rect.x+'px;top:'+rect.y+'px;width:'+rect.width+'px;height:'+rect.height+'px';document.body.append(cover);`,

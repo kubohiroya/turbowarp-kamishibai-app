@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readdirSync, readFileSync} from 'node:fs';
 import {test} from 'vitest';
 import {dsl4TestSourceFrontend} from './helpers/dsl4-test-frontend.ts';
 import {normalizeDsl4DiagnosticSequence} from '../src/dsl4/diagnostic-sequence-policy.js';
@@ -10,6 +11,7 @@ import {
   createRuntimeErrorPresentation,
   formatRuntimeErrorReport,
 } from '../src/dsl4/platform/runtime-error-presentation.js';
+import {dsl4RuntimeErrorRemedy} from '../src/dsl4/platform/runtime-error-remedies.js';
 import {
   runtimeErrorCauses,
   createRuntimeFailureContext,
@@ -202,4 +204,126 @@ test('union validation does not prescribe the type of a rejected alternative', (
   const view = createRuntimeErrorPresentation(first as unknown as Record<string, unknown>, 'ja');
   assert.doesNotMatch(view.explanation, /文字列を指定/u);
   assert.match(view.recovery, /候補形式/u);
+});
+
+test('script mistakes name the correction instead of reporting an undetermined cause', () => {
+  const expected: [string, RegExp][] = [
+    ['K4-INCLUDE-CYCLE', /include/u],
+    ['K4-INCLUDE-LIMIT-001', /include/u],
+    ['K4-INCLUDE-ROOT-ONLY', /include/u],
+    ['K4-DEFINITION-UNDEFINED', /定義/u],
+    ['K4-DEFINITION-DUPLICATE', /名前を変え/u],
+    ['K4-REF-003', /コスチューム/u],
+    ['K4-REF-002', /種類/u],
+    ['K4-BRANCH-001', /else/u],
+    ['K4-STABLE-ID-001', /stableId/u],
+    ['K4-ID-INVALID', /NFC/u],
+    ['K4-KEY-UNSUPPORTED', /KeyA/u],
+    ['K4-KEY-001', /別のキー/u],
+    ['K4-SCENE-LIMIT-001', /include/u],
+    ['K4-YAML-LIMIT-DEPTH-001', /include/u],
+    ['K4-VERSION-001', /4\.0/u],
+    ['K4-NARRATIVE-VERSION-001', /4\.0/u],
+    ['K4-ASSET-001', /相対パス/u],
+    ['K4-ASSET-REMOTE-URL-001', /https/u],
+    ['K4-ASSET-IMAGE-MIME-001', /image\//u],
+    ['K4-ASSET-REMOTE-CORS-001', /CORS/u],
+    ['K4-SOURCE-UTF8-001', /UTF-8/u],
+    ['K4-SOURCE-SIZE-001', /include/u],
+    ['K4-SOURCE-AMBIGUOUS', /1つ/u],
+    ['K4-SOURCE-URL-DISABLED', /取り込/u],
+    ['K4-ROOT-MISSING', /ステージ/u],
+    ['K4-ROOT-DUPLICATE', /削除/u],
+    ['K4-EXPRESSION-SYNTAX-001', /括弧/u],
+    ['K4-EXPRESSION-VARIABLE-UNKNOWN', /変数名/u],
+    ['K4-VARIABLE-WRITE-UNKNOWN', /変数/u],
+    ['K4-VARIABLE-WRITE-TYPE', /型/u],
+    ['K4-VARIABLE-WRITE-INACTIVE', /再生/u],
+    ['K4-COMMAND-UNSUPPORTED', /拡張/u],
+    ['K4-CUSTOM-ARGUMENT-UNKNOWN', /引数/u],
+    ['K4-VIDEO-AUTOPLAY', /タップ/u],
+    ['K4-VIDEO-LIMIT', /止める/u],
+    ['K4-SPEECH-STYLE-002', /一方/u],
+    ['K4-BUBBLE-STYLE-CYCLE-001', /styles/u],
+    ['K4-POSE-MODEL-001', /recognitionModel/u],
+    ['K4-SAVE-SLOT-LIMIT', /消して/u],
+    ['K4-WEB-PREVIEW-INSECURE-CONTEXT', /localhost/u],
+    ['K4-WEB-PREVIEW-PERMISSION-DENIED', /許可/u],
+    ['K4-PREVIEW-CONTROL-ASSET-001', /eager/u],
+    ['K4-DIAGNOSTICS-TRUNCATED', /先頭/u],
+    ['K4-VIEWPORT-001', /0より大き/u],
+  ];
+  for (const [code, correction] of expected) {
+    const view = createRuntimeErrorPresentation({code}, 'ja');
+    assert.doesNotMatch(view.explanation, /特定できません/u, code);
+    assert.match(view.recovery, correction, code);
+    const english = createRuntimeErrorPresentation({code}, 'en');
+    assert.doesNotMatch(english.explanation, /could not be determined/u, code);
+    for (const part of [english.title, english.explanation, english.recovery])
+      assert.doesNotMatch(part, /[ぁ-んァ-ン一-龥]/u, `${code}: ${part}`);
+  }
+});
+
+test('a specific code is explained before the family it belongs to', () => {
+  const family = createRuntimeErrorPresentation({code: 'K4-ASSET-DECODE-001'}, 'ja');
+  for (const code of ['K4-ASSET-001', 'K4-ASSET-REMOTE-URL-001', 'K4-ASSET-PATH-001'])
+    assert.notEqual(createRuntimeErrorPresentation({code}, 'ja').recovery, family.recovery, code);
+  const schema = createRuntimeErrorPresentation(
+    {code: 'K4-SCHEMA-001', validation: {keyword: 'propertyNames'}},
+    'ja',
+  );
+  assert.notEqual(
+    createRuntimeErrorPresentation(
+      {code: 'K4-ID-INVALID', validation: {keyword: 'propertyNames'}},
+      'ja',
+    ).recovery,
+    schema.recovery,
+  );
+});
+
+test('an unexplained failure keeps the cause open and still lists what to try', () => {
+  for (const locale of ['ja', 'en'] as const) {
+    const view = createRuntimeErrorPresentation({code: 'K4-NOT-IN-THE-CATALOG'}, locale);
+    assert.match(
+      view.explanation,
+      locale === 'ja' ? /特定できません/u : /could not be determined/u,
+    );
+    assert.match(view.recovery, /1\..*\n2\..*\n3\./su);
+    assert.match(view.recovery, locale === 'ja' ? /診断情報をコピー/u : /diagnostic information/u);
+  }
+  // A reported field still explains the correction when its code is not in the catalog.
+  const field = createRuntimeErrorPresentation(
+    {code: 'K4-NOT-IN-THE-CATALOG', validation: {keyword: 'required', field: 'seconds'}},
+    'ja',
+  );
+  assert.match(field.explanation, /seconds/u);
+  assert.match(field.recovery, /seconds/u);
+});
+
+test('every diagnostic code the runtime raises resolves to a correction', () => {
+  const codes = new Set<string>();
+  const walk = (directory: URL) => {
+    for (const entry of readdirSync(directory, {withFileTypes: true})) {
+      if (entry.name === 'generated') continue;
+      const child = new URL(`${entry.name}${entry.isDirectory() ? '/' : ''}`, directory);
+      if (entry.isDirectory()) walk(child);
+      else if (entry.name.endsWith('.ts'))
+        for (const match of readFileSync(child, 'utf8').matchAll(/'(K4-[A-Z0-9-]{3,})'/gu))
+          codes.add(match[1]!);
+    }
+  };
+  walk(new URL('../src/dsl4/', import.meta.url));
+  assert(codes.size > 400, `found ${codes.size} codes`);
+  const missing = [...codes].filter(
+    (code) =>
+      dsl4RuntimeErrorRemedy({
+        code,
+        outerCode: code,
+        codes: [code],
+        names: [],
+        command: '',
+        cameraOperation: false,
+      }) === null,
+  );
+  assert.deepEqual(missing, [], `codes without a correction: ${missing.join(', ')}`);
 });
