@@ -32,6 +32,7 @@ const compiledMetadataKeys = new Set([
   'narrativeControl',
   'implicitProjectActors',
   'implicitProjectAssets',
+  'sealedAssetSources',
 ]);
 const maxStoryDepth = 64;
 const maxStoryBytes = 16 * 1024 * 1024;
