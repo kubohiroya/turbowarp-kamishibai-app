@@ -194,6 +194,12 @@ export function validateDsl4AssetBundleManifest(
   const storyAssets = (storyDocument.assets ?? {}) as Readonly<
     Record<string, Readonly<Record<string, unknown>>>
   >;
+  // A work is half-finished until its author seals it at build time: until then the definitions
+  // may still change, so a recorded remote source is a derived record and not a constraint.
+  // Sealing pins every remote source, and a later change to one is an error from then on.
+  const sealedAssetSources =
+    (isRecord(storyDocument.metadata) ? storyDocument.metadata.sealedAssetSources : undefined) ===
+    true;
   const expectedIds = Object.keys(storyAssets).sort((left, right) =>
     left < right ? -1 : left > right ? 1 : 0,
   );
@@ -245,12 +251,16 @@ export function validateDsl4AssetBundleManifest(
     if (candidate.source.type === 'remote') {
       exactRemoteSourceKeys(candidate.source, `Asset ${id} remote source`, true);
       const storySource = isRecord(storyAsset.source) ? storyAsset.source : {};
+      // A pinned source is already fixed by its author, so a divergence there is tampering.
+      // An unpinned URL in an unsealed work is still open to edit until the author seals it.
+      const pinnedSource = storySource.integrity !== undefined;
       if (
         storyAsset.delivery !== 'remote' ||
-        candidate.source.url !== storySource.url ||
-        candidate.source.integrity !== storySource.integrity ||
-        candidate.source.contentType !== storySource.contentType ||
-        candidate.source.size !== storySource.size
+        ((sealedAssetSources || pinnedSource) &&
+          (candidate.source.url !== storySource.url ||
+            candidate.source.integrity !== storySource.integrity ||
+            candidate.source.contentType !== storySource.contentType ||
+            candidate.source.size !== storySource.size))
       ) {
         fail('K4-ASSET-BUNDLE-MANIFEST-001', `Remote asset source does not match: ${id}`);
       }

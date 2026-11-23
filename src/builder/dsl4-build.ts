@@ -246,6 +246,12 @@ export async function buildDsl4RuntimeComponent(options: {
   distributionProfile?: Dsl4DistributionProfile;
   /** Opt-in raw file storage for local embedded-document editing; never synthesizes legacy originals. */
   embeddedSourceDocuments?: boolean;
+  /**
+   * Declare the work finished. Until an author seals it, a half-finished work keeps its unpinned
+   * remote sources open so an opener can complete it; sealing fixes them and makes a later change
+   * an error. Sources the author pinned with `integrity` are fixed either way.
+   */
+  sealAssetSources?: boolean;
 }) {
   if (!isRecord(options)) throw new TypeError('DSL 4.0 build options are required');
   const {
@@ -278,6 +284,7 @@ export async function buildDsl4RuntimeComponent(options: {
     poseNetBundle,
     tmRuntime,
     distributionProfile = 'source',
+    sealAssetSources = false,
     embeddedSourceDocuments = false,
   } = options;
   if (typeof embeddedSourceDocuments !== 'boolean')
@@ -409,6 +416,12 @@ export async function buildDsl4RuntimeComponent(options: {
   }
   if (!parsed.ok) failDiagnostics(parsed.diagnostics, 'dsl4-parse');
   let storyDocument = parsed.storyDocument;
+  if (sealAssetSources) {
+    storyDocument = {
+      ...storyDocument,
+      metadata: {...(isRecord(storyDocument.metadata) ? storyDocument.metadata : {}), sealedAssetSources: true},
+    } as typeof storyDocument;
+  }
   if (isRecord(storyDocument.metadata) && storyDocument.metadata.narrativeControl === true) {
     const base = readSb3(baseSb3Bytes).project;
     const urls = isRecord(base.extensionURLs) ? Object.values(base.extensionURLs) : [];

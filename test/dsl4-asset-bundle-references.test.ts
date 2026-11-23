@@ -99,7 +99,7 @@ test('authenticates immutable payloads and rebinds only inferred project bitmap 
   });
   assert.equal(unchanged.descriptor, bound.descriptor);
 });
-test('keeps explicit project metadata, file paths and remote URLs strict instead of overriding them', async () => {
+test('keeps explicit project metadata and file paths strict instead of overriding them', async () => {
   const previous = await fixture();
   await assert.rejects(
     rebindDsl4AssetBundleReferences(story(2), previous, {...options, implicitProjectAssets: []}),
@@ -111,16 +111,32 @@ test('keeps explicit project metadata, file paths and remote URLs strict instead
       implicitProjectAssets: [id],
     }),
   );
-  for (const kind of ['target', 'loading', 'file', 'remote']) {
+  for (const kind of ['target', 'loading', 'file']) {
     const next = story(2);
     if (kind === 'target') next.assets[id]!.target = 'Other';
     if (kind === 'loading') next.assets[id]!.loading = 'lazy';
     if (kind === 'file') next.assets.File.file = 'other.svg';
-    if (kind === 'remote') next.assets.Remote.source.url = 'https://example.test/other.png';
     await assert.rejects(
       rebindDsl4AssetBundleReferences(next, previous, {...options, implicitProjectAssets: [id]}),
     );
   }
+});
+test('leaves an unpinned remote URL editable until the work is sealed', async () => {
+  const previous = await fixture();
+  // A half-finished work is the normal state: its author, or a workshop participant completing
+  // it, may still point an unpinned remote source somewhere else.
+  const edited = story(1);
+  edited.assets.Remote.source.url = 'https://example.test/other.png';
+  await rebindDsl4AssetBundleReferences(edited, previous, {
+    ...options,
+    implicitProjectAssets: [id],
+  });
+  // Sealing the work at build time fixes every remote source, so the same edit is then an error.
+  const sealed = {...edited, metadata: {sealedAssetSources: true}};
+  await assert.rejects(
+    rebindDsl4AssetBundleReferences(sealed, previous, {...options, implicitProjectAssets: [id]}),
+    /Remote asset source does not match/,
+  );
 });
 test('never re-signs a corrupt retained descriptor or file payload', async () => {
   const previous = await fixture();
