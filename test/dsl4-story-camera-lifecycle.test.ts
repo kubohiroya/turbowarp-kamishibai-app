@@ -339,3 +339,37 @@ for (const whileSettling of [false, true]) {
     assert.equal(stops, 3);
   });
 }
+
+test('prepares the preview where the story asked for it', async () => {
+  const fixture = cameraFixture();
+  const lifecycle = createDsl4StoryCameraLifecycle({
+    composition: fixture.composition,
+    previewPosition: 'bottom-right',
+    previewOpacity: 0.75,
+  });
+
+  assert.equal(await lifecycle.start(), true);
+  assert.deepEqual(fixture.log, [
+    'preview.hide',
+    'preview.opacity:0.75',
+    'preview.position:bottom-right',
+    'camera.start',
+  ]);
+});
+
+test('refuses a preview placement the source frontend never validated', () => {
+  const fixture = cameraFixture();
+  assert.throws(
+    () =>
+      createDsl4StoryCameraLifecycle({
+        composition: fixture.composition,
+        previewPosition: 'top-center',
+      }),
+    /story camera preview position must be one of/u,
+  );
+  assert.throws(
+    () => createDsl4StoryCameraLifecycle({composition: fixture.composition, previewOpacity: 1.5}),
+    /story camera preview opacity must be a finite number from 0 to 1/u,
+  );
+  assert.deepEqual(fixture.log, []);
+});

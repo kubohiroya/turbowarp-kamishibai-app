@@ -662,6 +662,24 @@ sceneへ移ると必ずstory既定へ戻り、前sceneの値をstickyにしま�
 paletteを呼びません。起動時固定・既定OFFの`dsl4PosePreviewMirroring`がOFFなら新methodを検査・呼出し
 せず、現行のmirrored表示を維持します。ONでmethodが不足する場合はstartupでfail closedにします。
 
+`preview.position`と`preview.opacity`はpose actionが見せるpreviewの置き場所と濃さのstory既定です。
+`position`は`full-stage | top-left | top-right | bottom-left | bottom-right | center`、`opacity`は
+0以上1以下の数値で、省略時はDSL 3.2と同じ`full-stage`・`0.2`です。明るい部屋で薄すぎる場合は
+`opacity`を上げ、場面の絵を隠したくない場合は`position`を角へ寄せます。
+
+```yaml
+recognition:
+  preview:
+    mirroring: mirrored
+    position: bottom-right
+    opacity: 0.8
+```
+
+runtimeはcamera lifecycleがpreviewを用意するときと、pose・poseInputToChangeScene・
+imageInputToChangeSceneがpreviewを要求するたびに同じ値を`setPreviewOpacity`／`setPreviewPosition`で
+適用します。scene単位の上書きは持たず、story全体で一つの置き場所です。`mirroring`と同様に表示だけの
+設定で、recognitionへ渡すframeとconfidenceは変更しません。
+
 ### 4.3 Pose overlay
 
 TM 2.0.0のSVG pose overlayは`poseRecognition.preview.overlay`で明示的に有効化・設定します。

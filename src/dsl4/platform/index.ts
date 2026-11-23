@@ -16,6 +16,16 @@ export {
 } from './publication-resident-budget.js';
 export {createDsl4PlatformAssetSession} from './platform-asset-session.js';
 export {createDsl4PoseActionPort} from './pose-action-port.js';
+export {
+  type Dsl4PosePreviewPlacement,
+  type Dsl4PosePreviewPosition,
+  dsl4DefaultPosePreviewOpacity,
+  dsl4DefaultPosePreviewPosition,
+  dsl4PosePreviewPositions,
+  readDsl4PosePreviewPlacement,
+  validateDsl4PosePreviewOpacity,
+  validateDsl4PosePreviewPosition,
+} from './pose-preview-placement.js';
 export {createDsl4PoseFeedbackPresenter} from './pose-feedback-presenter.js';
 export {createDsl4IndeterminateProgressIndicator} from './indeterminate-progress-indicator.js';
 export {createDsl4LoadingScreenPresenter} from './loading-screen-presenter.js';

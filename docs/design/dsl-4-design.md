@@ -547,6 +547,8 @@ recognition:
     allowSkip: false
   preview:
     mirroring: mirrored
+    position: full-stage
+    opacity: 0.2
 ```
 
 3.2の`setLoadingBackdrop`、`setLoadingCostume`、`setPoseRecognitionSound`を、関連項目ごとの
@@ -586,6 +588,14 @@ ONでは`@kubohiroya/turbowarp-teachable-machine/composition`の
 preview transformはrecognition入力の`flipHorizontal`、confidence、sequence／selection判定から分離します。
 Web player、通常editor、Packager、development previewは同じconsumerを使い、surface固有の暗黙値を
 追加しません。DSL 3.1／3.2とStandalone block／paletteは変更対象外です。
+
+`preview.position`と`preview.opacity`はpose actionが見せるcamera previewの置き場所と濃さです。
+`position`は`full-stage | top-left | top-right | bottom-left | bottom-right | center`、`opacity`は0〜1の
+数値で、省略時はDSL 3.2と同じ`full-stage`・`0.2`です。story単位の設定として、camera lifecycleが
+previewを用意するときと、pose・poseInputToChangeScene・imageInputToChangeSceneがpreviewを
+要求するたびに同じ値を適用します。`src/dsl4/platform/pose-preview-placement.ts`が唯一の読み取り口で、
+schema外の値はstartupで拒否します。`mirroring`と同じく表示だけの設定で、recognitionへ渡すframe、
+confidence、sequence／selectionの判定は変更しません。
 
 Scratch consumerはplatform composition境界に置き、coreにScratch variable IDやVM targetを持ち込みません。
 `scratchBinding`の入力はrenderer非依存な0〜1の`confidence`／`progress`sampleとして、各計算tickの

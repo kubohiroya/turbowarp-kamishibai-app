@@ -11,7 +11,7 @@ const projectRoot = fileURLToPath(new URL('../..', import.meta.url));
 const packageName = '@kubohiroya/turbowarp-kamishibai-app';
 const generatedPath = 'builder/generated/dsl4-narrative-playback-runtime-extension.js';
 /** The first release whose editor fetches its playback runtime from the site. */
-export const dsl4FirstSitePlaybackRuntimeVersion = '4.0.9';
+export const dsl4FirstSitePlaybackRuntimeVersion = '4.0.10';
 
 function releaseNumbers(version: string) {
   const match = /^(\d+)\.(\d+)\.(\d+)$/u.exec(version);

@@ -266,6 +266,8 @@ function normalizeRecognition(value: unknown) {
     navigation: {allowSkip: false, ...navigation},
     preview: {
       mirroring: 'mirrored',
+      position: 'full-stage',
+      opacity: 0.2,
       ...preview,
       ...(normalizedOverlay ? {overlay: normalizedOverlay} : {}),
       ...(normalizedControls ? {controls: normalizedControls} : {}),
@@ -301,7 +303,7 @@ function mapPoseRecognitionSource(
       selection: ['accumulationPerSecond', 'decayPerSecond', 'scoreThreshold'],
       feedback: ['mode'],
       navigation: ['allowSkip'],
-      preview: ['mirroring', 'overlay', 'controls'],
+      preview: ['mirroring', 'position', 'opacity', 'overlay', 'controls'],
     }[field];
     for (const nestedField of nestedFields ?? []) {
       const nestedNode = document.getIn(['recognition', field, nestedField], true);

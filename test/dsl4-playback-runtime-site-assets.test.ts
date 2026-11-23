@@ -44,53 +44,53 @@ test('reads one file out of an npm package tarball', () => {
 
 test('records the playback runtime the site serves for a release', () => {
   const bytes = Buffer.from('再生');
-  assert.deepEqual(dsl4PlaybackRuntimeSite('4.0.9', bytes), {
-    version: '4.0.9',
-    url: 'https://kubohiroya.github.io/turbowarp-kamishibai-app/runtime/4.0.9/kamishibai-playback.js',
+  assert.deepEqual(dsl4PlaybackRuntimeSite('4.0.10', bytes), {
+    version: '4.0.10',
+    url: 'https://kubohiroya.github.io/turbowarp-kamishibai-app/runtime/4.0.10/kamishibai-playback.js',
     sha256: createHash('sha256').update(bytes).digest('hex'),
     size: bytes.byteLength,
   });
 });
 
-test('publishes every release playback runtime since 4.0.9, earlier published ones from npm', async () => {
+test('publishes every release playback runtime since 4.0.10, earlier published ones from npm', async () => {
   const root = await mkdtemp(path.join(tmpdir(), 'playback-site-'));
   try {
     await mkdir(path.join(root, 'release-metadata'));
-    for (const version of ['4.0.8', '4.0.9', '4.0.10', '4.0.11', '4.0.0-rc.20'])
+    for (const version of ['4.0.9', '4.0.10', '4.0.11', '4.0.12', '4.0.0-rc.20'])
       await writeFile(path.join(root, 'release-metadata', `${version}.json`), '{}');
-    await writeFile(path.join(root, 'package.json'), JSON.stringify({version: '4.0.11'}));
+    await writeFile(path.join(root, 'package.json'), JSON.stringify({version: '4.0.12'}));
     await mkdir(path.join(root, 'src', path.dirname(generated)), {recursive: true});
     await writeFile(path.join(root, 'src', generated), 'current');
-    assert.deepEqual(await readSitePlaybackRuntimeVersions(root), ['4.0.9', '4.0.10', '4.0.11']);
+    assert.deepEqual(await readSitePlaybackRuntimeVersions(root), ['4.0.10', '4.0.11', '4.0.12']);
 
-    const archive = tarball({[`package/dist/${generated}`]: 'published 4.0.9'});
+    const archive = tarball({[`package/dist/${generated}`]: 'published 4.0.10'});
     const integrity = `sha512-${createHash('sha512').update(archive).digest('base64')}`;
     const requested: string[] = [];
     const fetchImpl = (async (url: string) => {
       requested.push(url);
-      if (url.endsWith('/4.0.10')) return new Response('', {status: 404});
-      if (url.endsWith('/4.0.9'))
+      if (url.endsWith('/4.0.11')) return new Response('', {status: 404});
+      if (url.endsWith('/4.0.10'))
         return Response.json({dist: {tarball: 'https://registry.test/a.tgz', integrity}});
       return new Response(archive);
     }) as unknown as typeof fetch;
 
     const site = path.join(root, 'site');
     assert.deepEqual(await writePlaybackRuntimeSiteAssets(site, {fetchImpl, root}), [
-      {file: 'runtime/4.0.9/kamishibai-playback.js', size: 15},
-      {file: 'runtime/4.0.11/kamishibai-playback.js', size: 7},
+      {file: 'runtime/4.0.10/kamishibai-playback.js', size: 16},
+      {file: 'runtime/4.0.12/kamishibai-playback.js', size: 7},
     ]);
     assert.deepEqual(requested, [
-      'https://registry.npmjs.org/@kubohiroya%2fturbowarp-kamishibai-app/4.0.9',
-      'https://registry.test/a.tgz',
       'https://registry.npmjs.org/@kubohiroya%2fturbowarp-kamishibai-app/4.0.10',
+      'https://registry.test/a.tgz',
+      'https://registry.npmjs.org/@kubohiroya%2fturbowarp-kamishibai-app/4.0.11',
     ]);
     assert.equal(
-      await readFile(path.join(site, 'runtime/4.0.9/kamishibai-playback.js'), 'utf8'),
-      'published 4.0.9',
+      await readFile(path.join(site, 'runtime/4.0.10/kamishibai-playback.js'), 'utf8'),
+      'published 4.0.10',
     );
 
     const tampered = (async (url: string) =>
-      url.endsWith('/4.0.9')
+      url.endsWith('/4.0.10')
         ? Response.json({dist: {tarball: 'https://registry.test/a.tgz', integrity: 'sha512-x'}})
         : new Response(archive)) as unknown as typeof fetch;
     await assert.rejects(
