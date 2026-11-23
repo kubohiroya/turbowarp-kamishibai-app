@@ -419,7 +419,10 @@ export async function buildDsl4RuntimeComponent(options: {
   if (sealAssetSources) {
     storyDocument = {
       ...storyDocument,
-      metadata: {...(isRecord(storyDocument.metadata) ? storyDocument.metadata : {}), sealedAssetSources: true},
+      metadata: {
+        ...(isRecord(storyDocument.metadata) ? storyDocument.metadata : {}),
+        sealedAssetSources: true,
+      },
     } as typeof storyDocument;
   }
   if (isRecord(storyDocument.metadata) && storyDocument.metadata.narrativeControl === true) {
