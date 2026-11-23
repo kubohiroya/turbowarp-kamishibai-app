@@ -1017,7 +1017,7 @@ test('builds one self-contained DSL 4.0 release with a pinned runtime extension'
   );
   assert.match(
     titleSvg,
-    /y="336"[^>]*>Faculty of Policy Informatics, Chiba University of Commerce · Hiroya Kubo &lt;hiroya@cuc\.ac\.jp&gt;<\/text>/u,
+    /y="336"[^>]*>Faculty of Policy Planning and Management, Chiba University of Commerce · Hiroya Kubo &lt;hiroya@cuc\.ac\.jp&gt;<\/text>/u,
   );
   assert.doesNotMatch(localizedTitleSvg, />千葉商科大学<\/text>\s*<text[^>]*>総合政策学部</u);
   assert.doesNotMatch(localizedTitleSvg, /\{\{/u);

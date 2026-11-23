@@ -132,7 +132,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.7';
+const extensionVersion = '4.0.9';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -1120,10 +1120,10 @@ class KamishibaiDsl4RuntimeExtension {
     if (!pendingStart || pendingStart.shell !== this.shell) {
       if (this.status === 'title') this.hideScratchTitle();
       if (this.status === 'ready') {
-        return this.enqueue(async () => {
-          await this.restart();
-          return this.pendingStart?.start();
-        }, 'initial-title-close');
+        // Only the restart belongs in the queue. The story itself runs on the promise this block
+        // hands back, as it does below, so the stop button's teardown is never queued behind it.
+        const prepared = this.enqueue(() => this.restart(), 'initial-title-close');
+        return prepared.then(() => this.pendingStart?.start());
       }
       return undefined;
     }
@@ -1869,6 +1869,27 @@ class KamishibaiDsl4RuntimeExtension {
     return this.operation;
   }
 
+  /**
+   * Begin a story without holding the operation queue for as long as the story lasts.
+   *
+   * `enqueue` serializes setup and teardown, and both the red stop button's teardown and the green
+   * flag's restart are queued operations. A story awaited inside the queue therefore starves them
+   * until it ends on its own: a replay from the end-of-story menu, an opened story file and a
+   * compute-mode change all left the stop button and the green flag dead that way. Starting a
+   * story publishes `status`, hides the title and leaves only the run itself pending, so a caller
+   * still observes a started story once this returns.
+   */
+  startStoryOutsideOperations(start: () => unknown) {
+    const report = (error: unknown) => {
+      if (this.status !== 'error') this.reportFailure(error, 'story-runtime');
+    };
+    try {
+      void Promise.resolve(start()).catch(report);
+    } catch (error) {
+      report(error);
+    }
+  }
+
   reportFailure(failure: unknown, phase: string) {
     this.showFailure(failure, {phase});
     kamishibaiLog.error(`${phase} failed.`, loggedError(failure));
@@ -2286,7 +2307,7 @@ class KamishibaiDsl4RuntimeExtension {
       this.status = 'title';
       this.showScratchTitle(this.titleLocale);
     } else {
-      await startAfterTitle();
+      this.startStoryOutsideOperations(startAfterTitle);
     }
   }
 }

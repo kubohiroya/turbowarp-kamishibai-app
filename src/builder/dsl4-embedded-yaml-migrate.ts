@@ -2,14 +2,8 @@ import {createHash, randomUUID} from 'node:crypto';
 import {readFile, lstat, realpath, mkdir, writeFile, link, unlink} from 'node:fs/promises';
 import path from 'node:path';
 import {migrateDsl4LegacyBlockProject} from '../dsl4/embedded-yaml-migration.js';
-import {
-  createDsl4BlockAuthoringExtensionSource,
-  dsl4BlockAuthoringExtensionId,
-} from '../dsl4/structured-block-source.js';
-import {
-  createDsl4BlockAuthoringEditorDefinitions,
-  createDsl4CoreActionBlockEditorDefinitions,
-} from './dsl4-block-authoring-editors.js';
+import {dsl4BlockAuthoringExtensionId} from '../dsl4/structured-block-source.js';
+import {createDsl4BlockAuthoringProjectExtensionSource} from './dsl4-catalog-extensions.js';
 import {
   readDsl4PlaybackRuntimeExtensionSource,
   readDsl4NarrativeRuntimeExtensionSource,
@@ -114,21 +108,10 @@ export async function migrateDsl4EmbeddedYamlFile(options: MigrateEmbeddedYamlFi
     const sourceSections =
       hasSectionBlocks || /"opcode":"useSection"[^}]*"hideFromPalette":false/u.test(oldSource);
     const form = migrated.report.channel === 'bundled' ? 'bundle' : 'runtime';
-    const source = createDsl4BlockAuthoringExtensionSource(
-      [
-        ...createDsl4BlockAuthoringEditorDefinitions(dsl4BlockAuthoringExtensionId, {
-          narrativeControlEnabled: options.narrativeControlEnabled ?? false,
-        }),
-        ...createDsl4CoreActionBlockEditorDefinitions(form, {
-          narrativeControlEnabled: options.narrativeControlEnabled ?? false,
-        }),
-      ],
-      {
-        referenceViews: true,
-        sourceSections,
-        narrativeControlEnabled: options.narrativeControlEnabled ?? false,
-      },
-    );
+    const source = createDsl4BlockAuthoringProjectExtensionSource(form, {
+      sourceSections,
+      narrativeControlEnabled: options.narrativeControlEnabled ?? false,
+    });
     urls[dsl4BlockAuthoringExtensionId] =
       'data:text/javascript;base64,' + Buffer.from(source, 'utf8').toString('base64');
   }

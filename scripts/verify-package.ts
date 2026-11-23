@@ -34,6 +34,9 @@ function run(
   return result.stdout;
 }
 
+const declaredPackageJson = JSON.parse(
+  await readFile(path.join(projectRoot, 'package.json'), 'utf8'),
+);
 const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'turbowarp-kamishibai-pack-'));
 try {
   const packResult: NpmPackResult | undefined = JSON.parse(
@@ -63,6 +66,10 @@ try {
     'dist/builder/index.js',
     'dist/builder/index.d.ts',
     'dist/builder/generated/dsl4-playback-runtime-extension.js',
+    // Every artifact the TurboWarp Plus catalog reads from package.json turbowarpExtension.catalog.
+    ...declaredPackageJson.turbowarpExtension.catalog.flatMap(
+      ({artifact, variants}: {artifact: string; variants: string[]}) => [artifact, ...variants],
+    ),
     'dist/dsl4/index.js',
     'dist/dsl4/object-store/index.js',
     'dist/dsl4/platform/standard-app-shell.js',

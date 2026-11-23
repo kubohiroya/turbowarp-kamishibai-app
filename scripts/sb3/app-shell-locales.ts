@@ -10,7 +10,7 @@ export const appShellCommon = Object.freeze({
 export const appShellTitleLines = Object.freeze({
   en: Object.freeze({
     authorOrganization: Object.freeze([
-      'Faculty of Policy Informatics,',
+      'Faculty of Policy Planning and Management,',
       'Chiba University of Commerce',
     ]),
     licenseApp: Object.freeze([
@@ -40,7 +40,7 @@ export const appShellLocales = Object.freeze({
     about: Object.freeze({
       author: Object.freeze({
         name: 'Hiroya Kubo',
-        organization: 'Faculty of Policy Informatics, Chiba University of Commerce',
+        organization: 'Faculty of Policy Planning and Management, Chiba University of Commerce',
       }),
       license: Object.freeze({
         app: appShellTitleLines.en.licenseApp.join('\n'),

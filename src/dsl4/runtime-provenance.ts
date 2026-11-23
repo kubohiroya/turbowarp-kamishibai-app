@@ -9,7 +9,7 @@ export const dsl4RuntimeProvenance = Object.freeze([
   {
     title: 'Kamishibai DSL 4.0 Runtime',
     source: 'turbowarp-kamishibai-app',
-    version: '4.0.7',
+    version: '4.0.9',
     copyright: 'Hiroya Kubo',
     license: 'MPL-2.0',
   },

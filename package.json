@@ -1,6 +1,6 @@
 {
   "name": "@kubohiroya/turbowarp-kamishibai-app",
-  "version": "4.0.7",
+  "version": "4.0.9",
   "private": false,
   "type": "module",
   "description": "TurboWarp-Kamishibai — an AI-powered interactive storytelling system built on the TurboWarp ecosystem, using Teachable Machine recognition as story input",
@@ -11,6 +11,125 @@
   },
   "bugs": {
     "url": "https://github.com/kubohiroya/turbowarp-kamishibai-app/issues"
+  },
+  "turbowarpExtension": {
+    "resourceDeclaration": {
+      "schemaVersion": 1,
+      "resources": [
+        {
+          "type": "camera",
+          "usage": "conditional",
+          "purpose": {
+            "en": "Read camera frames for pose and image recognition in a story",
+            "ja": "物語の中の姿勢認識・画像認識のためにカメラ映像を読み取る"
+          },
+          "condition": {
+            "en": "When a scene waits for a pose or image",
+            "ja": "場面が姿勢や画像を待つ場合"
+          },
+          "via": [
+            "@kubohiroya/turbowarp-camera-source",
+            "@kubohiroya/turbowarp-teachable-machine"
+          ]
+        },
+        {
+          "type": "microphone",
+          "usage": "conditional",
+          "purpose": {
+            "en": "Read audio segments for sound recognition",
+            "ja": "音声認識のためにマイクの音声を読み取る"
+          },
+          "condition": {
+            "en": "When a scene waits for a sound",
+            "ja": "場面が音を待つ場合"
+          },
+          "via": [
+            "@kubohiroya/turbowarp-teachable-machine"
+          ]
+        },
+        {
+          "type": "network",
+          "usage": "conditional",
+          "purpose": {
+            "en": "Download recognition models, their runtime, and the parts of a work published separately",
+            "ja": "認識モデルとその実行ライブラリー、分割して公開された作品の続きを取得する"
+          },
+          "condition": {
+            "en": "When the work uses recognition, external assets or separately published parts",
+            "ja": "作品が認識・外部素材・分割公開を使う場合"
+          },
+          "via": [
+            "@kubohiroya/turbowarp-teachable-machine",
+            "@kubohiroya/turbowarp-asset-cache"
+          ],
+          "data": {
+            "direction": "download",
+            "content": {
+              "en": "Model files, runtime libraries, images, sounds, videos and story data; camera frames and microphone audio are not uploaded",
+              "ja": "モデルファイル・実行ライブラリー・画像・音声・動画・物語データ。カメラ映像とマイク音声はアップロードしない"
+            }
+          }
+        },
+        {
+          "type": "storage",
+          "usage": "conditional",
+          "purpose": {
+            "en": "Keep save slots, playback preferences and cached assets in this browser",
+            "ja": "セーブデータ・再生設定・素材のキャッシュをこのブラウザ内に保存する"
+          },
+          "condition": {
+            "en": "When the reader saves progress, changes settings or the work caches assets",
+            "ja": "読者が進行を保存する、設定を変える、または作品が素材をキャッシュする場合"
+          },
+          "via": [
+            "@kubohiroya/turbowarp-asset-cache"
+          ]
+        },
+        {
+          "type": "audio-output",
+          "usage": "conditional",
+          "purpose": {
+            "en": "Play voices, sound effects, music and video sound",
+            "ja": "音声・効果音・音楽・動画の音を再生する"
+          },
+          "condition": {
+            "en": "When the work has sound",
+            "ja": "作品に音がある場合"
+          },
+          "via": [
+            "@kubohiroya/turbowarp-asset-cache",
+            "@kubohiroya/turbowarp-bubble"
+          ]
+        }
+      ]
+    },
+    "catalog": [
+      {
+        "artifact": "dist/builder/generated/dsl4-narrative-authoring-runtime-extension.js",
+        "variants": [
+          "dist/extensions/kubohiroyakamishibai4/authored.js",
+          "dist/builder/generated/dsl4-playback-runtime-extension.js",
+          "dist/builder/generated/dsl4-narrative-playback-runtime-extension.js"
+        ]
+      },
+      {
+        "artifact": "dist/extensions/kubohiroyakamishibaiauthoring4/bundle-narrative.js",
+        "variants": [
+          "dist/extensions/kubohiroyakamishibaiauthoring4/bundle-narrative-sections.js",
+          "dist/extensions/kubohiroyakamishibaiauthoring4/runtime-narrative.js",
+          "dist/extensions/kubohiroyakamishibaiauthoring4/runtime-narrative-sections.js",
+          "dist/extensions/kubohiroyakamishibaiauthoring4/bundle.js",
+          "dist/extensions/kubohiroyakamishibaiauthoring4/bundle-sections.js",
+          "dist/extensions/kubohiroyakamishibaiauthoring4/runtime.js",
+          "dist/extensions/kubohiroyakamishibaiauthoring4/runtime-sections.js",
+          "dist/extensions/kubohiroyakamishibaiauthoring4/embedded-yaml.js"
+        ],
+        "resourceDeclaration": {
+          "schemaVersion": 1,
+          "resources": []
+        }
+      }
+    ]
   },
   "exports": {
     "./builder": {
