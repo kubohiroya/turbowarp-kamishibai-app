@@ -97,9 +97,9 @@
       "source": {
         "provider": "npm",
         "package": "@kubohiroya/turbowarp-bubble",
-        "version": "0.21.0",
+        "version": "0.22.0",
         "artifact": "dist/turbowarp-bubble.js",
-        "integrity": "sha256-qEqBqw7prFvAbHdwEtSHk3APiROGal13VUlNPtaUsck="
+        "integrity": "sha256-+jvCIpeESq1X5HymKLC3uCW9+wXhbIYF6zk+fV/hGH8="
       }
     },
     {
