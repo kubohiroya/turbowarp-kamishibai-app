@@ -12,7 +12,7 @@ import {renderSiteVersion} from './site-version.ts';
 import {buildReleasePlayer} from './build-release-player.ts';
 import {preparePublishedSite} from './sb3/dsl4-published-assets.ts';
 import {writePoseNetSiteAssets} from './sb3/posenet-site-assets.ts';
-import {writePlaybackRuntimeSiteAssets} from './sb3/playback-runtime-site-assets.ts';
+import {writeRuntimeSiteAssets} from './sb3/playback-runtime-site-assets.ts';
 import {writeTMRuntimeSiteAssets} from './sb3/tm-runtime-site-assets.ts';
 
 await preparePublishedSite();
@@ -131,7 +131,7 @@ console.log(
   `Published Teachable Machine runtimes: ${JSON.stringify(await writeTMRuntimeSiteAssets(outputPath))}`,
 );
 console.log(
-  `Published playback runtimes: ${JSON.stringify(await writePlaybackRuntimeSiteAssets(outputPath))}`,
+  `Published versioned runtimes: ${JSON.stringify(await writeRuntimeSiteAssets(outputPath))}`,
 );
 const releaseBuilds = await Promise.all(
   downloadableReleases.map(async (release) => {

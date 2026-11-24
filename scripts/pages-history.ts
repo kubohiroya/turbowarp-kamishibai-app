@@ -4,8 +4,10 @@ import {lstat} from 'node:fs/promises';
 import path from 'node:path';
 
 const version = String.raw`\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?`;
+// `runtime/<version>/` holds the runtime bundles a published work points its extension at, so a
+// deployment may add a release's files but never change or drop one another work already names.
 const versionedArtifact = new RegExp(
-  String.raw`^(?:downloads/kamishibai-${version}\.sb3|players/${version}/.+)$`,
+  String.raw`^(?:downloads/kamishibai-${version}\.sb3|(?:players|runtime)/${version}/.+)$`,
   'u',
 );
 

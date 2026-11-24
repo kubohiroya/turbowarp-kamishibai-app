@@ -13,6 +13,9 @@ const user = {name: 'Pages regression test', email: 'pages-test@example.invalid'
 const oldSb3 = 'downloads/kamishibai-4.0.0-rc.38.sb3';
 const oldPlayer = 'players/4.0.0-rc.38/index.html';
 const oldAsset = 'players/4.0.0-rc.38/assets/player data.bin';
+// A distributed work points its extension at these, so they are immutable like the players.
+const oldRuntime = 'runtime/4.0.0-rc.38/kamishibai-playback.js';
+const oldRuntimeManifest = 'runtime/4.0.0-rc.38/manifest.json';
 const newSb3 = 'downloads/kamishibai-4.0.0-rc.39.sb3';
 const newPlayer = 'players/4.0.0-rc.39/index.html';
 const oldFiles = {
@@ -20,6 +23,8 @@ const oldFiles = {
   [oldSb3]: Buffer.from([0x50, 0x4b, 0, 255, 17]),
   [oldPlayer]: Buffer.from('<html>Original rc.38</html>'),
   [oldAsset]: Buffer.from([254, 0, 1]),
+  [oldRuntime]: Buffer.from('// Original rc.38 playback runtime'),
+  [oldRuntimeManifest]: Buffer.from('{"version":"4.0.0-rc.38"}'),
 };
 
 async function writeFiles(directory: string, files: Record<string, string | Buffer>) {
@@ -73,7 +78,7 @@ test('publishes twice from clean outputs while preserving remote releases and de
     await deploySite(directory, {repo: remote, user});
     assert.equal(git('rev-parse', 'gh-pages').toString(), published);
 
-    for (const filename of [oldSb3, oldPlayer, oldAsset]) {
+    for (const filename of [oldSb3, oldPlayer, oldAsset, oldRuntime, oldRuntimeManifest]) {
       await writeFiles(directory, {[filename]: 'Changed old artifact'});
       await assert.rejects(deploySite(directory, {repo: remote, user}), /Refusing to replace/u);
       assert.equal(git('rev-parse', 'gh-pages').toString(), published);
