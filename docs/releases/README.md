@@ -68,7 +68,7 @@ git tag -a "v$release_version" "$release_commit" -m "Release v$release_version"
 git push origin "refs/tags/v$release_version"
 ```
 
-tagは注釈付きとし、既存tagを上書きしません。`v*`のtag pushがRelease workflowを起動します。workflowはtagとpackageの版、現在のremote mainとtagのcommitが一致することを検査します。実行中にmainが進んだ場合も停止します。
+tagは注釈付きとし、既存tagを上書きしません。`v*`のtag pushがRelease workflowを起動します。workflowはtagとpackageの版が一致することを検査し、各段で`scripts/assert-current-release.ts`を呼んで、tagがrelease commitを指したままであることと、release commitが現在のremote mainに載っていることを確かめます。実行中にmainが`docs/`だけの変更で進んだ場合は公開を続けますが、tagの付け替え、mainの巻き戻しや分岐、`package.json`・`pnpm-lock.yaml`・`src/`・`scripts/`・`schema/`・`release-metadata/`・`site/`といった公開に関わるパスの変更があれば停止します。
 
 Release workflowは次の順で処理します。
 

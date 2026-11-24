@@ -4,22 +4,9 @@ import path from 'node:path';
 import {setTimeout} from 'node:timers/promises';
 import {fileURLToPath} from 'node:url';
 
-type Run = (args: string[]) => string;
+import {assertCurrentRelease} from './assert-current-release.ts';
 
-/** A stale release job must not change mutable registry tags or request a Pages build. */
-export function assertCurrentRelease({
-  sha = process.env.GITHUB_SHA,
-  tag = process.env.GITHUB_REF_NAME,
-  git = (args: string[]) => execFileSync('git', args, {encoding: 'utf8'}),
-}: {sha?: string; tag?: string; git?: Run} = {}) {
-  assert(sha && /^[a-f0-9]{40}$/u.test(sha), 'A release commit is required.');
-  assert(tag && /^v[0-9A-Za-z.-]+$/u.test(tag), 'A release tag is required.');
-  for (const ref of ['refs/heads/main', `refs/tags/${tag}^{}`]) {
-    const rows = git(['ls-remote', 'origin', ref]).trim().split('\n');
-    assert.equal(rows.length, 1, 'The release ref is missing or ambiguous.');
-    assert.equal(rows[0]?.split(/\s+/u)[0], sha, 'The release main or tag advanced.');
-  }
-}
+type Run = (args: string[]) => string;
 
 /** Complete a verified release; trial publications must not call this operation. */
 export async function finalizeReleaseTags(
