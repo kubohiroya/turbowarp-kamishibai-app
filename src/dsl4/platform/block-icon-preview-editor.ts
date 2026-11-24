@@ -1,7 +1,15 @@
 import {dsl4BlockAuthoringExtensionId} from '../block-source-shared.js';
 import {dsl4TurboWarpActionBlockSpecs} from '../core-action-block-codec.js';
+import {
+  dsl4RotationStyleNames,
+  isDsl4RotationStyle,
+  normalizeDsl4Direction,
+  scratchDsl4RotationStyle,
+  type Dsl4RotationStyle,
+} from '../rotation-style.js';
 import type {Dsl4SourceFrontend} from '../source-frontend.js';
 import {mountDsl4BlockIconAssetPreview} from './block-icon-asset-preview.js';
+import {mountDsl4BlockArgumentView, type Dsl4BlockViewBlockly} from './block-icon-block-view.js';
 import {createDsl4BlockIconPreviewRuntime} from './block-icon-preview-runtime.js';
 
 type Literal = string | number | boolean;
@@ -25,11 +33,27 @@ interface PreviewActor {
   x: number;
   y: number;
   size: number;
+  direction?: number;
+  rotationStyle?: string;
   visible?: boolean;
   drawableID: number;
   setXY(x: number, y: number): void;
   setSize(size: number): void;
+  setDirection?(direction: number): void;
+  setRotationStyle?(style: string): void;
 }
+/** One stage gesture at a time: the size, or the rotation style with its angle. */
+type StageEditor =
+  | {kind: 'scale'; origin: number; value: number; min: number; max: number}
+  | {
+      kind: 'rotation';
+      style: Dsl4RotationStyle;
+      originStyle: string | undefined;
+      origin: number;
+      value: number;
+      min: number;
+      max: number;
+    };
 interface PreviewHandle {
   runtime: unknown;
   canvas: HTMLCanvasElement;
@@ -47,10 +71,25 @@ interface PreviewRuntime {
     signal: AbortSignal;
   }): Promise<PreviewHandle>;
 }
+/** What the dialog is showing: in a scene's dialog, the block picked in the tree on the left. */
+export interface Dsl4BlockPreviewSelected {
+  snapshot: Snapshot;
+  context: Context;
+  depth: number;
+}
+export interface Dsl4BlockPreviewSelection {
+  get(): Dsl4BlockPreviewSelected;
+  subscribe(listener: () => void): () => void;
+}
 interface PreviewDefinition {
   extensionId: string;
   opcodes: string[];
-  mount(container: HTMLElement, context: Context, snapshot: Snapshot): () => void;
+  mount(
+    container: HTMLElement,
+    context: Context,
+    snapshot: Snapshot,
+    selection?: Dsl4BlockPreviewSelection,
+  ): () => void;
   hover?(anchor: HTMLElement | SVGElement, snapshot: Snapshot): () => void;
 }
 interface RegistrationAPI {
@@ -60,7 +99,11 @@ interface RegistrationAPI {
 }
 export interface Dsl4BlockPreviewScratch {
   vm: unknown;
-  gui?: {blockEditors?: RegistrationAPI; createPreviewVm?: () => unknown};
+  gui?: {
+    blockEditors?: RegistrationAPI;
+    createPreviewVm?: () => unknown;
+    getBlockly?: () => Promise<unknown>;
+  };
 }
 type PreviewScratch = Dsl4BlockPreviewScratch;
 
@@ -77,7 +120,14 @@ const labels: Record<string, string> = {
   SCALE: '大きさ（%）',
   SECONDS: '秒数',
   EASING: '動きの変化',
+  ROTATION: '回転',
+  DIRECTION: '向き（度）',
   TEXT: '文章',
+};
+const rotationLabels: Record<Dsl4RotationStyle, string> = {
+  allAround: '自由に回転',
+  leftRight: '左右のみ',
+  none: '回転しない',
 };
 
 /** Extract only changed literals; unrelated draft metadata and unchanged source tokens stay intact. */
@@ -143,6 +193,18 @@ function commandFor(opcode: string) {
   return opcode.slice(opcode.lastIndexOf('_') + 1);
 }
 
+/**
+ * A pane shared with the scene dialog follows the selected block, so it shows the state at that
+ * action with waits and moves at zero. A dialog opened on one action block replays that action.
+ */
+export function dsl4BlockPreviewMode(
+  command: string,
+  {shared = false}: {shared?: boolean} = {},
+): 'still' | 'action' | 'scene' {
+  if (command === 'scene') return 'scene';
+  return !shared && animatedCommands.has(command) ? 'action' : 'still';
+}
+
 function stageSize(handle: PreviewHandle) {
   const runtime = handle.runtime;
   const renderer = record(runtime) && record(runtime.renderer) ? runtime.renderer : null;
@@ -163,21 +225,33 @@ function argumentValue(context: Context, snapshot: Snapshot, name: string): unkn
   return snapshot.arguments[name]?.value;
 }
 
-function setTransformDraft(context: Context, values: Record<string, number>) {
+function setTransformDraft(context: Context, values: Record<string, number | string>) {
   const draft = context.getDraft();
   if (!record(draft.inputs) || context.getState().status !== 'editing') return;
   const description = context.getFixedInputView?.();
   for (const [name, value] of Object.entries(values)) {
-    if (!Number.isFinite(value) || description?.inputs[name]?.state !== 'editable') continue;
+    const usable = typeof value === 'number' ? Number.isFinite(value) : value.length > 0;
+    if (!usable || description?.inputs[name]?.state !== 'editable') continue;
     const previous = draft.inputs[name];
     if (!record(previous)) continue;
     draft.inputs[name] = {
-      value: Math.round(value * 100) / 100,
+      value: typeof value === 'number' ? Math.round(value * 100) / 100 : value,
       changed: true,
       ...(previous.repair === true ? {repair: true} : {}),
     };
   }
   context.setDraft(draft);
+}
+
+/** Scratch measures direction clockwise from up, with 90 pointing right. */
+export function dsl4PreviewDragDirection(
+  pivot: {x: number; y: number},
+  point: {x: number; y: number},
+) {
+  const dx = point.x - pivot.x;
+  const dy = point.y - pivot.y;
+  if (!Number.isFinite(dx) || !Number.isFinite(dy) || (dx === 0 && dy === 0)) return 90;
+  return normalizeDsl4Direction((Math.atan2(dx, -dy) * 180) / Math.PI);
 }
 
 function createFixedEditorOptions(extensionId: string, opcode: string, command: string) {
@@ -190,12 +264,23 @@ function createFixedEditorOptions(extensionId: string, opcode: string, command: 
     contractId: `kamishibai.visual.${command}`,
     contractRevision: '1',
     bindings: spec.arguments.map((argument) => {
-      const numeric = argument.type === 'number' || argument.name === 'SCALE';
-      const optional = command === 'setSkin' && argument.name === 'SCALE';
+      const numeric =
+        argument.type === 'number' ||
+        argument.name === 'SCALE' ||
+        (command === 'show' && argument.name === 'DIRECTION');
+      const optional =
+        (command === 'setSkin' && argument.name === 'SCALE') ||
+        (command === 'show' && ['ROTATION', 'DIRECTION'].includes(argument.name));
       const choices =
-        argument.name === 'EASING' ? ['linear', 'easeIn', 'easeOut', 'easeInOut'] : null;
+        argument.name === 'EASING'
+          ? ['linear', 'easeIn', 'easeOut', 'easeInOut']
+          : argument.name === 'ROTATION'
+            ? [...dsl4RotationStyleNames]
+            : null;
       const document = choices
-        ? {type: 'string', enum: choices}
+        ? optional
+          ? {anyOf: [{type: 'string', enum: choices}, {const: ''}]}
+          : {type: 'string', enum: choices}
         : numeric
           ? optional
             ? {anyOf: [{type: 'number', exclusiveMinimum: 0}, {const: ''}]}
@@ -216,7 +301,14 @@ function createFixedEditorOptions(extensionId: string, opcode: string, command: 
           kind: choices ? 'enum' : numeric ? 'number' : 'text',
           label: labels[argument.name] ?? argument.name,
           ...(optional ? {reset: ''} : {}),
-          ...(choices ? {choices: choices.map((value) => ({value, label: value}))} : {}),
+          ...(choices
+            ? {
+                choices: choices.map((value) => ({
+                  value,
+                  label: isDsl4RotationStyle(value) ? rotationLabels[value] : value,
+                })),
+              }
+            : {}),
         },
         schemaBundle: {
           identity: {
@@ -241,6 +333,7 @@ function createFixedEditorOptions(extensionId: string, opcode: string, command: 
         },
         read(value: Literal): Json {
           if (!numeric) return String(value);
+          if (optional && String(value).trim() === '') return '';
           if (optional && String(value).trim() === '') return '';
           const result = Number(value);
           if (!Number.isFinite(result)) throw new TypeError('Expected a finite number.');
@@ -270,12 +363,18 @@ export function mountDsl4BlockIconPreview({
   context,
   snapshot,
   runtime,
+  shared = false,
+  resolveBlockly,
   debounceMs = 100,
 }: {
   container: HTMLElement;
   context: Context;
   snapshot: Snapshot;
   runtime: PreviewRuntime;
+  /** The scene dialog's own pane, which follows the selected block instead of one action block. */
+  shared?: boolean;
+  /** Supplies the Editor's Blockly for the block view under the preview, when the host has one. */
+  resolveBlockly?: () => Promise<Dsl4BlockViewBlockly | undefined>;
   debounceMs?: number;
 }): () => void {
   const document = container.ownerDocument;
@@ -307,14 +406,79 @@ export function mountDsl4BlockIconPreview({
   box.style.cssText =
     'display:none;position:absolute;border:2px solid #30a9ff;box-sizing:border-box;touch-action:none;cursor:move;';
   box.setAttribute('aria-hidden', 'true');
-  viewport.append(stageMount, box);
+  const menu = document.createElement('div');
+  menu.dataset.dsl4ActorMenu = 'true';
+  menu.setAttribute('role', 'menu');
+  menu.style.cssText =
+    'display:none;position:absolute;z-index:2;min-width:9em;padding:4px;background:#fff;border:1px solid #0003;border-radius:6px;box-shadow:0 4px 14px #0004;';
+  const scaleItem = document.createElement('button');
+  scaleItem.type = 'button';
+  scaleItem.setAttribute('role', 'menuitem');
+  scaleItem.dataset.dsl4ActorMenuItem = 'scale';
+  scaleItem.textContent = '拡大縮小';
+  scaleItem.style.cssText = 'display:block;width:100%;text-align:left;';
+  const rotationItem = document.createElement('button');
+  rotationItem.type = 'button';
+  rotationItem.setAttribute('role', 'menuitem');
+  rotationItem.setAttribute('aria-haspopup', 'true');
+  rotationItem.dataset.dsl4ActorMenuItem = 'rotation';
+  rotationItem.textContent = '回転';
+  rotationItem.style.cssText = 'display:block;width:100%;text-align:left;';
+  const submenu = document.createElement('div');
+  submenu.dataset.dsl4ActorSubmenu = 'rotation';
+  submenu.setAttribute('role', 'menu');
+  submenu.hidden = true;
+  submenu.style.cssText = 'padding-left:8px;';
+  const rotationItems = dsl4RotationStyleNames.map((style) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.setAttribute('role', 'menuitem');
+    item.dataset.dsl4ActorRotationStyle = style;
+    item.textContent = rotationLabels[style];
+    item.style.cssText = 'display:block;width:100%;text-align:left;';
+    submenu.append(item);
+    return {style, item};
+  });
+  menu.append(scaleItem, rotationItem, submenu);
+  const panel = document.createElement('div');
+  panel.dataset.dsl4ActorScalePanel = 'true';
+  panel.hidden = true;
+  panel.style.cssText =
+    'display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px;';
+  const panelLabel = document.createElement('label');
+  panelLabel.style.cssText = 'font-size:12px;';
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.dataset.dsl4ActorScaleSlider = 'true';
+  slider.step = '1';
+  const readout = document.createElement('output');
+  readout.dataset.dsl4ActorScaleValue = 'true';
+  readout.style.cssText = 'font-size:12px;min-width:4em;text-align:right;';
+  const panelButtons = document.createElement('div');
+  panelButtons.style.cssText =
+    'grid-column:1 / -1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;';
+  const resetScaleButton = document.createElement('button');
+  resetScaleButton.type = 'button';
+  resetScaleButton.dataset.dsl4ActorScaleAction = 'reset';
+  resetScaleButton.textContent = 'リセット';
+  const cancelScaleButton = document.createElement('button');
+  cancelScaleButton.type = 'button';
+  cancelScaleButton.dataset.dsl4ActorScaleAction = 'cancel';
+  cancelScaleButton.textContent = 'キャンセル';
+  const saveScaleButton = document.createElement('button');
+  saveScaleButton.type = 'button';
+  saveScaleButton.dataset.dsl4ActorScaleAction = 'save';
+  saveScaleButton.textContent = '保存';
+  panelButtons.append(resetScaleButton, cancelScaleButton, saveScaleButton);
+  panel.append(panelLabel, slider, readout, panelButtons);
+  viewport.append(stageMount, box, menu);
   const help = document.createElement('p');
   help.style.cssText = 'margin:0;font-size:12px;line-height:1.5;';
   help.textContent =
     command === 'moveTo'
-      ? '設定を変えると動きを再生し直します。アクターをドラッグして移動先を指定できます。大きさは直前のshow actorで設定します。'
+      ? '設定を変えると動きを再生し直します。アクターをドラッグして移動先を指定できます。大きさと回転は直前のshow actorで設定します。'
       : command === 'show'
-        ? 'アクターをドラッグして位置、青い枠のふちをドラッグして大きさを設定します。'
+        ? 'アクターをドラッグして位置、青い枠のふちをドラッグして大きさを設定します。右クリックから拡大縮小と回転も設定できます。'
         : command === 'setSkin'
           ? '青い枠のふちをドラッグして大きさを設定します。'
           : command === 'say' ||
@@ -323,10 +487,13 @@ export function mountDsl4BlockIconPreview({
               command === 'thinkText'
             ? '設定を変えると、最新の内容で吹き出しを再生し直します。'
             : '設定は保存するまで台本に反映されません。';
-  root.append(toolbar, viewport, help);
+  const blockView = document.createElement('div');
+  blockView.style.cssText = 'min-width:0;width:100%;';
+  root.append(toolbar, viewport, panel, help, blockView);
   container.appendChild(root);
 
   let disposed = false;
+  let releaseBlockView: (() => void) | undefined;
   let handle: PreviewHandle | undefined;
   let controller: AbortController | undefined;
   let pending: ReturnType<typeof setTimeout> | undefined;
@@ -337,8 +504,21 @@ export function mountDsl4BlockIconPreview({
   let dragging = false;
   let frame: number | undefined;
   let releaseGesture: (() => void) | undefined;
+  let editor: StageEditor | undefined;
+  const specArguments =
+    dsl4TurboWarpActionBlockSpecs.find((item) => item.command === command)?.arguments ?? [];
+  const defaultDirection = (() => {
+    const value = Number(
+      specArguments.find((argument) => argument.name === 'DIRECTION')?.defaultValue,
+    );
+    return Number.isFinite(value) ? value : 90;
+  })();
+  const defaultScale = (() => {
+    const value = Number(specArguments.find((argument) => argument.name === 'SCALE')?.defaultValue);
+    return Number.isFinite(value) && value > 0 ? value : 100;
+  })();
   const window = document.defaultView;
-  const mode = command === 'scene' ? 'scene' : animatedCommands.has(command) ? 'action' : 'still';
+  const mode = dsl4BlockPreviewMode(command, {shared});
   const report = (error: unknown) => {
     if (disposed) return;
     status.textContent = error instanceof Error ? error.message : 'プレビューを表示できません。';
@@ -535,8 +715,10 @@ export function mountDsl4BlockIconPreview({
         Math.abs(event.clientY - border.top),
         Math.abs(event.clientY - border.bottom),
       ) <= 7;
-    const resize = onBorder && canEdit('SCALE');
-    if (!resize && !(canEdit('X') && canEdit('Y'))) return;
+    // While the panel is open the whole actor scales; otherwise only its border does.
+    const resize = (editor?.kind === 'scale' || onBorder) && canEdit('SCALE');
+    const turn = editor?.kind === 'rotation' && editor.min !== editor.max;
+    if (!turn && !resize && !(canEdit('X') && canEdit('Y'))) return;
     event.preventDefault();
     event.stopPropagation();
     handle.stop?.();
@@ -559,11 +741,18 @@ export function mountDsl4BlockIconPreview({
       if (!moved && Math.hypot(input.clientX - start.x, input.clientY - start.y) < 2) return;
       moved = true;
       input.preventDefault();
-      if (resize) {
-        selected.setSize(
-          dsl4PreviewDragScale(scale, pivot, start, {x: input.clientX, y: input.clientY}),
-        );
-        setTransformDraft(context, {SCALE: selected.size});
+      if (turn) {
+        applyEditorValue(dsl4PreviewDragDirection(pivot, {x: input.clientX, y: input.clientY}));
+      } else if (resize) {
+        const next = dsl4PreviewDragScale(scale, pivot, start, {
+          x: input.clientX,
+          y: input.clientY,
+        });
+        if (editor?.kind === 'scale') applyEditorValue(next);
+        else {
+          selected.setSize(next);
+          setTransformDraft(context, {SCALE: selected.size});
+        }
       } else {
         const position = dsl4PreviewDragPosition(
           origin,
@@ -580,12 +769,17 @@ export function mountDsl4BlockIconPreview({
       if (input.pointerId !== event.pointerId) return;
       if (input.type !== 'pointercancel') move(input);
       else if (moved) {
-        selected.setXY(origin.x, origin.y);
-        selected.setSize(scale);
+        if (turn) applyEditorValue(editor!.origin);
+        else {
+          selected.setXY(origin.x, origin.y);
+          if (editor?.kind === 'scale') applyEditorValue(scale);
+          else selected.setSize(scale);
+        }
         context.setDraft(previousDraft);
       }
       releaseGesture?.();
-      if (!disposed) schedule();
+      // An open panel holds a value the draft does not have yet; replaying would discard it.
+      if (!disposed && !editor) schedule();
     };
     releaseGesture = () => {
       dragging = false;
@@ -599,9 +793,156 @@ export function mountDsl4BlockIconPreview({
     box.addEventListener('pointerup', finish);
     box.addEventListener('pointercancel', finish);
   };
+  const scaleUnavailable =
+    command === 'moveTo'
+      ? '大きさは直前のshow actorで設定します。'
+      : 'このブロックでは大きさを設定できません。';
+  const rotationUnavailable = 'このブロックでは回転を設定できません。';
+  function closeMenu() {
+    menu.style.display = 'none';
+    submenu.hidden = true;
+  }
+  function showValue(value: number) {
+    const rounded = Math.round(value * 100) / 100;
+    slider.value = String(rounded);
+    readout.textContent = editor?.kind === 'rotation' ? `${rounded}度` : `${rounded}%`;
+  }
+  /** Keep the preview and the slider in step; the draft waits for 保存. */
+  function applyEditorValue(value: number) {
+    const selected = actor();
+    if (!selected || !editor) return;
+    const clamped = Math.max(editor.min, Math.min(editor.max, value));
+    editor.value = clamped;
+    if (editor.kind === 'scale') selected.setSize(clamped);
+    else selected.setDirection?.(clamped);
+    showValue(clamped);
+    updateBounds();
+  }
+  function closeEditor() {
+    const selected = actor();
+    if (editor?.kind === 'rotation' && editor.originStyle !== undefined)
+      selected?.setRotationStyle?.(editor.originStyle);
+    editor = undefined;
+    panel.hidden = true;
+  }
+  function openEditor(next: StageEditor, label: string) {
+    editor = next;
+    slider.min = String(next.min);
+    slider.max = String(next.max);
+    slider.disabled = next.min === next.max;
+    panelLabel.textContent = label;
+    panel.hidden = false;
+    handle?.stop?.();
+    showValue(next.value);
+    status.textContent = slider.disabled
+      ? '保存で引数に反映します。'
+      : 'ドラッグかスライダーで値を変え、保存で引数に反映します。';
+  }
+  function openScaleEditor() {
+    const selected = actor();
+    if (!selected) return;
+    if (!canEdit('SCALE')) {
+      status.textContent = scaleUnavailable;
+      return;
+    }
+    const origin = selected.size;
+    openEditor(
+      {kind: 'scale', origin, value: origin, min: Math.min(10, origin), max: Math.max(400, origin)},
+      '大きさ',
+    );
+  }
+  /** The chosen rotation style previews at once; 保存 writes it with the angle. */
+  function openRotationEditor(style: Dsl4RotationStyle) {
+    const selected = actor();
+    if (!selected) return;
+    if (!canEdit('ROTATION') || !canEdit('DIRECTION')) {
+      status.textContent = rotationUnavailable;
+      return;
+    }
+    const origin = Number.isFinite(selected.direction) ? Number(selected.direction) : 90;
+    const originStyle = typeof selected.rotationStyle === 'string' ? selected.rotationStyle : '';
+    selected.setRotationStyle?.(scratchDsl4RotationStyle(style));
+    openEditor(
+      {
+        kind: 'rotation',
+        style,
+        originStyle,
+        origin,
+        value: origin,
+        // Scratch keeps direction in this range, and a fixed actor needs no angle at all.
+        min: style === 'none' ? origin : -179,
+        max: style === 'none' ? origin : 180,
+      },
+      `回転：${rotationLabels[style]}`,
+    );
+  }
+  const openMenu = (event: MouseEvent) => {
+    if (!handle || !actor()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const parent = viewport.getBoundingClientRect();
+    menu.style.left = `${Math.max(0, event.clientX - parent.left)}px`;
+    menu.style.top = `${Math.max(0, event.clientY - parent.top)}px`;
+    menu.style.display = 'block';
+    submenu.hidden = true;
+    scaleItem.disabled = !canEdit('SCALE');
+    rotationItem.disabled = !(canEdit('ROTATION') && canEdit('DIRECTION'));
+    // A disabled item cannot explain itself on click, so say it as the menu opens.
+    if (scaleItem.disabled) status.textContent = scaleUnavailable;
+    else if (rotationItem.disabled) status.textContent = rotationUnavailable;
+  };
+  box.addEventListener('contextmenu', openMenu);
+  scaleItem.addEventListener('click', () => {
+    closeMenu();
+    openScaleEditor();
+  });
+  rotationItem.addEventListener('click', () => {
+    submenu.hidden = !submenu.hidden;
+  });
+  for (const {style, item} of rotationItems)
+    item.addEventListener('click', () => {
+      closeMenu();
+      openRotationEditor(style);
+    });
+  viewport.addEventListener('pointerdown', closeMenu);
+  slider.addEventListener('input', () => {
+    const value = Number(slider.value);
+    if (Number.isFinite(value)) applyEditorValue(value);
+  });
+  resetScaleButton.addEventListener('click', () => {
+    if (editor) applyEditorValue(editor.kind === 'scale' ? defaultScale : defaultDirection);
+  });
+  cancelScaleButton.addEventListener('click', () => {
+    if (!editor) return;
+    applyEditorValue(editor.origin);
+    closeEditor();
+    status.textContent = '変更を取り消しました。';
+  });
+  saveScaleButton.addEventListener('click', () => {
+    if (!editor) return;
+    if (editor.kind === 'scale') setTransformDraft(context, {SCALE: editor.value});
+    else {
+      setTransformDraft(context, {ROTATION: editor.style, DIRECTION: editor.value});
+      editor.originStyle = undefined;
+    }
+    closeEditor();
+    status.textContent = '引数に反映しました。台本へはダイアログの保存で反映します。';
+  });
   box.addEventListener('pointerdown', beginGesture);
   animateBounds();
   schedule(true);
+  if (resolveBlockly)
+    void resolveBlockly()
+      .then((blockly) => {
+        if (disposed || !blockly) return;
+        releaseBlockView = mountDsl4BlockArgumentView({
+          container: blockView,
+          context,
+          snapshot,
+          blockly,
+        });
+      })
+      .catch(report);
   return () => {
     if (disposed) return;
     disposed = true;
@@ -610,8 +951,31 @@ export function mountDsl4BlockIconPreview({
     releaseGesture?.();
     if (frame !== undefined) window?.cancelAnimationFrame(frame);
     box.removeEventListener('pointerdown', beginGesture);
+    box.removeEventListener('contextmenu', openMenu);
+    viewport.removeEventListener('pointerdown', closeMenu);
+    releaseBlockView?.();
     releaseHandle();
     root.remove();
+  };
+}
+
+/** Only a host that exposes a usable Blockly gets the block view; others keep the preview alone. */
+function createBlockViewProvider(Scratch: PreviewScratch) {
+  const getBlockly = Scratch.gui?.getBlockly;
+  if (typeof getBlockly !== 'function') return undefined;
+  return async () => {
+    const blockly = await getBlockly();
+    const xml = record(blockly) ? blockly.Xml : undefined;
+    if (
+      !record(blockly) ||
+      typeof blockly.inject !== 'function' ||
+      typeof blockly.getMainWorkspace !== 'function' ||
+      !record(xml) ||
+      typeof xml.blockToDom !== 'function' ||
+      typeof xml.domToBlock !== 'function'
+    )
+      return undefined;
+    return blockly as unknown as Dsl4BlockViewBlockly;
   };
 }
 
@@ -677,8 +1041,47 @@ export function installDsl4BlockIconPreviews({
     views.add(release);
     return release;
   }
-  function mount(container: HTMLElement, context: Context, snapshot: Snapshot) {
-    return ownView(mountDsl4BlockIconPreview({container, context, snapshot, runtime}));
+  const resolveBlockly = createBlockViewProvider(Scratch);
+  function mount(
+    container: HTMLElement,
+    context: Context,
+    snapshot: Snapshot,
+    selection?: Dsl4BlockPreviewSelection,
+  ) {
+    const open = (target: Dsl4BlockPreviewSelected) =>
+      mountDsl4BlockIconPreview({
+        container,
+        context: target.context,
+        snapshot: target.snapshot,
+        runtime,
+        // A pane showing another block than the one the dialog opened follows the tree, so it
+        // shows that position at once instead of replaying the action.
+        shared: target.depth > 0 || target.snapshot.blockId !== snapshot.blockId,
+        ...(resolveBlockly ? {resolveBlockly} : {}),
+      });
+    if (!selection) return ownView(open({snapshot, context, depth: 0}));
+    let release: (() => void) | undefined;
+    let shown = '';
+    const follow = () => {
+      let target: Dsl4BlockPreviewSelected;
+      try {
+        target = selection.get();
+      } catch {
+        return;
+      }
+      if (target.snapshot.blockId === shown) return;
+      shown = target.snapshot.blockId;
+      const previous = release;
+      release = undefined;
+      previous?.();
+      release = open(target);
+    };
+    follow();
+    const unsubscribe = selection.subscribe(follow);
+    return ownView(() => {
+      unsubscribe();
+      release?.();
+    });
   }
   function hover(anchor: HTMLElement | SVGElement, snapshot: Snapshot) {
     const document = anchor.ownerDocument;

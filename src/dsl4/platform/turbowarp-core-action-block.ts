@@ -5,6 +5,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 
 import {dsl4CoreActionManifest} from '../core-action-manifest.js';
 import {deepFreeze} from '../story-document.js';
+import {dsl4RotationStyleNames} from '../rotation-style.js';
 import {dsl4VideoOperations} from '../video-source.js';
 
 import {
@@ -106,6 +107,10 @@ export function createDsl4TurboWarpCoreActionBlockSurface(
       dsl4MoveEasing: {
         acceptReporters: true,
         items: ['linear', 'easeIn', 'easeOut', 'easeInOut'],
+      },
+      dsl4RotationStyle: {
+        acceptReporters: true,
+        items: [...dsl4RotationStyleNames],
       },
       dsl4VariableValueType: {
         acceptReporters: true,

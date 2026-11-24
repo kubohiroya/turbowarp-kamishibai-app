@@ -201,6 +201,27 @@ test('normalizes block inputs through their manifest Schema definitions', () => 
       'Hero',
       {skin: 'HeroIdle', x: 10, y: -20, scale: 80},
     ],
+    [
+      'show',
+      {
+        TARGET: 'Hero',
+        SKIN: 'HeroIdle',
+        X: '10',
+        Y: -20,
+        SCALE: 80,
+        ROTATION: 'leftRight',
+        DIRECTION: '-90',
+      },
+      'Hero',
+      {skin: 'HeroIdle', x: 10, y: -20, scale: 80, rotation: 'leftRight', direction: -90},
+    ],
+    [
+      // Blank rotation inputs leave the actor as it is, exactly as an older block does.
+      'show',
+      {TARGET: 'Hero', SKIN: 'HeroIdle', X: 0, Y: 0, SCALE: 100, ROTATION: '', DIRECTION: ''},
+      'Hero',
+      {skin: 'HeroIdle', x: 0, y: 0, scale: 100},
+    ],
     ['hide', {TARGET: 'Hero'}, 'Hero', {}],
     ['setTransparency', {TARGET: 'Hero', SPEC: '50'}, 'Hero', {transparency: 50}],
     [
@@ -249,7 +270,7 @@ test('normalizes block inputs through their manifest Schema definitions', () => 
     ],
   ];
 
-  assert.equal(cases.length, 37);
+  assert.equal(cases.length, 39);
   for (const [command, input, target, args] of cases) {
     assert.deepEqual(adapter.createAction(command, input), {
       target,
@@ -319,6 +340,26 @@ test('fails closed for malformed, unsafe, excessive, or Schema-invalid block inp
     () => adapter.createAction('wait', {SECONDS: Number.NaN}),
     () => adapter.createAction('wait', {SECONDS: 1, EXTRA: true}),
     () => adapter.createAction('show', {TARGET: 'Hero', SKIN: 'Skin', X: 0, Y: 0, SCALE: 0}),
+    () =>
+      adapter.createAction('show', {
+        TARGET: 'Hero',
+        SKIN: 'Skin',
+        X: 0,
+        Y: 0,
+        SCALE: 100,
+        ROTATION: 'mirror',
+        DIRECTION: '',
+      }),
+    () =>
+      adapter.createAction('show', {
+        TARGET: 'Hero',
+        SKIN: 'Skin',
+        X: 0,
+        Y: 0,
+        SCALE: 100,
+        ROTATION: '',
+        DIRECTION: 'sideways',
+      }),
     () => adapter.createAction('say', {TARGET: 'Hero', SPEC: '{"text":"missing wait"}'}),
     () => adapter.createAction('keyInputToChangeScene', {ROUTES: '[]'}),
     () => adapter.createAction('keyInputToChangeScene', {ROUTES: '{'}),

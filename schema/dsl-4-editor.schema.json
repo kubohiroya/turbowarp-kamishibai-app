@@ -3064,6 +3064,14 @@
         }
       ]
     },
+    "rotationStyle": {
+      "description": "How the actor shows its direction: freely, mirrored only, or never.",
+      "enum": [
+        "allAround",
+        "leftRight",
+        "none"
+      ]
+    },
     "showArgs": {
       "type": "object",
       "additionalProperties": false,
@@ -3089,6 +3097,12 @@
         "scale": {
           "type": "number",
           "exclusiveMinimum": 0
+        },
+        "rotation": {
+          "$ref": "#/$defs/rotationStyle"
+        },
+        "direction": {
+          "type": "number"
         },
         "transition": {
           "$ref": "#/$defs/visualTransition"
@@ -9754,6 +9768,21 @@
         }
       ]
     },
+    "editorAction_rotationStyle": {
+      "anyOf": [
+        {
+          "description": "How the actor shows its direction: freely, mirrored only, or never.",
+          "enum": [
+            "allAround",
+            "leftRight",
+            "none"
+          ]
+        },
+        {
+          "$ref": "#/$defs/editorScopedNarrative_reference"
+        }
+      ]
+    },
     "editorAction_showArgs": {
       "type": "object",
       "additionalProperties": false,
@@ -9809,6 +9838,26 @@
             {
               "type": "number",
               "exclusiveMinimum": 0
+            },
+            {
+              "$ref": "#/$defs/editorScopedNarrative_reference"
+            }
+          ]
+        },
+        "rotation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/editorAction_rotationStyle"
+            },
+            {
+              "$ref": "#/$defs/editorScopedNarrative_reference"
+            }
+          ]
+        },
+        "direction": {
+          "anyOf": [
+            {
+              "type": "number"
             },
             {
               "$ref": "#/$defs/editorScopedNarrative_reference"
