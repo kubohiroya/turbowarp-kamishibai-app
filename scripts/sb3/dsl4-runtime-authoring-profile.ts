@@ -253,7 +253,10 @@ export function installDsl4RuntimeAuthoringProfile(
           this.hideAllDisplayTargets();
         },
         cameraPreviewControls: this.cameraPreviewControlOptions(),
-        inputTarget: Scratch.vm.renderer?.canvas,
+        // Keys go to the document, like the packaged story: the stage canvas cannot take focus, so
+        // a keymap on it never saw Space, ArrowRight or ArrowDown (#1183). Pointer advance stays on
+        // the stage. The adapter already ignores keys typed into inputs and editors.
+        inputTarget: globalThis.document,
         stagePointerTarget: Scratch.vm.renderer?.canvas,
         createHostPort: async ({runtimeHost}: {runtimeHost: unknown}) =>
           createTransitionPort({runtimeHost}),
