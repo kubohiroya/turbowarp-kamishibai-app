@@ -434,6 +434,19 @@ test('routes runtime extension Scratch VM access through the shared runtime host
   assert.match(entry, /createObjectURL: \(blob: Blob\) => URL\.createObjectURL\(blob\)/u);
 });
 
+test('takes story keys from the document in both the packaged story and the menu-opened preview', async () => {
+  const read = async (name: string) =>
+    readFile(await resolveModulePath(path.join(repositoryRoot, 'scripts', 'sb3', name)), 'utf8');
+  const entry = await read('dsl4-runtime-extension-entry.js');
+  const authoring = await read('dsl4-runtime-authoring-profile.js');
+  assert.match(entry, /shell\.runtimeHost\.attach\(globalThis\.document\)/u);
+  // The stage canvas cannot take focus, so a keymap attached to it never sees a key press (#1183).
+  assert.match(authoring, /inputTarget: globalThis\.document,/u);
+  assert.doesNotMatch(authoring, /inputTarget: Scratch\.vm\.renderer/u);
+  // Pointer advance still belongs to the rendered stage.
+  assert.match(authoring, /stagePointerTarget: Scratch\.vm\.renderer\?\.canvas/u);
+});
+
 test('reads renderer, monitors, and targets through the shared runtime host', async () => {
   for (const relative of [
     path.join('src', 'dsl4', 'platform', 'turbowarp-crossfade-platform.js'),
