@@ -79,11 +79,10 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME does not name package.json version $version."
             exit 1
           fi
-      - name: Require the release commit to remain the current main
-        run: |
-          set -euo pipefail
-          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
-          test "$(git ls-remote origin "refs/tags/$GITHUB_REF_NAME^{}" | cut -f1)" = "$GITHUB_SHA"
+      - name: Require the release commit to remain the published main
+        # One guard for every job: the tag must still name the release commit, and main may only
+        # have advanced by commits that no publication step reads (docs/).
+        run: node scripts/assert-current-release.ts
       - name: Rebuild and verify the frozen Standard SB3
         run: |
           pnpm run build:lib
@@ -105,7 +104,7 @@ jobs:
           NPM_ARCHIVE: ${{ steps.pack.outputs.file }}
         run: |
           set -euo pipefail
-          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          node scripts/assert-current-release.ts
           tag="$GITHUB_REF_NAME"
           name="$(node -p "require('./package.json').name")"
           version="$(node -p "require('./package.json').version")"
@@ -176,7 +175,7 @@ jobs:
           set -euo pipefail
           name="$(node -p "require('./package.json').name")"
           version="$(node -p "require('./package.json').version")"
-          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          node scripts/assert-current-release.ts
           want="$(sha1sum "$NPM_ARCHIVE" | cut -d' ' -f1)"
           have="$(npm view "$name@$version" dist.shasum --prefer-online 2> /dev/null || true)"
           if [ -n "$have" ]; then
@@ -250,10 +249,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          node scripts/assert-current-release.ts
           pnpm run build:site
           git diff --exit-code
-          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          node scripts/assert-current-release.ts
           node --input-type=module <<'NODE'
           import {deploySite} from './scripts/deploy-site.ts';
           const repo = `https://x-access-token:${process.env.GH_TOKEN}@github.com/${process.env.GITHUB_REPOSITORY}.git`;
