@@ -4,7 +4,7 @@ import path from 'node:path';
 import {setTimeout} from 'node:timers/promises';
 import {fileURLToPath} from 'node:url';
 
-import {assertCurrentRelease} from './finalize-release-tags.ts';
+import {assertCurrentRelease} from './assert-current-release.ts';
 
 type Api = (method: 'GET' | 'POST', endpoint: string) => Promise<unknown>;
 const repository = 'kubohiroya/turbowarp-kamishibai-app';

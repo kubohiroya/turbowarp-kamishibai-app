@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {test} from 'vitest';
 
-import {assertCurrentRelease, finalizeReleaseTags} from '../scripts/finalize-release-tags.ts';
+import {assertCurrentRelease} from '../scripts/assert-current-release.ts';
+import {finalizeReleaseTags} from '../scripts/finalize-release-tags.ts';
 
 const name = '@kubohiroya/turbowarp-kamishibai-app';
 const version = '4.0.0-rc.58';
@@ -92,23 +93,114 @@ test('an unsuccessful tag write cannot be reported as a completed release', asyn
   );
 });
 
-test('rejects moved main or peeled tags before a mutable write', () => {
-  const sha = 'a'.repeat(40);
-  const changed = 'b'.repeat(40);
-  for (const moved of ['refs/heads/main', `refs/tags/v${version}^{}`]) {
-    assert.throws(
-      () =>
-        assertCurrentRelease({
-          sha,
-          tag: `v${version}`,
-          git(args) {
-            const ref = args[2]!;
-            return `${ref === moved ? changed : sha}\t${ref}\n`;
-          },
+const sha = 'a'.repeat(40);
+const head = 'b'.repeat(40);
+
+/**
+ * A release checkout as the guard sees it: `main` stands at `head`, the tag peels to `tagSha`,
+ * and `changed` lists what main gained since the release commit.
+ */
+function releaseCheckout({
+  tagSha = sha,
+  mainSha = head,
+  onMain = true,
+  changed = [] as string[],
+  calls = [] as string[][],
+} = {}) {
+  return (args: string[]) => {
+    calls.push(args);
+    const [command] = args;
+    if (command === 'ls-remote') {
+      const ref = args[2]!;
+      return `${ref.startsWith('refs/tags/') ? tagSha : mainSha}\t${ref}\n`;
+    }
+    if (command === 'rev-parse')
+      return args[1] === '--is-shallow-repository' ? 'true\n' : `${mainSha}\n`;
+    if (command === 'fetch') return '';
+    if (command === 'merge-base') {
+      if (!onMain) throw new Error('exit status 1');
+      return '';
+    }
+    if (command === 'diff') return changed.map((file) => `${file}\0`).join('');
+    throw new Error(`Unexpected git ${args.join(' ')}`);
+  };
+}
+
+test('accepts a main that advanced by documentation alone', () => {
+  const calls: string[][] = [];
+  assert.equal(
+    assertCurrentRelease({
+      sha,
+      tag: `v${version}`,
+      git: releaseCheckout({
+        calls,
+        changed: ['docs/releases/v4.0.13.md', 'docs/releases/README.md'],
+      }),
+    }),
+    head,
+  );
+  assert.deepEqual(calls.filter(([command]) => command === 'fetch')[0], [
+    'fetch',
+    '--no-tags',
+    '--quiet',
+    '--depth=100',
+    'origin',
+    '+refs/heads/main:refs/remotes/origin/main',
+  ]);
+});
+
+test('rejects a main that advanced by publication relevant changes', () => {
+  assert.throws(
+    () =>
+      assertCurrentRelease({
+        sha,
+        tag: `v${version}`,
+        git: releaseCheckout({
+          changed: ['docs/releases/README.md', 'src/dsl4/runtime-provenance.ts'],
         }),
-      /advanced/u,
-    );
-  }
+      }),
+    /publication relevant changes: src\/dsl4\/runtime-provenance\.ts/u,
+  );
+});
+
+test('rejects a tag moved off the release commit', () => {
+  assert.throws(
+    () =>
+      assertCurrentRelease({
+        sha,
+        tag: `v${version}`,
+        git: releaseCheckout({tagSha: head, mainSha: sha}),
+      }),
+    /tag advanced/u,
+  );
+});
+
+test('rejects a release commit that main no longer carries', () => {
+  assert.throws(
+    () =>
+      assertCurrentRelease({
+        sha,
+        tag: `v${version}`,
+        git: releaseCheckout({onMain: false, changed: ['docs/releases/README.md']}),
+      }),
+    /no longer on main/u,
+  );
+});
+
+test('an unchanged main needs no history of its own', () => {
+  const calls: string[][] = [];
+  assert.equal(
+    assertCurrentRelease({
+      sha,
+      tag: `v${version}`,
+      git: releaseCheckout({calls, mainSha: sha}),
+    }),
+    sha,
+  );
+  assert.deepEqual(
+    calls.map(([command]) => command),
+    ['ls-remote', 'ls-remote'],
+  );
 });
 
 test('registry visibility waits cannot allow an obsolete release to downgrade tags', async () => {
