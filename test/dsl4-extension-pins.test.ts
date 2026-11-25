@@ -79,8 +79,31 @@ test('locks every DSL4 extension to a reviewed npm release with matching caret s
 });
 
 test('runtime provenance matches the resolved dependency versions', async () => {
-  const lockfile = parse(await readFile(path.join(repositoryRoot, 'pnpm-lock.yaml'), 'utf8'));
+  const [lockfileSource, packageJsonSource] = await Promise.all([
+    readFile(path.join(repositoryRoot, 'pnpm-lock.yaml'), 'utf8'),
+    readFile(path.join(repositoryRoot, 'package.json'), 'utf8'),
+  ]);
+  const lockfile = parse(lockfileSource);
+  const {version: releaseVersion} = JSON.parse(packageJsonSource) as {version: string};
+  // `packages` is keyed `name@version`, and a scoped name carries its own leading '@'.
+  const installed = new Map<string, string[]>();
+  for (const key of Object.keys(lockfile.packages ?? {})) {
+    const separator = key.lastIndexOf('@');
+    const name = key.slice(0, separator);
+    installed.set(name, [...(installed.get(name) ?? []), key.slice(separator + 1)]);
+  }
   for (const component of dsl4RuntimeProvenance) {
+    // This release's own entry. It is what the published extension advertises as its
+    // `// Version:` line, since dsl4PackageMetadata reads the version from here, and it is a
+    // dependency of nothing, so neither branch below would ever reach it.
+    if (component.source === 'turbowarp-kamishibai-app') {
+      assert.equal(
+        component.version,
+        releaseVersion,
+        'the version the composed runtime advertises must be this release',
+      );
+      continue;
+    }
     const dependency = lockfile.importers['.'].dependencies[component.source];
     if (dependency !== undefined) {
       const resolved = dependency.version.split('(')[0];
@@ -96,6 +119,17 @@ test('runtime provenance matches the resolved dependency versions', async () => 
       }
       const resolvedVersion = gitHosted ? entry.version : resolved;
       assert.equal(component.version, resolvedVersion, `${component.source} runtime provenance`);
+      continue;
     }
+    // Composed without being depended on directly, such as a model that arrives through another
+    // package. These used to be skipped, which left their recorded version unfalsifiable: one
+    // version installed and it must be the recorded one, or the bundle's own notice is a guess.
+    const versions = installed.get(component.source);
+    assert(versions, `${component.source} is recorded as composed but is not installed`);
+    assert.deepEqual(
+      versions,
+      [component.version],
+      `${component.source} runtime provenance (one installed version, matching the record)`,
+    );
   }
 });
