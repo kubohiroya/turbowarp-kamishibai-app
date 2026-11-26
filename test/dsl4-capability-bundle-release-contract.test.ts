@@ -231,8 +231,15 @@ test('ships the Standard artifact as one compact static extension bundle', async
       .filter(({featureFlag}) => featureFlag === undefined)
       .map(({command}) => command),
   );
+  const optInOpcodes = new Set(
+    dsl4CoreActionManifest
+      .filter(({featureFlag}) => featureFlag !== undefined)
+      .map(({command}) => command),
+  );
   assert.deepEqual(
-    dsl4TurboWarpCoreActionBlockSpecs.map(({command}) => command),
+    dsl4TurboWarpCoreActionBlockSpecs
+      .map(({command}) => command)
+      .filter((command) => !optInOpcodes.has(command)),
     sourceVisibleOpcodes,
   );
   assert.match(entrypoint, /createDsl4TurboWarpCoreActionBlockSurface/u);
@@ -366,7 +373,7 @@ test('pins a deterministic release, publication, and rollback sequence', async (
     immutableStates: ['frozen', 'published'],
     npmDistTag: 'latest',
     githubPrerelease: false,
-    recommendedStableVersion: '4.0.15',
+    recommendedStableVersion: '4.0.16',
   });
 
   for (const evidencePath of contract.evidence) {

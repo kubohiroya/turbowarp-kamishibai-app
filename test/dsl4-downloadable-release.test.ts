@@ -1726,7 +1726,7 @@ test('opens the fixed official website through the Runtime 4 opcode', async () =
   }
 });
 
-test('registers all DSL 4.0 runtime blocks as visible VM primitives', async () => {
+test('registers the standard DSL 4.0 runtime blocks as visible VM primitives', async () => {
   const result = await buildRelease();
   const restoreGlobals = installUnsandboxedScriptDom();
   const vm = new VirtualMachine();
@@ -1739,7 +1739,9 @@ test('registers all DSL 4.0 runtime blocks as visible VM primitives', async () =
     await loadProjectQuietly(vm, result.archive);
 
     const commands = [
-      ...dsl4CoreActionManifest.map(({command}) => command),
+      ...dsl4CoreActionManifest
+        .filter(({featureFlag}) => featureFlag === undefined)
+        .map(({command}) => command),
       'sayText',
       'thinkText',
     ];
@@ -1778,6 +1780,13 @@ test('registers all DSL 4.0 runtime blocks as visible VM primitives', async () =
         .map(({info}: VmCategoryBlock) => info.opcode),
       bundledCommands,
     );
+    for (const command of ['animate', 'presentationEffect']) {
+      assert.equal(
+        vm.runtime.getOpcodeFunction(`${bundleExtensionId}_${runtimeExtensionId}__${command}`),
+        undefined,
+      );
+    }
+
     const sourceMarker = category.blocks.find(
       ({info}: VmCategoryBlock) => info.opcode === `${runtimeExtensionId}__embeddedYaml`,
     );
