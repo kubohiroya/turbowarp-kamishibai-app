@@ -13,6 +13,7 @@ import {authorDsl4BlockSourceSb3} from '../src/builder/dsl4-block-source-author.
 import {exportDsl4BlockSourcesToYaml} from '../src/builder/dsl4-block-source-export.js';
 import {serializeDsl4CanonicalDocument} from '../src/builder/dsl4-validate.js';
 import {dsl4PresentationEffectsRuntimeCapability} from '../src/dsl4/presentation-effects-gate.js';
+import {dsl4TextInterpolationRuntimeCapability} from '../src/dsl4/text-interpolation.js';
 import {
   dsl4TurboWarpCoreActionBlockSpecs,
   createDsl4TurboWarpCoreActionBlockSurface,
@@ -205,6 +206,16 @@ test('round-trips motion and presentation effects through actual YAML-authored S
     ),
     parse(original),
   );
+});
+
+test('rejects an old runner before writing a block script with dialogue interpolation', () => {
+  const original = source.replace(
+    'text: こんにちは, seconds: 1',
+    "text: {interpolate: {join: ['Score ', {variable: score}]}}, seconds: 1",
+  );
+  assert.throws(() => authored(original), {code: 'K4-TEXT-INTERPOLATION-RUNTIME-001'});
+  const project = authored(original, dsl4TextInterpolationRuntimeCapability + '\n');
+  assert.deepEqual(parse(extracted(project)), parse(original));
 });
 
 test('keeps legacy animate and presentationEffect on the custom actor block', () => {
@@ -1403,7 +1414,7 @@ test('round-trips authored dialogue and caption with native join and story-varia
       '      - wait: 1',
       `      - Hero.think: {text: ${JSON.stringify(expr)}, seconds: 1}\n      - Hero.setText: {text: ${JSON.stringify(expr)}, style: body}\n      - wait: 1`,
     );
-  const project = authored(sourceText);
+  const project = authored(sourceText, dsl4TextInterpolationRuntimeCapability + '\n');
   const blocks = project.targets[0]!.blocks;
   assert.equal(Object.values(blocks).filter((block) => block.opcode === 'operator_join').length, 6);
   assert.equal(

@@ -83,6 +83,7 @@ import {
   createDsl4SessionBackingWarningDiagnostic,
 } from '../../dist/dsl4/platform/session-backing-diagnostic.js';
 import {dsl4PresentationEffectsRuntimeCapability} from '../../dist/dsl4/presentation-effects-gate.js';
+import {dsl4TextInterpolationRuntimeCapability} from '../../dist/dsl4/text-interpolation.js';
 import {createDsl4StandardAppShell} from '../../dist/dsl4/platform/standard-app-shell.js';
 import {
   hasDsl4EmbeddedBlockStory,
@@ -646,6 +647,7 @@ class KamishibaiDsl4RuntimeExtension {
     ? '// Kamishibai capabilities: invalidate-source-v1'
     : undefined;
   readonly presentationEffectsCapability = dsl4PresentationEffectsRuntimeCapability;
+  readonly textInterpolationCapability = dsl4TextInterpolationRuntimeCapability;
   lastError: string;
   titleLocale: RuntimeEntryLocale;
   selectedProject: Readonly<Record<string, unknown>> | null;

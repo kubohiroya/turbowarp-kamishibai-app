@@ -31,14 +31,23 @@ export function dsl4HasPresentationEffectsRuntime(
   replacementSource: string | undefined,
   embeddedUrl: unknown,
 ) {
-  if (replacementSource !== undefined)
-    return replacementSource.includes(dsl4PresentationEffectsRuntimeCapability);
+  return dsl4HasRuntimeCapability(
+    replacementSource,
+    embeddedUrl,
+    dsl4PresentationEffectsRuntimeCapability,
+  );
+}
+
+export function dsl4HasRuntimeCapability(
+  replacementSource: string | undefined,
+  embeddedUrl: unknown,
+  capability: string,
+) {
+  if (replacementSource !== undefined) return replacementSource.includes(capability);
   const prefix = 'data:text/javascript;base64,';
   if (typeof embeddedUrl !== 'string' || !embeddedUrl.startsWith(prefix)) return false;
   try {
-    return atob(embeddedUrl.slice(prefix.length)).includes(
-      dsl4PresentationEffectsRuntimeCapability,
-    );
+    return atob(embeddedUrl.slice(prefix.length)).includes(capability);
   } catch {
     return false;
   }

@@ -1,6 +1,11 @@
 import {
+  dsl4StoryUsesTextInterpolation,
+  dsl4TextInterpolationRuntimeCapability,
+} from '../dsl4/text-interpolation.js';
+import {
   dsl4FirstPresentationEffectStoryPath,
   dsl4HasPresentationEffectsRuntime,
+  dsl4HasRuntimeCapability,
 } from '../dsl4/presentation-effects-gate.js';
 import {
   createDsl4EmbeddedAssetBundle,
@@ -427,15 +432,33 @@ export async function buildDsl4RuntimeComponent(options: {
   }
   if (!parsed.ok) failDiagnostics(parsed.diagnostics, 'dsl4-parse');
   let storyDocument = parsed.storyDocument;
-  if (dsl4FirstPresentationEffectStoryPath(storyDocument) !== null && !localPreviewRuntime) {
+  const needsPresentationEffects = dsl4FirstPresentationEffectStoryPath(storyDocument) !== null;
+  const needsTextInterpolation = dsl4StoryUsesTextInterpolation(storyDocument);
+  if ((needsPresentationEffects || needsTextInterpolation) && !localPreviewRuntime) {
     const project = readSb3(baseSb3Bytes).project;
     const runtimeUrl = isRecord(project.extensionURLs)
       ? project.extensionURLs.kubohiroyakamishibai4
       : undefined;
-    if (!dsl4HasPresentationEffectsRuntime(runtimeExtensionSource, runtimeUrl)) {
+    if (
+      needsPresentationEffects &&
+      !dsl4HasPresentationEffectsRuntime(runtimeExtensionSource, runtimeUrl)
+    ) {
       throw new Dsl4BuildError(
         'Actor animation and presentation effects require a current Kamishibai playback runtime.',
         {stage: 'dsl4-runtime-capability', code: 'K4-PRESENTATION-EFFECTS-RUNTIME-001'},
+      );
+    }
+    if (
+      needsTextInterpolation &&
+      !dsl4HasRuntimeCapability(
+        runtimeExtensionSource,
+        runtimeUrl,
+        dsl4TextInterpolationRuntimeCapability,
+      )
+    ) {
+      throw new Dsl4BuildError(
+        'Text interpolation requires a current Kamishibai playback runtime.',
+        {stage: 'dsl4-runtime-capability', code: 'K4-TEXT-INTERPOLATION-RUNTIME-001'},
       );
     }
   }

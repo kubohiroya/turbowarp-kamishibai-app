@@ -73,3 +73,28 @@ export function evaluateDsl4TextInterpolation(
 
   return visit(value.interpolate, 0);
 }
+
+export const dsl4TextInterpolationRuntimeCapability =
+  '// Kamishibai capabilities: text-interpolation-v1';
+
+export function dsl4StoryUsesTextInterpolation(story: unknown) {
+  return (
+    record(story) &&
+    Array.isArray(story.scenes) &&
+    story.scenes.some(
+      (scene: unknown) =>
+        record(scene) &&
+        Array.isArray(scene.actions) &&
+        scene.actions.some(
+          (action: unknown) =>
+            record(action) &&
+            action.handler !== 'custom' &&
+            (action.command === 'say' ||
+              action.command === 'think' ||
+              action.command === 'setText') &&
+            record(action.args) &&
+            isDsl4TextInterpolation(action.args.text),
+        ),
+    )
+  );
+}

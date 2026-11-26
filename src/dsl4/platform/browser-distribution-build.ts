@@ -1,3 +1,7 @@
+import {
+  dsl4StoryUsesTextInterpolation,
+  dsl4TextInterpolationRuntimeCapability,
+} from '../text-interpolation.js';
 import {strFromU8, strToU8, zipSync} from 'fflate';
 
 import {
@@ -9,6 +13,7 @@ import {Dsl4CompiledStoryError} from '../compiled-story-artifact.js';
 import {
   dsl4FirstPresentationEffectStoryPath,
   dsl4HasPresentationEffectsRuntime,
+  dsl4HasRuntimeCapability,
 } from '../presentation-effects-gate.js';
 import {createDsl4RuntimeArtifactDescriptor} from '../runtime-artifact-descriptor.js';
 import {loadDsl4RuntimeComponent} from '../runtime-artifact-loader.js';
@@ -473,6 +478,21 @@ export async function createDsl4BrowserDistributionSb3(options: {
     fail(
       'K4-PRESENTATION-EFFECTS-RUNTIME-001',
       'Actor animation and presentation effects require a current Kamishibai playback runtime.',
+    );
+  }
+  if (
+    dsl4StoryUsesTextInterpolation(component.storyDocument) &&
+    !dsl4HasRuntimeCapability(
+      options.runtimeExtensionSource,
+      isRecord(outputProject.extensionURLs)
+        ? outputProject.extensionURLs.kubohiroyakamishibai4
+        : undefined,
+      dsl4TextInterpolationRuntimeCapability,
+    )
+  ) {
+    fail(
+      'K4-TEXT-INTERPOLATION-RUNTIME-001',
+      'Text interpolation requires a current Kamishibai playback runtime.',
     );
   }
   installRuntimeExtensionSource(outputProject, options.runtimeExtensionSource);
