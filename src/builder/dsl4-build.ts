@@ -1,4 +1,7 @@
-import {dsl4FirstPresentationEffectStoryPath} from '../dsl4/presentation-effects-gate.js';
+import {
+  dsl4FirstPresentationEffectStoryPath,
+  dsl4HasPresentationEffectsRuntime,
+} from '../dsl4/presentation-effects-gate.js';
 import {
   createDsl4EmbeddedAssetBundle,
   Dsl4AssetBundleError,
@@ -424,14 +427,17 @@ export async function buildDsl4RuntimeComponent(options: {
   }
   if (!parsed.ok) failDiagnostics(parsed.diagnostics, 'dsl4-parse');
   let storyDocument = parsed.storyDocument;
-  if (
-    dsl4FirstPresentationEffectStoryPath(storyDocument) !== null &&
-    !(localPreviewRuntime && featureFlags.dsl4PresentationEffects)
-  ) {
-    throw new Dsl4BuildError(
-      'Actor animation and presentation effects are available only in the opt-in local preview; they cannot be packaged for the Standard SB3 runtime.',
-      {stage: 'dsl4-runtime-capability', code: 'K4-PRESENTATION-EFFECTS-RUNTIME-001'},
-    );
+  if (dsl4FirstPresentationEffectStoryPath(storyDocument) !== null && !localPreviewRuntime) {
+    const project = readSb3(baseSb3Bytes).project;
+    const runtimeUrl = isRecord(project.extensionURLs)
+      ? project.extensionURLs.kubohiroyakamishibai4
+      : undefined;
+    if (!dsl4HasPresentationEffectsRuntime(runtimeExtensionSource, runtimeUrl)) {
+      throw new Dsl4BuildError(
+        'Actor animation and presentation effects require a current Kamishibai playback runtime.',
+        {stage: 'dsl4-runtime-capability', code: 'K4-PRESENTATION-EFFECTS-RUNTIME-001'},
+      );
+    }
   }
 
   if (sealAssetSources) {

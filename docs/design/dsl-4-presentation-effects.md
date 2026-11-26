@@ -1,9 +1,8 @@
-# DSL 4.0 のアニメーションと演出（試験機能）
+# DSL 4.0 のアニメーションと演出
 
-台本の宣言は `kamishibai: '4.0'` のままです。ローカルプレビュー
-`preview-dsl4 --watch` に `--enable-presentation-effects` を加えたときだけ実行できます。
-標準ランタイムと公開用SB3では既定OFFです。既存の `moveTo`、`setTransparency`、
-`setSkin`、`loop` は変更しません。
+台本の宣言は `kamishibai: '4.0'` のままです。対応する標準ランタイムとローカルプレビューでは
+既定で実行できます。旧版のランタイムでは、対応版でSB3を作り直す必要があります。
+既存の `moveTo`、`setTransparency`、`setSkin`、`loop` は変更しません。
 
 ```yaml
 kamishibai: '4.0'

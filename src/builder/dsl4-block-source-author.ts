@@ -1,3 +1,7 @@
+import {
+  dsl4FirstPresentationEffectStoryPath,
+  dsl4HasPresentationEffectsRuntime,
+} from '../dsl4/presentation-effects-gate.js';
 import {readDsl4SectionAuthoringState} from '../dsl4/block-source-section-state.js';
 import type {Dsl4SectionAuthoringState} from '../dsl4/block-source-section-state.js';
 import {strFromU8, strToU8, unzipSync, zipSync} from 'fflate';
@@ -114,6 +118,7 @@ function writeAuthoredProject(
   sourceSections = false,
   narrativeRuntimeSource?: string,
   invalidatedRecognition = false,
+  presentationEffects = false,
 ) {
   const archive = unzipSync(baseBytes);
   const projectEntry = archive['project.json'];
@@ -172,6 +177,12 @@ function writeAuthoredProject(
   const runtimeUrl = definitionRecord(project.extensionURLs)[
     form === 'bundle' ? dsl4BlockSourceBundleExtensionId : dsl4BlockSourceRuntimeExtensionId
   ];
+  if (presentationEffects && !dsl4HasPresentationEffectsRuntime(undefined, runtimeUrl)) {
+    fail(
+      'Actor animation and presentation effects require a current Kamishibai authoring runtime.',
+      'K4-PRESENTATION-EFFECTS-RUNTIME-001',
+    );
+  }
   if (
     invalidatedRecognition &&
     (typeof runtimeUrl !== 'string' ||
@@ -341,6 +352,8 @@ export function authorDsl4BlockSourceSb3({
     sourceSections,
     narrativeRuntimeSource,
     hasDsl4InvalidatedRecognitionMetadata((parsed as {storyDocument?: unknown}).storyDocument),
+    dsl4FirstPresentationEffectStoryPath((parsed as {storyDocument?: unknown}).storyDocument) !==
+      null,
   );
   const readBack = extractDsl4BlockSourcesFromProject(prepared.authoredProject);
   const reparsed = sourceFrontend.parse(readBack.sources[readBack.entryPath] ?? '', {
@@ -421,6 +434,8 @@ export async function authorDsl4BlockSourceGraphSb3({
     sourceSections,
     narrativeRuntimeSource,
     hasDsl4InvalidatedRecognitionMetadata((parsed as {storyDocument?: unknown}).storyDocument),
+    dsl4FirstPresentationEffectStoryPath((parsed as {storyDocument?: unknown}).storyDocument) !==
+      null,
   );
   const readBack = extractDsl4BlockSourcesFromProject(prepared.authoredProject);
   const graph = await createDsl4BlockSourceGraph(readBack, sourceGraph.limits);

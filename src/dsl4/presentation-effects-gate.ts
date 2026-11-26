@@ -4,8 +4,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** Find opt-in actions in the normalized scene sequence, not in arbitrary custom payloads. */
-export function dsl4FirstPresentationEffectStoryPath(story: Readonly<Record<string, unknown>>) {
+/** Find presentation actions in the normalized scene sequence, not in arbitrary custom payloads. */
+export function dsl4FirstPresentationEffectStoryPath(story: unknown) {
+  if (!isRecord(story)) return null;
   const scenes: unknown[] = Array.isArray(story.scenes) ? story.scenes : [];
   for (const scene of scenes) {
     if (!isRecord(scene) || typeof scene.id !== 'string' || !Array.isArray(scene.actions)) continue;
@@ -19,6 +20,26 @@ export function dsl4FirstPresentationEffectStoryPath(story: Readonly<Record<stri
   return null;
 }
 
+export const dsl4PresentationEffectsRuntimeCapability =
+  '// Kamishibai capabilities: presentation-effects-v1';
+
 export const dsl4PresentationEffectsFlagError = 'K4-PRESENTATION-EFFECTS-FLAG-001';
 export const dsl4PresentationEffectsFlagMessage =
   'dsl4PresentationEffects must be enabled for actor animation or presentation effects';
+
+export function dsl4HasPresentationEffectsRuntime(
+  replacementSource: string | undefined,
+  embeddedUrl: unknown,
+) {
+  if (replacementSource !== undefined)
+    return replacementSource.includes(dsl4PresentationEffectsRuntimeCapability);
+  const prefix = 'data:text/javascript;base64,';
+  if (typeof embeddedUrl !== 'string' || !embeddedUrl.startsWith(prefix)) return false;
+  try {
+    return atob(embeddedUrl.slice(prefix.length)).includes(
+      dsl4PresentationEffectsRuntimeCapability,
+    );
+  } catch {
+    return false;
+  }
+}

@@ -744,8 +744,8 @@ const remedies: readonly Dsl4ErrorRemedyEntry[] = [
       'An animation or presentation effect in this story requires the matching local preview.',
     ],
     recovery: [
-      'ローカルプレビューを --enable-presentation-effects 付きで開き直すか、該当の演出を外してください。',
-      'Reopen local preview with --enable-presentation-effects, or remove the effect.',
+      '演出に対応した新しい紙芝居ランタイムで開き直すか、該当の演出を外してください。',
+      'Open the story with a current Kamishibai runtime, or remove the effect.',
     ],
   },
   {

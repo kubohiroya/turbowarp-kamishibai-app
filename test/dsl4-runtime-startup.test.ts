@@ -353,6 +353,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4Runtime: true,
     dsl4Video: true,
     dsl4CrossfadeTransitions: true,
+    dsl4PresentationEffects: true,
     dsl4AppShell: true,
     dsl4PoseFeedbackModes: true,
     dsl4SpeechAdvanceTypewriter: true,
@@ -376,6 +377,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4Runtime: true,
     dsl4Video: true,
     dsl4CrossfadeTransitions: true,
+    dsl4PresentationEffects: true,
     dsl4AppShell: true,
     dsl4PoseFeedbackModes: true,
     dsl4SpeechAdvanceTypewriter: true,
@@ -583,11 +585,11 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
   assert.throws(() => resolveDsl4FeatureFlags({dsl4Runtime: 1}), TypeError);
   assert.equal(
     resolveDsl4FeatureFlags(dsl4StandardProductionFeatureFlags).dsl4PresentationEffects,
-    false,
+    true,
   );
   assert.equal(
     resolveDsl4FeatureFlags(dsl4NonEmbeddedDevelopmentFeatureFlags).dsl4PresentationEffects,
-    false,
+    true,
   );
   assert.throws(
     () => resolveDsl4FeatureFlags({dsl4PresentationEffects: true}),

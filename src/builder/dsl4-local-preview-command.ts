@@ -4,7 +4,7 @@ import {open} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 
-import {resolveDsl4FeatureFlags} from '../dsl4/feature-flags.js';
+import {resolveDsl4LocalPreviewFeatureFlags} from '../dsl4/feature-flags.js';
 import {dsl4BrowserPreviewArtifactLimits} from '../dsl4/browser-preview-artifact-limits.js';
 import {buildDsl4RuntimeComponent} from './dsl4-build.js';
 import {dsl4LocalPreviewBrowserBootstrapMaximums} from './dsl4-local-preview-browser-bootstrap.js';
@@ -276,7 +276,7 @@ export async function runDsl4LocalPreviewCommand(
     1,
     dsl4LocalPreviewBrowserBootstrapMaximums.maxSourceBytes,
   );
-  const featureFlags = resolveDsl4FeatureFlags(options.featureFlags ?? {});
+  const featureFlags = resolveDsl4LocalPreviewFeatureFlags(options.featureFlags);
   const sourceLimits = resolveDsl4BuildSourceLimits({
     sourceIncludesEnabled: featureFlags.dsl4SourceIncludes,
     maxSourceBytes,

@@ -59,3 +59,95 @@ export function createDsl4BrowserStagePresentationEffectSurfaces(options: {
     }),
   });
 }
+
+type EffectAnimation = Pick<Animation, 'cancel' | 'finished'>;
+
+function animateTogether(
+  targets: readonly HTMLElement[],
+  keyframes: Keyframe[],
+  options: KeyframeAnimationOptions,
+): EffectAnimation {
+  const animations: Animation[] = [];
+  try {
+    for (const target of targets) {
+      const width = target.clientWidth;
+      const scale = width > 0 ? target.getBoundingClientRect().width / width || 1 : 1;
+      const frames =
+        scale === 1
+          ? keyframes
+          : keyframes.map((frame) => ({
+              ...frame,
+              ...(typeof frame.translate === 'string'
+                ? {
+                    translate: frame.translate.replace(
+                      /-?\d+(?:\.\d+)?px/gu,
+                      (length) => `${Number.parseFloat(length) / scale}px`,
+                    ),
+                  }
+                : {}),
+            }));
+      animations.push(target.animate(frames, options));
+    }
+  } catch (error) {
+    for (const animation of animations) {
+      void animation.finished.catch(() => {});
+      animation.cancel();
+    }
+    throw error;
+  }
+  return {
+    finished: Promise.all(animations.map(({finished}) => finished)).then(() => animations[0]!),
+    cancel() {
+      for (const animation of animations) animation.cancel();
+    },
+  };
+}
+
+/**
+ * Use only the VM canvas and its renderer-owned overlays. In the stock Editor/Player the stage
+ * parent also contains controls and sometimes the camera; neither may be transformed or masked.
+ */
+export function createDsl4TurboWarpPresentationEffectSurfaces(
+  runtime: unknown,
+): Readonly<Partial<Record<Dsl4PresentationScope, Dsl4PresentationEffectSurface>>> {
+  const {renderer} = (runtime ?? {}) as {
+    renderer?: {canvas?: HTMLCanvasElement; overlayContainer?: HTMLElement};
+  };
+  const canvas = renderer?.canvas;
+  const overlays = renderer?.overlayContainer;
+  if (!canvas || typeof canvas.animate !== 'function') return {};
+  if (!overlays || typeof overlays.querySelectorAll !== 'function') return {};
+
+  function createScope(scope: Dsl4PresentationScope): Dsl4PresentationEffectSurface {
+    const mask = createDsl4DomPresentationEffectSurface({
+      target: canvas!,
+      attachMask(layer) {
+        layer.dataset.dsl4PresentationEffectMask = scope;
+        if (!overlays!.isConnected) {
+          throw new TypeError('The renderer overlay surface is not mounted');
+        }
+        if (scope === 'stage') overlays!.prepend(layer);
+        else overlays!.appendChild(layer);
+      },
+    });
+    return {
+      createOverlay: mask.createOverlay!,
+      target: {
+        animate(keyframes, options) {
+          // Bubble uses a renderer overlay. The wrapper is already positioned by scratch-render;
+          // animate its SVG, not the shared overlay root (which can hold other extensions' UI).
+          const speech =
+            scope === 'presentation'
+              ? [
+                  ...overlays!.querySelectorAll<HTMLElement>(
+                    '[data-bubble-render-backend="svg-overlay"]',
+                  ),
+                ]
+              : [];
+          return animateTogether([canvas!, ...speech], keyframes, options);
+        },
+      },
+    };
+  }
+  return {stage: createScope('stage'), presentation: createScope('presentation')};
+}

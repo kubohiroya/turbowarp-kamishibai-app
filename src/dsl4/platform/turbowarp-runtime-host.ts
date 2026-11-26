@@ -39,6 +39,7 @@ import {
 import type {Dsl4SourceFrontend} from '../source-frontend.js';
 import {deepFreeze} from '../story-document.js';
 import type {Dsl4SubtleCrypto} from '../subtle-crypto.js';
+import {createDsl4TurboWarpPresentationEffectSurfaces} from './presentation-effect-surfaces.js';
 import {createDsl4ActorActionPort} from './actor-action-port.js';
 import {createDsl4AsyncInputActionPort} from './async-input-action-port.js';
 import {createDsl4BubblePlatform} from './bubble-platform.js';
@@ -1051,7 +1052,8 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
     const port: Record<string, Dsl4RuntimePortOperation | undefined> = {};
     if (featureFlags.dsl4PresentationEffects) {
       presentationEffects = createDsl4PresentationEffectPort(
-        options.presentationEffectSurfaces ?? {},
+        options.presentationEffectSurfaces ??
+          createDsl4TurboWarpPresentationEffectSurfaces(options.runtime),
       );
       addPortMethods(
         port,

@@ -12,6 +12,7 @@ import {parse} from 'yaml';
 import {authorDsl4BlockSourceSb3} from '../src/builder/dsl4-block-source-author.js';
 import {exportDsl4BlockSourcesToYaml} from '../src/builder/dsl4-block-source-export.js';
 import {serializeDsl4CanonicalDocument} from '../src/builder/dsl4-validate.js';
+import {dsl4PresentationEffectsRuntimeCapability} from '../src/dsl4/presentation-effects-gate.js';
 import {
   dsl4TurboWarpCoreActionBlockSpecs,
   createDsl4TurboWarpCoreActionBlockSurface,
@@ -177,7 +178,8 @@ test('round-trips motion and presentation effects through actual YAML-authored S
       - presentationEffect: {scope: stage, effect: fade, seconds: 0, params: {}}
       - Hero.say:`,
   );
-  const project = authored(original);
+  assert.throws(() => authored(original), {code: 'K4-PRESENTATION-EFFECTS-RUNTIME-001'});
+  const project = authored(original, dsl4PresentationEffectsRuntimeCapability + '\n');
   const blocks = Object.values(blocksOf(project));
   assert.equal(blocks.filter(({opcode}) => opcode === `${runtimePrefix}animate`).length, 2);
   assert.equal(
@@ -972,6 +974,8 @@ test('retains dedicated definitions, scenes and labeled includes through a pinne
     )
     .replaceAll('dsl4VariableValueType', 'kubohiroyakamishibairuntime4__dsl4VariableValueType');
   const runtime =
+    dsl4PresentationEffectsRuntimeCapability +
+    '\n' +
     'Scratch.extensions.register(Object.assign({getInfo(){return ' +
     infoJson +
     ';}},Object.fromEntries(' +
