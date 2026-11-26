@@ -92,7 +92,7 @@ async function startFixtureServer(root: string) {
  * The second half is the regression. A replay started from the end-of-story menu used to be awaited
  * inside the extension's serialized operation queue, where it starved the queued operations behind
  * it — the stop button's teardown and the green flag's restart — so a replayed story ran to its own
- * end with both controls dead. The eight-second wait is what makes that visible: both presses are
+ * end with both controls dead. The eight-second stage effect is what makes that visible and tests packaged runtime support: both presses are
  * given two seconds, far less than the story needs to end by itself.
  */
 test(
@@ -104,7 +104,7 @@ test(
     const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'dsl4-stop-package-'));
     await writeFile(
       path.join(projectDirectory, 'story.k4.yml'),
-      "kamishibai: '4.0'\ncontrols:\n  keymaps:\n    production:\n      Space: navigation.nextAction\nscenes:\n  opening:\n    - wait: 0.05\n    - wait: 8\n",
+      "kamishibai: '4.0'\ncontrols:\n  keymaps:\n    production:\n      Space: navigation.nextAction\nscenes:\n  opening:\n    - wait: 0.05\n    - presentationEffect: {scope: stage, effect: shake, seconds: 8, params: {amplitude: 12}}\n    - presentationEffect: {scope: presentation, effect: fade, seconds: 0.2, params: {opacity: 0.75}}\n",
     );
     const built = await buildDsl4RuntimeComponent({
       baseSb3Bytes: await buildReleaseBase(),
@@ -140,6 +140,7 @@ test(
       const storyRunning = `${reporter('storyStatusReporter')} === 'running'`;
       const titleShown = `document.querySelector('[data-dsl4-title-controls=true]')?.style.display === 'block'`;
       const menuShown = `document.querySelector('[data-dsl4-application-menu=true]')?.style.display === 'block'`;
+      const stageAnimating = 'globalThis.Scratch?.vm?.renderer?.canvas?.getAnimations().length > 0';
       const settled = (expression: string) =>
         page
           .waitForFunction(expression, null, {timeout: 2_000})
@@ -147,10 +148,35 @@ test(
           .catch(() => false);
       await page.waitForFunction('Boolean(globalThis.Scratch?.vm)', null, {timeout: 30_000});
       await page.waitForFunction(titleShown, null, {timeout: 30_000});
+      const packagerError = await page
+        .locator('#error')
+        .filter({visible: true})
+        .textContent({timeout: 500})
+        .catch(() => null);
+      assert.equal(
+        packagerError
+          ?.split('\n')
+          .find((line) => line.includes('Error:'))
+          ?.trim() ?? null,
+        null,
+        JSON.stringify(errors),
+      );
+      await page.evaluate(() => {
+        const observer = new MutationObserver(() => {
+          if (
+            document.querySelector(
+              '.scratch-render-overlays [data-dsl4-presentation-effect-mask="presentation"]',
+            )
+          )
+            document.documentElement.dataset.presentationMaskObserved = 'true';
+        });
+        observer.observe(document.body, {subtree: true, childList: true});
+      });
 
       // The first run, started from the title.
       await page.click('[data-dsl4-title-action=start]');
       await page.waitForFunction(storyRunning, null, {timeout: 30_000});
+      await page.waitForFunction(stageAnimating, null, {timeout: 10_000});
       await page.evaluate('globalThis.Scratch.vm.stopAll()');
       const stopped = await settled(`${hostStatus} === 'stopped'`);
       await page.evaluate('globalThis.Scratch.vm.greenFlag()');
@@ -159,10 +185,17 @@ test(
       // The same two presses on a replay started from the end-of-story menu.
       await page.click('[data-dsl4-title-action=start]');
       await page.waitForFunction(menuShown, null, {timeout: 30_000});
+      assert.equal(
+        await page.locator('html').getAttribute('data-presentation-mask-observed'),
+        'true',
+      );
+      assert.equal(await page.locator('[data-dsl4-presentation-effect-mask]').count(), 0);
       await page.click('[data-dsl4-menu-action=reload]');
       await page.waitForFunction(storyRunning, null, {timeout: 30_000});
+      await page.waitForFunction(stageAnimating, null, {timeout: 10_000});
       await page.evaluate('globalThis.Scratch.vm.stopAll()');
       const replayStopped = await settled(`${hostStatus} === 'stopped'`);
+      assert.equal(await settled(`!(${stageAnimating})`), true);
       await page.evaluate('globalThis.Scratch.vm.greenFlag()');
       const replayReset = await settled(titleShown);
 

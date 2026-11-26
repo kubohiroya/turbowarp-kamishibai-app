@@ -6,7 +6,10 @@ import type {RuntimeEvent} from '../src/dsl4/runtime-controller.js';
 import {resolveDsl4PlaybackFeatures} from '../src/dsl4/playback-features.js';
 import type {Dsl4RuntimePort} from '../src/dsl4/runtime-port.js';
 import {deferred} from './helpers/async-test-helpers.ts';
-import {dsl4TestSourceFrontend} from './helpers/dsl4-test-frontend.ts';
+import {
+  createDsl4TestProductionSourceFrontend,
+  dsl4TestSourceFrontend,
+} from './helpers/dsl4-test-frontend.ts';
 import {thrown} from './helpers/thrown-error.ts';
 import {
   requireArray,
@@ -3810,4 +3813,65 @@ test('prefetches the next scene model once the current scene model is ready', as
   help.resolve();
   await run;
   assert.equal(controller.getState().status, 'finished');
+});
+
+test('resolves each entry to the same authored text action, freezes its output, and preserves static ruby', async () => {
+  const parsed = createDsl4TestProductionSourceFrontend({narrativeControlEnabled: true}).parse(`
+kamishibai: '4.0'
+assets: {Idle: costume:Hero}
+actors: {Hero: Idle}
+variables: {score: 1, ready: true}
+textStyles: {body: {}}
+scenes:
+  first:
+    - repeat:
+        times: 2
+        do:
+          - Hero.say: {text: {interpolate: {join: ['Score ', {variable: score}]}}, seconds: 1}
+          - changeVariable: {name: score, by: 1}
+    - Hero.think: {text: {interpolate: {variable: ready}}, seconds: 1}
+    - Hero.setText: {text: {interpolate: {join: [{variable: score}, 7]}}, style: body}
+    - Hero.say: {text: [{ruby: {base: 竹取, reading: たけとり}}], seconds: 1}
+`);
+  assert(parsed.ok, JSON.stringify(parsed.diagnostics));
+  const rendered: unknown[] = [];
+  const first = deferred();
+  let firstContext: ActionContext | undefined;
+  const controller = createDsl4RuntimeController({
+    storyDocument: parsed.storyDocument,
+    narrativeControlEnabled: true,
+    speechAdvanceTypewriterEnabled: true,
+    port: {
+      say(payload: PortPayload, context: ActionContext) {
+        rendered.push(payload.text);
+        if (rendered.length === 1) {
+          firstContext = context;
+          return first.promise;
+        }
+      },
+      think(payload: PortPayload) {
+        rendered.push(payload.text);
+      },
+      setText(payload: PortPayload) {
+        rendered.push(payload.text);
+      },
+    },
+  });
+  const run = controller.start();
+  await waitFor(() => rendered.length === 1, 'first interpolated speech did not enter');
+  assert.equal(
+    setVariableOf(requireDefined(firstContext, 'the active action context'))('score', 8),
+    true,
+  );
+  assert.deepEqual(rendered, ['Score 1']);
+  first.resolve();
+  await run;
+  assert.equal(controller.getState().status, 'finished');
+  assert.deepEqual(rendered, [
+    'Score 1',
+    'Score 9',
+    'true',
+    [{type: 'text', text: '107'}],
+    [{type: 'ruby', base: '竹取', reading: 'たけとり'}],
+  ]);
 });

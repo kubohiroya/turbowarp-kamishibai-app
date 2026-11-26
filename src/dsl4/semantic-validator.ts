@@ -1,3 +1,4 @@
+import {evaluateDsl4TextInterpolation, isDsl4TextInterpolation} from './text-interpolation.js';
 import {
   isDsl4ActorCoreSourceAction,
   dsl4EmptyActionRegistrySnapshot,
@@ -521,6 +522,23 @@ export function validateDsl4Semantics(
         const opcode = key.slice(separator + 1);
         if (!Object.hasOwn(actors, actor)) {
           issues.push({code: 'K4-REF-001', path: actionPath, message: `Unknown actor: ${actor}`});
+        }
+        const text = (value as Record<string, unknown>)?.text;
+        if (['say', 'think', 'setText'].includes(opcode) && isDsl4TextInterpolation(text)) {
+          try {
+            const declared = (story.variables ?? {}) as Record<string, unknown>;
+            // Source validation checks references and the literal part of the size budget. Values
+            // are resolved and checked against the same budget only when this action is entered.
+            evaluateDsl4TextInterpolation(text, (name) =>
+              Object.hasOwn(declared, name) ? '' : undefined,
+            );
+          } catch (error) {
+            issues.push({
+              code: 'K4-TEXT-INTERPOLATION-001',
+              path: `${actionPath}.text`,
+              message: (error as Error).message,
+            });
+          }
         }
         if (opcode === 'show' || opcode === 'setSkin') {
           const valueRecord = value as Record<string, unknown>;

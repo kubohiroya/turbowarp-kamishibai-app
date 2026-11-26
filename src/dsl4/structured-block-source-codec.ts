@@ -1,3 +1,9 @@
+import {
+  dsl4TextInterpolationLimits,
+  evaluateDsl4TextInterpolation,
+  isDsl4TextInterpolation,
+  type Dsl4TextExpression,
+} from './text-interpolation.js';
 import {isDsl4ActorCoreSourceAction, isDsl4ReservedCustomActionName} from './action-registry.js';
 import {dsl4BlockAuthoringIconSvg} from './authoring-icon.js';
 import {dsl4AuthoringPaletteGroups, withDsl4PaletteGroups} from './block-palette-i18n.js';
@@ -501,10 +507,10 @@ export function createDsl4StructuredBlockSourceDeclaration({
       return id;
     }
     const blockCommand =
-      simpleSpeech &&
       (command === 'say' || command === 'think') &&
       isRecord(value) &&
-      typeof value.text === 'string' &&
+      (simpleSpeech || isDsl4TextInterpolation(value.text)) &&
+      (typeof value.text === 'string' || isDsl4TextInterpolation(value.text)) &&
       typeof value.seconds === 'number' &&
       Object.keys(value).every((key) => key === 'text' || key === 'seconds')
         ? `${command}Text`
@@ -571,7 +577,8 @@ export function createDsl4StructuredBlockSourceDeclaration({
       else if (name === 'SPEC') {
         inputs[name] = json(value);
         for (const key of Object.keys(extras)) delete extras[key];
-      } else if (jsonInputs.has(name)) inputs[name] = json(args[field]);
+      } else if (name === 'TEXT' && isDsl4TextInterpolation(args.text)) inputs[name] = '';
+      else if (jsonInputs.has(name)) inputs[name] = json(args[field]);
       else if (
         command === 'setText' &&
         name === 'TEXT' &&
@@ -588,6 +595,10 @@ export function createDsl4StructuredBlockSourceDeclaration({
     for (const [name] of references)
       inputs[name] = spec.arguments.find((argument) => argument.name === name)?.defaultValue ?? '';
     const id = add(`${runtimePrefix}${blockCommand}`, inputs);
+    if (Object.hasOwn(inputs, 'TEXT') && isDsl4TextInterpolation(args.text)) {
+      evaluateDsl4TextInterpolation(args.text, () => '');
+      attachText(id, 'TEXT', args.text.interpolate as Dsl4TextExpression);
+    }
     for (const [name, reference] of references) attachNode(id, name, reference);
     for (const argument of spec.arguments) {
       if (!argument.menu || inputs[argument.name] === '') continue;
@@ -605,6 +616,23 @@ export function createDsl4StructuredBlockSourceDeclaration({
     connect(wrapper, id, true);
     return wrapper;
   }
+  function attachText(parent: string, name: string, expression: Dsl4TextExpression) {
+    if (typeof expression !== 'object') {
+      blocks[parent]!.inputs[name] = [1, [typeof expression === 'number' ? 4 : 10, expression]];
+      return;
+    }
+    const child =
+      'variable' in expression
+        ? add(`${prefix}narrativeVariable`, {NAME: expression.variable})
+        : add('operator_join');
+    blocks[child]!.parent = parent;
+    blocks[parent]!.inputs[name] = [3, child, [10, '']];
+    if ('join' in expression) {
+      attachText(child, 'STRING1', expression.join[0]);
+      attachText(child, 'STRING2', expression.join[1]);
+    }
+  }
+
   function attachNode(parent: string, name: string, value: unknown) {
     if (!isRecord(value)) return;
     let child: string;
@@ -887,6 +915,111 @@ export function readDsl4StructuredBlockSource(
     }
     return literalInput(connection, block);
   }
+  function textReporterInput(owner: Block): unknown {
+    const raw = owner.inputs.TEXT;
+    const ownerId = ids.get(owner)!;
+    if (!Array.isArray(raw)) fail('Missing text input', ownerId);
+    let nodes = 0;
+    function readLiteral(literal: unknown, blockId: string, stringOnly = false): string | number {
+      if (Array.isArray(literal) && literal.length === 2) {
+        const [type, value] = literal;
+        if (
+          type === 10 &&
+          typeof value === 'string' &&
+          value.length <= dsl4TextInterpolationLimits.chars
+        )
+          return value;
+        if (
+          !stringOnly &&
+          [4, 5, 6, 7, 8].includes(type) &&
+          (typeof value === 'number' || (typeof value === 'string' && value.trim() !== '')) &&
+          Number.isFinite(Number(value))
+        )
+          return Number(value);
+      }
+      return fail('Text interpolation requires a string or finite number literal', blockId);
+    }
+    function staticLiteral(value: unknown, parent: string, stringOnly = false): string | number {
+      if (typeof value !== 'string') return readLiteral(value, parent, stringOnly);
+      const block = blocks[value];
+      if (
+        !isRecord(block) ||
+        visited.has(value) ||
+        block.shadow !== true ||
+        block.topLevel !== false ||
+        block.parent !== parent ||
+        block.next !== null ||
+        !isRecord(block.inputs) ||
+        Object.keys(block.inputs).length !== 0 ||
+        !isRecord(block.fields)
+      )
+        fail('Invalid or shared text interpolation shadow', value);
+      visited.add(value);
+      const text = block.opcode === 'text';
+      const numeric =
+        typeof block.opcode === 'string' &&
+        /^math_(?:number|integer|whole_number|positive_number|angle)$/u.test(block.opcode);
+      const field = text ? block.fields.TEXT : numeric ? block.fields.NUM : undefined;
+      return readLiteral(
+        [text ? 10 : 4, Array.isArray(field) ? field[0] : undefined],
+        value,
+        stringOnly,
+      );
+    }
+    function read(parent: Block, socket: string, depth: number): Dsl4TextExpression {
+      const blockId = ids.get(parent)!;
+      if (depth > dsl4TextInterpolationLimits.depth || ++nodes > dsl4TextInterpolationLimits.nodes)
+        fail('Text interpolation exceeds its nesting or size limit', blockId);
+      const tuple = parent.inputs[socket];
+      if (!Array.isArray(tuple)) fail('Missing text interpolation input', blockId);
+      if (tuple[0] === 1 && tuple.length === 2) return staticLiteral(tuple[1], blockId);
+      const candidate = tuple[1];
+      if (
+        typeof candidate !== 'string' ||
+        !((tuple[0] === 2 && tuple.length === 2) || (tuple[0] === 3 && tuple.length === 3))
+      )
+        fail('Invalid text interpolation connection', blockId);
+      if (tuple[0] === 3 && tuple[2] !== null) staticLiteral(tuple[2], blockId);
+      const node = readBlock(candidate, blockId);
+      if (node.next !== null) fail('Text reporters cannot contain a next block', candidate);
+      if (
+        node.opcode === 'operator_join' &&
+        Object.keys(node.inputs).length === 2 &&
+        Object.hasOwn(node.inputs, 'STRING1') &&
+        Object.hasOwn(node.inputs, 'STRING2')
+      ) {
+        return {join: [read(node, 'STRING1', depth + 1), read(node, 'STRING2', depth + 1)]};
+      }
+      if (node.opcode === `${prefix}narrativeVariable`) {
+        const name = node.inputs.NAME;
+        if (!Array.isArray(name) || name.length !== 2 || name[0] !== 1)
+          fail('The story variable name must be a literal', candidate);
+        return {variable: String(staticLiteral(name[1], candidate, true))};
+      }
+      return fail('Only operator_join and narrativeVariable may connect to story text', candidate);
+    }
+    if (raw[0] === 1 && raw.length === 2) {
+      const shadow = raw[1];
+      const shadowBlock = typeof shadow === 'string' ? blocks[shadow] : undefined;
+      const fixedString =
+        (Array.isArray(shadow) &&
+          shadow.length === 2 &&
+          shadow[0] === 10 &&
+          typeof shadow[1] === 'string') ||
+        (isRecord(shadowBlock) && shadowBlock.opcode === 'text');
+      return fixedString ? input(owner, 'TEXT') : staticLiteral(shadow, ownerId);
+    }
+    if (typeof raw[1] !== 'string')
+      fail('Only literal or allowed reporter inputs are supported for story text', ownerId);
+    const expression = {interpolate: read(owner, 'TEXT', 0)};
+    try {
+      evaluateDsl4TextInterpolation(expression, () => '');
+    } catch (error) {
+      fail((error as Error).message, ids.get(owner));
+    }
+    return expression;
+  }
+
   function literalInput(connection: unknown, block: Block): unknown {
     try {
       return readInput(connection);
@@ -1046,9 +1179,13 @@ export function readDsl4StructuredBlockSource(
         ['FADEIN', 'VOLUME', 'FADEOUT'].includes(name) &&
         !Object.hasOwn(block.inputs, name)
           ? ''
-          : input(block, name),
+          : name === 'TEXT' && ['say', 'think', 'setText'].includes(command)
+            ? textReporterInput(block)
+            : input(block, name),
       ]),
     );
+    const textInterpolation = isDsl4TextInterpolation(args.TEXT) ? args.TEXT : undefined;
+    if (textInterpolation) args.TEXT = '';
     let value: unknown;
     const references = Object.fromEntries(
       Object.entries(args).filter(
@@ -1073,6 +1210,11 @@ export function readDsl4StructuredBlockSource(
       if (isRecord(value)) value[field] = reference;
       else if (scalarFields[command] === field) value = reference;
       else fail('Reference is not supported in this core input', ids.get(block));
+    }
+    if (textInterpolation) {
+      if (!isRecord(value) || jsonText)
+        fail('Text reporter cannot be combined with JSON text encoding', ids.get(block));
+      value.text = textInterpolation;
     }
     const optional = optionalInputs[command] ?? {};
     if (jsonText && command !== 'setText') fail('JSON text encoding applies only to setText');

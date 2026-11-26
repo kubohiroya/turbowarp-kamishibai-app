@@ -17,6 +17,7 @@ export function definitionRecord(value: unknown): Record<string, unknown> {
 }
 
 const referenceNamespaces: Record<string, string> = {
+  textInterpolationVariableName: 'variables',
   assetId: 'assets',
   actorId: 'actors',
   styleId: 'textStyles',

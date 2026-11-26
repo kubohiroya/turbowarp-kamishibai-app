@@ -1,3 +1,4 @@
+import {isDsl4TextInterpolation} from './text-interpolation.js';
 import {isDsl4RecognitionSourceCommand} from './recognition-actions.js';
 
 /** Compile bounded narrative structure without executing Scratch or evaluating expressions. */
@@ -308,6 +309,17 @@ export function compileDsl4NarrativeSource(
     ): unknown {
       if (Array.isArray(value)) return value.map((child, i) => resolve(child, scopes, [...at, i]));
       if (!record(value)) return value;
+      // Dialogue/caption interpolation has its own allowlist. A scoped narrative ref must not
+      // turn into a literal inside it before the ordinary-action schema has validated it.
+      const owner = at.at(-2);
+      if (
+        at.at(-1) === 'text' &&
+        typeof owner === 'string' &&
+        /\.(?:say|think|setText)$/u.test(owner) &&
+        isDsl4TextInterpolation(value)
+      )
+        return value;
+
       if (Object.keys(value).length === 1 && Object.hasOwn(value, 'ref')) {
         const match = typeof value.ref === 'string' ? value.ref.split('.') : [];
         const [scope, name] = match;

@@ -247,7 +247,7 @@ DSL 4.0 build-dsl4 options:
 
 DSL 4.0 preview-dsl4 options:
   --watch                         Keep watching the selected source (required)
-  --enable-presentation-effects   Opt into actor animation and scoped effects (default OFF)
+  --enable-presentation-effects   Accepted for compatibility; presentation effects are on
   --enable-source-includes        Enable transactional Source Graph watching
   --max-source-files N            Maximum files in the include graph
   --max-total-source-bytes N      Maximum graph total and composed source bytes

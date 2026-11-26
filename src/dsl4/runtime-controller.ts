@@ -1,3 +1,5 @@
+import {normalizeDsl4ContentRuns} from './content-run.js';
+import {evaluateDsl4TextInterpolation, isDsl4TextInterpolation} from './text-interpolation.js';
 import {
   dsl4FirstPresentationEffectStoryPath,
   dsl4PresentationEffectsFlagError,
@@ -1451,6 +1453,23 @@ export function createDsl4RuntimeController({
     context: ActionContext,
     options?: {rehearsalSceneSkip?: boolean; sceneEntryStaging?: boolean},
   ) {
+    if (
+      action.handler !== 'custom' &&
+      ['say', 'think', 'setText'].includes(String(action.command)) &&
+      isRecord(action.args) &&
+      isDsl4TextInterpolation(action.args.text)
+    ) {
+      const text = evaluateDsl4TextInterpolation(action.args.text, (name) =>
+        context.getVariable(name),
+      );
+      action = deepFreeze({
+        ...action,
+        args: {
+          ...action.args,
+          text: action.command === 'setText' ? normalizeDsl4ContentRuns(text) : text,
+        },
+      });
+    }
     const transitionKey = {
       stage: 'backdrop',
       bgm: 'bgm',

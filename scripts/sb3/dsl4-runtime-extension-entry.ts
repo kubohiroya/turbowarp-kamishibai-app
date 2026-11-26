@@ -82,6 +82,8 @@ import {
   createDsl4SessionBackingFatalDiagnostic,
   createDsl4SessionBackingWarningDiagnostic,
 } from '../../dist/dsl4/platform/session-backing-diagnostic.js';
+import {dsl4PresentationEffectsRuntimeCapability} from '../../dist/dsl4/presentation-effects-gate.js';
+import {dsl4TextInterpolationRuntimeCapability} from '../../dist/dsl4/text-interpolation.js';
 import {createDsl4StandardAppShell} from '../../dist/dsl4/platform/standard-app-shell.js';
 import {
   hasDsl4EmbeddedBlockStory,
@@ -133,7 +135,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.17';
+const extensionVersion = '4.0.21';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -644,6 +646,8 @@ class KamishibaiDsl4RuntimeExtension {
   readonly invalidationSourceCapability = DSL4_NARRATIVE_CONTROL
     ? '// Kamishibai capabilities: invalidate-source-v1'
     : undefined;
+  readonly presentationEffectsCapability = dsl4PresentationEffectsRuntimeCapability;
+  readonly textInterpolationCapability = dsl4TextInterpolationRuntimeCapability;
   lastError: string;
   titleLocale: RuntimeEntryLocale;
   selectedProject: Readonly<Record<string, unknown>> | null;
@@ -797,7 +801,10 @@ class KamishibaiDsl4RuntimeExtension {
     const {ArgumentType, BlockType} = this.Scratch;
     const coreActionSurface = createDsl4TurboWarpCoreActionBlockSurface(
       {ArgumentType, BlockType},
-      {visible: productionFeatureFlags.dsl4TurboWarpActionSurface, includeOptIn: false},
+      {
+        visible: productionFeatureFlags.dsl4TurboWarpActionSurface,
+        includeOptIn: productionFeatureFlags.dsl4PresentationEffects,
+      },
     );
     const runtimeVariableSurface = createDsl4TurboWarpRuntimeVariableBlockSurface(
       {ArgumentType, BlockType},
@@ -1251,6 +1258,10 @@ class KamishibaiDsl4RuntimeExtension {
     return this.invokeCoreActionBlock('transition', args);
   }
 
+  presentationEffect(args: ScratchBlockArguments) {
+    return this.invokeCoreActionBlock('presentationEffect', args);
+  }
+
   goto(args: ScratchBlockArguments) {
     return this.invokeCoreActionBlock('goto', args);
   }
@@ -1305,6 +1316,10 @@ class KamishibaiDsl4RuntimeExtension {
 
   moveTo(args: ScratchBlockArguments) {
     return this.invokeCoreActionBlock('moveTo', args);
+  }
+
+  animate(args: ScratchBlockArguments) {
+    return this.invokeCoreActionBlock('animate', args);
   }
 
   say(args: ScratchBlockArguments) {

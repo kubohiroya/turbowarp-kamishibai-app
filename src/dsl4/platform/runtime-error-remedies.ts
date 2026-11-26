@@ -738,14 +738,17 @@ const remedies: readonly Dsl4ErrorRemedyEntry[] = [
   },
   {
     when: /^K4-PRESENTATION-EFFECTS-(?:FLAG|RUNTIME)-001$/u,
-    title: ['試験的な演出が無効です', 'Experimental presentation effects are disabled'],
+    title: [
+      'この環境では演出を利用できません',
+      'Presentation effects are unavailable in this runtime',
+    ],
     explanation: [
-      'この台本のアニメーションまたは演出には、対応するローカルプレビューが必要です。',
-      'An animation or presentation effect in this story requires the matching local preview.',
+      'この台本のアニメーションまたは演出には、対応する紙芝居ランタイムが必要です。',
+      'An animation or presentation effect in this story requires a compatible Kamishibai runtime.',
     ],
     recovery: [
-      'ローカルプレビューを --enable-presentation-effects 付きで開き直すか、該当の演出を外してください。',
-      'Reopen local preview with --enable-presentation-effects, or remove the effect.',
+      '演出に対応した新しい紙芝居ランタイムで開き直すか、該当の演出を外してください。',
+      'Open the story with a current Kamishibai runtime, or remove the effect.',
     ],
   },
   {
@@ -758,6 +761,30 @@ const remedies: readonly Dsl4ErrorRemedyEntry[] = [
     recovery: [
       '対応する範囲とパラメーターを指定し、ローカルプレビューを開き直してください。',
       'Use supported parameters and scope, then reopen the local preview.',
+    ],
+  },
+  {
+    when: /^K4-TEXT-INTERPOLATION-RUNTIME-001$/u,
+    title: ['台詞・字幕の式に未対応です', 'This runtime does not support expressions in text'],
+    explanation: [
+      '台詞や字幕に定数や台本変数をつなげる式があり、書き出し先のランタイムでは実行できません。',
+      'The selected runtime cannot read an expression used in dialogue or captions.',
+    ],
+    recovery: [
+      '対応する紙芝居ランタイムを含むSB3を使うか、式を固定の文章に置き換えてください。',
+      'Use an SB3 with a current Kamishibai runtime, or replace the expression with fixed text.',
+    ],
+  },
+  {
+    when: /^K4-TEXT-INTERPOLATION-001$/u,
+    title: ['台詞・字幕の式を読み取れません', 'The dialogue or caption expression is invalid'],
+    explanation: [
+      '式の形、変数名、または式や結果の長さが、台詞・字幕で扱える範囲を超えています。',
+      'The expression shape, a variable name, or its size is not supported for dialogue or captions.',
+    ],
+    recovery: [
+      '宣言した台本変数だけを使い、定数と「つなげる」の組み合わせを短くしてください。',
+      'Use only declared story variables, literals, and joins, and shorten the expression or its text.',
     ],
   },
   {

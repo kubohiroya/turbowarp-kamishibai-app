@@ -80,6 +80,7 @@ export const dsl4StandardProductionFeatureFlags = deepFreeze({
   dsl4Runtime: true,
   dsl4Video: true,
   dsl4CrossfadeTransitions: true,
+  dsl4PresentationEffects: true,
   dsl4AppShell: true,
   dsl4PoseFeedbackModes: true,
   dsl4SpeechAdvanceTypewriter: true,
@@ -203,4 +204,14 @@ export function resolveDsl4FeatureFlags(input: unknown = {}) {
     throw new TypeError('dsl4TurboWarpActionSurface requires dsl4Runtime');
   }
   return deepFreeze(resolved);
+}
+
+/** Keep preview on by default while preserving explicit low-level overrides. */
+export function resolveDsl4LocalPreviewFeatureFlags(input: unknown = {}) {
+  if (!isRecord(input)) return resolveDsl4FeatureFlags(input);
+  return resolveDsl4FeatureFlags({
+    dsl4Runtime: true,
+    dsl4PresentationEffects: input.dsl4Runtime !== false,
+    ...input,
+  });
 }

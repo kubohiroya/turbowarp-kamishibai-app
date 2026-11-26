@@ -25,7 +25,7 @@ import {
   dsl4BrowserTurboWarpStageDefaults,
   dsl4BrowserTurboWarpStageMaximumProjectBytes,
 } from '../dsl4/browser-turbowarp-stage.js';
-import {resolveDsl4FeatureFlags} from '../dsl4/feature-flags.js';
+import {resolveDsl4LocalPreviewFeatureFlags} from '../dsl4/feature-flags.js';
 import {dsl4ExternalSourceManifestFilenames} from '../dsl4/external-source-manifest.js';
 import {Sb3BuilderError} from './errors.js';
 import type {Dsl4FileWatcher} from './file-system.js';
@@ -398,7 +398,7 @@ export function createDsl4LocalPreviewHost(options: {
   }
   const sourceFrontend = validateFrontend(options.sourceFrontend);
   const maxSourceBytes = safeInteger(options.maxSourceBytes, 'maxSourceBytes', 1);
-  const featureFlags = resolveDsl4FeatureFlags(options.featureFlags ?? {});
+  const featureFlags = resolveDsl4LocalPreviewFeatureFlags(options.featureFlags);
   const graphOptions = featureFlags.dsl4SourceIncludes
     ? {
         maxSourceFiles: safeInteger(options.maxSourceFiles, 'maxSourceFiles', 1),
