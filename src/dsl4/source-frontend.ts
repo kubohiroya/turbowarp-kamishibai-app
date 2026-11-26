@@ -1003,6 +1003,7 @@ export function createDsl4SourceFrontend(
           ...(compiled.metadata as Record<string, unknown>),
           sourceVersion: '4.0',
           narrativeControl: true,
+          ...(compilation.hasInvalidation ? {invalidateSource: true} : {}),
         };
         for (const scene of compiled.scenes as Record<string, unknown>[]) {
           for (const [index, action] of (scene.actions as Record<string, unknown>[]).entries())

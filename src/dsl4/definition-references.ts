@@ -240,7 +240,8 @@ export function collectDsl4DefinitionReferences(story: Record<string, unknown>, 
           condition(args.condition, [...at, command, 'condition']);
           actions(args.then, [...at, command, 'then']);
           actions(args.else, [...at, command, 'else']);
-        } else if (command === 'repeat' || command === 'forEach')
+        } else if (command === 'invalidate') actions(args.then, [...at, command, 'then']);
+        else if (command === 'repeat' || command === 'forEach')
           actions(args.do, [...at, command, 'do']);
         else {
           walk({[command]: value}, {$ref: '#/$defs/action'}, at);

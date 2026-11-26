@@ -4,7 +4,7 @@ import {strFromU8, strToU8, unzipSync, zipSync} from 'fflate';
 import {parse} from 'yaml';
 import {readSb3} from './sb3.js';
 import {definitionRecord} from '../dsl4/definition-references.js';
-import {findDsl4NarrativeControlPath} from '../dsl4/narrative-control.js';
+import {findDsl4NarrativeControlPath, hasDsl4Invalidation} from '../dsl4/narrative-control.js';
 
 import {canonicalizeDsl4Source} from '../dsl4/source-canonicalizer.js';
 import {
@@ -145,6 +145,22 @@ function writeAuthoredProject(
       fail(
         'A narrative block story requires a matching development runner',
         'K4-NARRATIVE-RUNTIME-001',
+      );
+  }
+  if (modules.some((module) => hasDsl4Invalidation(module.source))) {
+    const url = definitionRecord(project.extensionURLs)[
+      form === 'bundle' ? dsl4BlockSourceBundleExtensionId : dsl4BlockSourceRuntimeExtensionId
+    ];
+    if (
+      typeof url !== 'string' ||
+      !url.startsWith('data:text/javascript;base64,') ||
+      !Buffer.from(url.slice(url.indexOf(',') + 1), 'base64')
+        .toString('utf8')
+        .includes('// Kamishibai capabilities: invalidate-source-v1')
+    )
+      fail(
+        'Invalidation sections require a matching source parser runtime',
+        'K4-INVALIDATE-RUNTIME-001',
       );
   }
   const stage = stageOf(project);

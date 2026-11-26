@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {test} from 'vitest';
 import {Ajv2020} from 'ajv/dist/2020.js';
-import {parse} from 'yaml';
+import {parse, stringify} from 'yaml';
 import base from '../schema/dsl-4.schema.json' with {type: 'json'};
 import narrative from '../schema/dsl-4-narrative-control.schema.json' with {type: 'json'};
 import editor from '../schema/dsl-4-editor.schema.json' with {type: 'json'};
@@ -168,4 +168,37 @@ test('repeat.as exposes typed index/number references while unscoped repeat does
   const unscoped = source.replace('        as: round\n', '');
   assert.equal(owner.parse(unscoped).ok, false);
   assert.equal(editorValidation(parse(unscoped)), false);
+});
+
+test('dedicated invalidation is synchronized in runtime and editing schemas', () => {
+  for (const condition of [false, true]) {
+    const input = {
+      kamishibai: '4.0',
+      scenes: {start: [{invalidate: {condition, then: [{wait: 1}]}}]},
+    };
+    assert.equal(narrativeValidation(input), true);
+    assert.equal(editorValidation(input), true, JSON.stringify(editorValidation.errors));
+    assert.equal(owner.parse(stringify(input)).ok, true);
+  }
+  const invalid = {
+    kamishibai: '4.0',
+    scenes: {start: [{invalidate: {condition: 'false', then: [{wait: 1}]}}]},
+  };
+  assert.equal(editorValidation(invalid), false);
+  const scoped = {
+    kamishibai: '4.0',
+    scenes: {
+      start: [
+        {
+          forEach: {
+            as: 'row',
+            items: [{n: 1}],
+            do: [{invalidate: {condition: true, then: [{wait: {ref: 'row.n'}}]}}],
+          },
+        },
+      ],
+    },
+  };
+  assert.equal(editorValidation(scoped), true, JSON.stringify(editorValidation.errors));
+  assert.equal(owner.parse(stringify(scoped)).ok, true);
 });

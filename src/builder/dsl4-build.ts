@@ -445,6 +445,26 @@ export async function buildDsl4RuntimeComponent(options: {
         {stage: 'dsl4-runtime-capability', code: 'K4-NARRATIVE-RUNTIME-001'},
       );
   }
+  if (isRecord(storyDocument.metadata) && storyDocument.metadata.invalidateSource === true) {
+    const project = readSb3(baseSb3Bytes).project;
+    const marker = '// Kamishibai capabilities: invalidate-source-v1';
+    const urls = isRecord(project.extensionURLs) ? Object.values(project.extensionURLs) : [];
+    if (
+      !runtimeExtensionSource?.includes(marker) &&
+      !urls.some(
+        (url) =>
+          typeof url === 'string' &&
+          url.startsWith('data:text/javascript;base64,') &&
+          Buffer.from(url.slice(url.indexOf(',') + 1), 'base64')
+            .toString('utf8')
+            .includes(marker),
+      )
+    )
+      throw new Dsl4BuildError('Invalidation sections require a matching source parser runtime.', {
+        stage: 'dsl4-runtime-capability',
+        code: 'K4-INVALIDATE-RUNTIME-001',
+      });
+  }
   let assetDistribution;
   if (assetConfig !== undefined || assetLock !== undefined || assetProfile !== undefined) {
     if (

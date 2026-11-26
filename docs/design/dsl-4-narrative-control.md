@@ -192,3 +192,11 @@ CLIの`--no-narrative-control`で入力を拒否する場合も診断位置を�
 
 npmのrc.44は未公開として扱います。SB3はGitHub Releaseから取得できます。CLIが必要な場合はrc.44のタグを別checkoutへ取得し、
 lockfile固定で依存を用意して`pnpm build:lib`後の`bin/turbowarp-kamishibai.mjs`を使います。npmの旧版が新しいStandard機能を備えるとは案内しません。
+
+## 専用の無効化区間（Issue #1198、ローカル実装候補）
+
+`invalidate: {condition: false, then: […]}`を編集時の採否の専用書式として追加します。
+静的booleanだけを受け取り、falseの本体をYAMLに保持しながら意味解決・実行用命令列から除外します。
+汎用ifの未選択側も意味検証する契約とは異なります。専用C型ブロックのon/offと相互変換します。
+[書式・保存往復の契約](../dsl4-invalidate.md)を参照してください。既存作品へ自動適用せず、DSL 4.0系列の対応版でのみ使用します。
+実行用の構造Schemaと、それから生成する編集支援Schemaを同時に更新・同期検証します。

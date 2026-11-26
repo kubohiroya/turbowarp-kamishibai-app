@@ -84,7 +84,7 @@ const raws = (p: Record<string, unknown>) =>
       ([path, file]) => [path, file.source],
     ),
   );
-async function fixture(inputFiles = files) {
+async function fixture(inputFiles: Record<string, string> = files) {
   const frontend = createDsl4ProductionSourceFrontend(schema),
     parsed = frontend.parse("kamishibai: '4.0'\nscenes:\n  initial:\n    - wait: 0\n", {
       sourceId: 'story',
@@ -809,4 +809,48 @@ it('keeps several dirty module views and reflects them independently across grap
     expect(readDocumentViewMetadata(component(all), ref('file:' + path))?.activeKind).toBe(
       'schema-blocks',
     );
+});
+
+describe('invalidation sections in scene module views', () => {
+  it('preserves the disabled body through edit, reflect, JSON save/reload and schema rebuild', async () => {
+    const input = {
+      'main.k4.yml':
+        "kamishibai: '4.0'\ninclude: part.k4.yml\ncontrols: {keymaps: {production: {Space: navigation.nextAction}}}\n",
+      'part.k4.yml':
+        'scenes:\n  part:\n    - invalidate:\n        condition: false\n        then:\n          - wait: 7\n    - wait: 3\n',
+    };
+    const {project, options} = await fixture(input);
+    const built = await run(project, options, 'schema-blocks', 'from-source', 'file:part.k4.yml');
+    const blocks = built.project.targets[0].blocks;
+    const section = Object.values(blocks).find((b) => b.opcode.endsWith('_useSection'))!;
+    expect(section.fields.ENABLED![0]).toBe('off');
+    const wait = Object.values(blocks).find(
+      (b) => b.opcode.endsWith('_wait') && literalValue(b, 'SECONDS') === 3,
+    );
+    expect(wait).toBeDefined();
+    setLiteral(wait!, 'SECONDS', '4');
+    const saved = await run(
+      built.project,
+      options,
+      'schema-blocks',
+      'to-source',
+      'file:part.k4.yml',
+    );
+    const value = parse(raws(saved.project)['part.k4.yml']!);
+    expect(value.scenes.part[0]).toEqual({invalidate: {condition: false, then: [{wait: 7}]}});
+    const reloaded = JSON.parse(JSON.stringify(saved.project));
+    const rebuilt = await run(
+      reloaded,
+      options,
+      'schema-blocks',
+      'from-source',
+      'file:part.k4.yml',
+    );
+    const groups = Object.values(rebuilt.project.targets[0].blocks).filter((b) =>
+      b.opcode.endsWith('_useSection'),
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.fields.ENABLED![0]).toBe('off');
+    expect(raws(rebuilt.project)['main.k4.yml']).toBe(input['main.k4.yml']);
+  });
 });
