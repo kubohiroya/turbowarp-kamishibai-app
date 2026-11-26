@@ -5,7 +5,7 @@
     "repositoryPath": "/kubohiroya/turbowarp-kamishibai-app",
     "series": "4.0",
     "channel": "latest",
-    "version": "4.0.19"
+    "version": "4.0.20"
   },
   "extensions": {
     "@kubohiroya/turbowarp-asset-cache": "0.10.0",
