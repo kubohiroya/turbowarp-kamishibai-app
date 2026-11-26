@@ -1,5 +1,6 @@
 import {deepFreeze} from './story-document.js';
 import {composeBubbleStyles} from './bubble-style.js';
+import {isDsl4RecognitionCommand} from './recognition-actions.js';
 
 function sortedUnique(values: Iterable<string>) {
   return [...new Set(values)].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
@@ -174,8 +175,29 @@ export function createDsl4AssetDependencyIndex(storyDocument: Readonly<Record<st
     Readonly<Record<string, unknown>>
   >;
   const backgroundBySceneId = new Map<string, ReadonlyArray<string>>();
+  const metadata = (storyDocument.metadata ?? {}) as Readonly<Record<string, unknown>>;
+  const invalidatedRecognitionScenes = new Set(
+    Array.isArray(metadata.invalidatedRecognitionScenes)
+      ? metadata.invalidatedRecognitionScenes.filter((id): id is string => typeof id === 'string')
+      : [],
+  );
+  const offOnlyModels = new Set(
+    sceneList
+      .filter((scene) => invalidatedRecognitionScenes.has(String(scene.id)))
+      .map((scene) => scene.recognitionModel)
+      .filter((id): id is string => typeof id === 'string'),
+  );
+  const recognitionScenes = new Set<string>();
   const successorsBySceneId = new Map<string, ReadonlySet<string>>();
   for (const [sceneIndex, scene] of sceneList.entries()) {
+    if (
+      ((scene.actions ?? []) as ReadonlyArray<Readonly<Record<string, unknown>>>).some((action) =>
+        isDsl4RecognitionCommand(action.command),
+      )
+    ) {
+      recognitionScenes.add(String(scene.id));
+      if (typeof scene.recognitionModel === 'string') offOnlyModels.delete(scene.recognitionModel);
+    }
     successorsBySceneId.set(
       String(scene.id),
       sceneSuccessors(scene, sceneList[sceneIndex + 1], storyDocument.branches),
@@ -183,7 +205,6 @@ export function createDsl4AssetDependencyIndex(storyDocument: Readonly<Record<st
   }
   for (const scene of sceneList) {
     const dependencies = new Set<string>();
-    addDependency(scene.recognitionModel, dependencies);
     let usesPoseRecognition = false;
     for (const action of (scene.actions ?? []) as ReadonlyArray<
       Readonly<Record<string, unknown>>
@@ -197,6 +218,14 @@ export function createDsl4AssetDependencyIndex(storyDocument: Readonly<Record<st
       usesPoseRecognition =
         addActionDependencies(action, dependencies, bubbleStyles) || usesPoseRecognition;
     }
+    // Keep legacy declaration-only preparation, but not a model whose only consumers are OFF.
+    // The declaration remains available to a later explicit invocation and to the editor.
+    if (
+      (!invalidatedRecognitionScenes.has(String(scene.id)) ||
+        recognitionScenes.has(String(scene.id))) &&
+      !offOnlyModels.has(String(scene.recognitionModel))
+    )
+      addDependency(scene.recognitionModel, dependencies);
     if (usesPoseRecognition) {
       for (const assetId of recognitionDependencies) dependencies.add(assetId);
     }

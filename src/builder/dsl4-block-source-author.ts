@@ -5,6 +5,10 @@ import {parse} from 'yaml';
 import {readSb3} from './sb3.js';
 import {definitionRecord} from '../dsl4/definition-references.js';
 import {findDsl4NarrativeControlPath, hasDsl4Invalidation} from '../dsl4/narrative-control.js';
+import {
+  dsl4InvalidatedRecognitionPreloadCapability,
+  hasDsl4InvalidatedRecognitionMetadata,
+} from '../dsl4/recognition-actions.js';
 
 import {canonicalizeDsl4Source} from '../dsl4/source-canonicalizer.js';
 import {
@@ -109,6 +113,7 @@ function writeAuthoredProject(
   modules: readonly AuthoringModule[],
   sourceSections = false,
   narrativeRuntimeSource?: string,
+  invalidatedRecognition = false,
 ) {
   const archive = unzipSync(baseBytes);
   const projectEntry = archive['project.json'];
@@ -167,6 +172,18 @@ function writeAuthoredProject(
   const runtimeUrl = definitionRecord(project.extensionURLs)[
     form === 'bundle' ? dsl4BlockSourceBundleExtensionId : dsl4BlockSourceRuntimeExtensionId
   ];
+  if (
+    invalidatedRecognition &&
+    (typeof runtimeUrl !== 'string' ||
+      !runtimeUrl.startsWith('data:text/javascript;base64,') ||
+      !Buffer.from(runtimeUrl.slice(runtimeUrl.indexOf(',') + 1), 'base64')
+        .toString('utf8')
+        .includes(dsl4InvalidatedRecognitionPreloadCapability))
+  )
+    fail(
+      'Invalidated recognition requires a runtime that suppresses model preloading.',
+      'K4-INVALIDATE-PRELOAD-RUNTIME-001',
+    );
   const simpleSpeech =
     typeof runtimeUrl === 'string' &&
     runtimeUrl.startsWith('data:text/javascript;base64,') &&
@@ -323,6 +340,7 @@ export function authorDsl4BlockSourceSb3({
     ],
     sourceSections,
     narrativeRuntimeSource,
+    hasDsl4InvalidatedRecognitionMetadata((parsed as {storyDocument?: unknown}).storyDocument),
   );
   const readBack = extractDsl4BlockSourcesFromProject(prepared.authoredProject);
   const reparsed = sourceFrontend.parse(readBack.sources[readBack.entryPath] ?? '', {
@@ -397,7 +415,13 @@ export async function authorDsl4BlockSourceGraphSb3({
       includeLabels: node.includes.map((edge) => edge.path),
     };
   });
-  const prepared = writeAuthoredProject(baseBytes, modules, sourceSections, narrativeRuntimeSource);
+  const prepared = writeAuthoredProject(
+    baseBytes,
+    modules,
+    sourceSections,
+    narrativeRuntimeSource,
+    hasDsl4InvalidatedRecognitionMetadata((parsed as {storyDocument?: unknown}).storyDocument),
+  );
   const readBack = extractDsl4BlockSourcesFromProject(prepared.authoredProject);
   const graph = await createDsl4BlockSourceGraph(readBack, sourceGraph.limits);
   const reparsed = graphFrontend.parse(graph, parseOptions);

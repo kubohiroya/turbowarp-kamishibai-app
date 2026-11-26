@@ -1004,6 +1004,9 @@ export function createDsl4SourceFrontend(
           sourceVersion: '4.0',
           narrativeControl: true,
           ...(compilation.hasInvalidation ? {invalidateSource: true} : {}),
+          ...(compilation.invalidatedRecognitionScenes.length
+            ? {invalidatedRecognitionScenes: compilation.invalidatedRecognitionScenes}
+            : {}),
         };
         for (const scene of compiled.scenes as Record<string, unknown>[]) {
           for (const [index, action] of (scene.actions as Record<string, unknown>[]).entries())

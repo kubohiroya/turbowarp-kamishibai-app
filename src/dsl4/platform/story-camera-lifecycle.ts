@@ -1,4 +1,5 @@
 import {type Dsl4CompositionMethod, validateCompositionMethods} from './composition-contract.js';
+import {isDsl4RecognitionCommand} from '../recognition-actions.js';
 import {
   dsl4DefaultPosePreviewOpacity,
   dsl4DefaultPosePreviewPosition,
@@ -10,17 +11,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-const recognitionCommands = new Set(['pose', 'poseInputToChangeScene', 'imageInputToChangeScene']);
-
 export function storyUsesPoseRecognition(storyDocument: unknown) {
   if (!isRecord(storyDocument) || !Array.isArray(storyDocument.scenes)) return false;
   return storyDocument.scenes.some(
     (scene) =>
       isRecord(scene) &&
       Array.isArray(scene.actions) &&
-      scene.actions.some(
-        (action) => isRecord(action) && recognitionCommands.has(String(action.command)),
-      ),
+      scene.actions.some((action) => isRecord(action) && isDsl4RecognitionCommand(action.command)),
   );
 }
 
