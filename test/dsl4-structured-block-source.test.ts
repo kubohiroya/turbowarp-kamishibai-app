@@ -1393,3 +1393,65 @@ test('uses simple speech only when the base runtime advertises support, otherwis
     assert.equal(comparable(extracted(project)), comparable(sourceText));
   }
 });
+
+test('round-trips authored dialogue and caption with native join and story-variable reporters', () => {
+  const expr = {interpolate: {join: ['Score ', {join: [{variable: 'score'}, 7]}]}};
+  const sourceText = source
+    .replace('variables:', 'textStyles: {body: {}}\nvariables:')
+    .replace('text: こんにちは', `text: ${JSON.stringify(expr)}`)
+    .replace(
+      '      - wait: 1',
+      `      - Hero.think: {text: ${JSON.stringify(expr)}, seconds: 1}\n      - Hero.setText: {text: ${JSON.stringify(expr)}, style: body}\n      - wait: 1`,
+    );
+  const project = authored(sourceText);
+  const blocks = project.targets[0]!.blocks;
+  assert.equal(Object.values(blocks).filter((block) => block.opcode === 'operator_join').length, 6);
+  assert.equal(
+    Object.values(blocks).filter((block) => block.opcode === helperPrefix + 'narrativeVariable')
+      .length,
+    3,
+  );
+  const firstJoin = Object.entries(blocks).find(([, block]) => block.opcode === 'operator_join')!;
+  const secondJoin = blocks[(firstJoin[1].inputs.STRING2 as unknown[])[1] as string]!;
+  const secondJoinId = (firstJoin[1].inputs.STRING2 as unknown[])[1] as string;
+  secondJoin.inputs.STRING2 = [1, 'editor-native-number'];
+  blocks['editor-native-number'] = {
+    opcode: 'math_number',
+    shadow: true,
+    topLevel: false,
+    next: null,
+    parent: secondJoinId,
+    fields: {NUM: ['7', null]},
+    inputs: {},
+  };
+  assert.equal(comparable(extracted(project)), comparable(sourceText));
+
+  const bad = structuredClone(project);
+  bad.targets[0]!.blocks[firstJoin[0]]!.opcode = 'operator_random';
+  assert.throws(() => extracted(bad), /Only operator_join and narrativeVariable/);
+
+  const cyclic = structuredClone(project);
+  cyclic.targets[0]!.blocks[secondJoinId]!.inputs.STRING1 = [2, firstJoin[0]];
+  assert.throws(() => extracted(cyclic), /cycle|shared block/);
+
+  const unclear = sourceText.replaceAll('"variable":"score"', '"variable":"missing"');
+  const result = frontend.parse(unclear);
+  assert.equal(result.ok, false);
+  assert.ok(result.diagnostics.some(({message}) => message.includes('Unknown story variable')));
+});
+
+test('accepts a finite fixed number shadow but rejects inline Scratch variable inputs', () => {
+  const project = authored(source);
+  const speech = Object.values(project.targets[0]!.blocks).find((block) =>
+    block.opcode.endsWith('_say'),
+  )!;
+  // Build a regular simple block, as the structured DSL's editor palette supplies it.
+  speech.opcode = speech.opcode.replace(/say$/u, 'sayText');
+  speech.inputs = {TARGET: [1, [10, 'Hero']], TEXT: [1, [4, '12.5']], SECONDS: [1, [4, '1']]};
+  const generated = extracted(project);
+  assert.match(generated, /text: "12\.5"|text: '12\.5'/u);
+  speech.inputs.TEXT = [3, [12, 'Score', 'scratch-data-variable'], [10, 'fallback']];
+  assert.throws(() => extracted(project), /Only literal or allowed reporter inputs/);
+  speech.inputs.TEXT = [1, [4, 'Infinity']];
+  assert.throws(() => extracted(project), /finite number literal/);
+});

@@ -2839,8 +2839,42 @@
       "minItems": 1,
       "items": {"$ref": "#/$defs/contentRun"}
     },
+    "textInterpolationVariableName": {"$ref": "#/$defs/id"},
+    "textInterpolationNode": {
+      "anyOf": [
+        {"type": "string", "maxLength": 8192},
+        {"type": "number"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["variable"],
+          "properties": {"variable": {"$ref": "#/$defs/textInterpolationVariableName"}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["join"],
+          "properties": {
+            "join": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {"$ref": "#/$defs/textInterpolationNode"}
+            }
+          }
+        }
+      ]
+    },
+    "textInterpolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interpolate"],
+      "properties": {
+        "interpolate": {"type": "object", "$ref": "#/$defs/textInterpolationNode"}
+      }
+    },
     "bodyText": {
-      "oneOf": [{"type": "string"}, {"$ref": "#/$defs/contentRuns"}]
+      "oneOf": [{"type": "string"}, {"$ref": "#/$defs/contentRuns"}, {"$ref": "#/$defs/textInterpolation"}]
     },
     "setTextArgs": {
       "type": "object",

@@ -1,3 +1,4 @@
+import {isDsl4TextInterpolation} from './text-interpolation.js';
 import {isDsl4ActorCoreSourceAction} from './action-registry.js';
 import {normalizeDsl4ContentRuns} from './content-run.js';
 import {encodeDsl4StoryPathSegment} from './story-path.js';
@@ -464,7 +465,12 @@ function normalizeAction(
   const stableId =
     typeof argumentRecord?.stableId === 'string' ? argumentRecord.stableId : undefined;
   delete args.stableId;
-  if (!customAction && command === 'setText' && Object.hasOwn(args, 'text')) {
+  if (
+    !customAction &&
+    command === 'setText' &&
+    Object.hasOwn(args, 'text') &&
+    !isDsl4TextInterpolation(args.text)
+  ) {
     // Both the plain string and the authored run list reach the runtime as one typed run list.
     args.text = normalizeDsl4ContentRuns(args.text);
   }

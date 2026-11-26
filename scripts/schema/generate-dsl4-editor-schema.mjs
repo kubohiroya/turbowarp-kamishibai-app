@@ -105,7 +105,9 @@ export function composeDsl4EditorSchema(base, narrative) {
   output.description =
     'Authoring structure for ordinary and narrative DSL 4.0 source. Owner validation additionally resolves typed references, validates expanded actions and checks runtime/project semantics.';
   for (const [name, definition] of Object.entries(base.$defs))
-    output.$defs[actionPrefix + name] = transform(definition, actionPrefix, true);
+    output.$defs[actionPrefix + name] = name.startsWith('textInterpolation')
+      ? copy(definition)
+      : transform(definition, actionPrefix, true);
   for (const prefix of [rootPrefix, scopedPrefix]) {
     for (const [name, definition] of Object.entries(narrative.$defs))
       output.$defs[prefix + name] = transform(definition, prefix);

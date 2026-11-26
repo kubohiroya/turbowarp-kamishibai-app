@@ -327,3 +327,19 @@ test('CLI distinguishes implicit SB3 names from undefined names and exposes mach
       /pretty or json/u,
     );
   }));
+
+test('retains a story variable used only by a text interpolation', () => {
+  const result = audit({
+    assets: {Idle: 'costume:Hero'},
+    actors: {Hero: 'Idle'},
+    variables: {shown: 1, spare: 2},
+    scenes: {
+      opening: [
+        {'Hero.say': {text: {interpolate: {join: ['Score ', {variable: 'shown'}]}}, seconds: 1}},
+      ],
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.definitions.find((item) => item.name === 'shown')?.status, 'used');
+  assert.ok(result.removable.some((item) => item.name === 'spare'));
+});
