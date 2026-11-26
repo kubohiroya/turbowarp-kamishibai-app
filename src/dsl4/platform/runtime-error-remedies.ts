@@ -737,6 +737,30 @@ const remedies: readonly Dsl4ErrorRemedyEntry[] = [
     ],
   },
   {
+    when: /^K4-PRESENTATION-EFFECTS-(?:FLAG|RUNTIME)-001$/u,
+    title: ['試験的な演出が無効です', 'Experimental presentation effects are disabled'],
+    explanation: [
+      'この台本のアニメーションまたは演出には、対応するローカルプレビューが必要です。',
+      'An animation or presentation effect in this story requires the matching local preview.',
+    ],
+    recovery: [
+      'ローカルプレビューを --enable-presentation-effects 付きで開き直すか、該当の演出を外してください。',
+      'Reopen local preview with --enable-presentation-effects, or remove the effect.',
+    ],
+  },
+  {
+    when: /^K4-PRESENTATION-EFFECT-00[123]$/u,
+    title: ['演出を実行できません', 'This presentation effect cannot run'],
+    explanation: [
+      '演出の設定、表示レイヤー、または実行中のプレビューを確認してください。',
+      'Check the effect parameters, rendering layer, and active preview.',
+    ],
+    recovery: [
+      '対応する範囲とパラメーターを指定し、ローカルプレビューを開き直してください。',
+      'Use supported parameters and scope, then reopen the local preview.',
+    ],
+  },
+  {
     when: /^K4-VERSION-001$/u,
     title: ['台本の先頭の版の指定が違います', 'The version at the top of the script is wrong'],
     explanation: [

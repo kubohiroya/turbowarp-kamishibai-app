@@ -1,3 +1,8 @@
+import {
+  dsl4FirstPresentationEffectStoryPath,
+  dsl4PresentationEffectsFlagError,
+  dsl4PresentationEffectsFlagMessage,
+} from './presentation-effects-gate.js';
 import type {Dsl4RuntimePort} from './runtime-port.js';
 import {createRuntimeFailureContext} from './runtime-error-context.js';
 import {
@@ -193,6 +198,7 @@ export function createDsl4RuntimeController({
   turboWarpBubbleAdvancedPresentationEnabled = false,
   broadcastMessageAndWaitEnabled = false,
   crossfadeTransitionsEnabled = false,
+  presentationEffectsEnabled = false,
   narrativeControlEnabled = false,
   quiesceTimeoutMs = dsl4RuntimeQuiesceDefaults.quiesceTimeoutMs,
   scheduleQuiesceTimeout = defaultScheduleQuiesceTimeout,
@@ -221,6 +227,7 @@ export function createDsl4RuntimeController({
   turboWarpBubbleAdvancedPresentationEnabled?: boolean;
   broadcastMessageAndWaitEnabled?: boolean;
   crossfadeTransitionsEnabled?: boolean;
+  presentationEffectsEnabled?: boolean;
   narrativeControlEnabled?: boolean;
   quiesceTimeoutMs?: number;
   scheduleQuiesceTimeout?: (callback: () => void, milliseconds: number) => () => void;
@@ -298,6 +305,14 @@ export function createDsl4RuntimeController({
   }
   if (typeof broadcastMessageAndWaitEnabled !== 'boolean') {
     throw new TypeError('broadcastMessageAndWaitEnabled must be boolean');
+  }
+  if (typeof presentationEffectsEnabled !== 'boolean') {
+    throw new TypeError('presentationEffectsEnabled must be boolean');
+  }
+  if (!presentationEffectsEnabled && dsl4FirstPresentationEffectStoryPath(storyDocument) !== null) {
+    const error = new TypeError(dsl4PresentationEffectsFlagMessage);
+    Object.defineProperty(error, 'code', {value: dsl4PresentationEffectsFlagError});
+    throw error;
   }
   if (typeof crossfadeTransitionsEnabled !== 'boolean') {
     throw new TypeError('crossfadeTransitionsEnabled must be boolean');
@@ -1158,6 +1173,7 @@ export function createDsl4RuntimeController({
     const nextScene = nextIndex === undefined ? null : scenes[nextIndex];
     let preparedSceneCrossfade = null;
     try {
+      if (presentationEffectsEnabled) finishPresentationTransitions(reason);
       preparedSceneCrossfade = nextScene
         ? await prepareSceneCrossfade(nextScene, reason, actionIndex)
         : null;
@@ -1735,6 +1751,7 @@ export function createDsl4RuntimeController({
         if (currentActionIndex + 1 >= actions.length) {
           if (currentSceneIndex + 1 >= scenes.length) {
             try {
+              if (presentationEffectsEnabled) finishPresentationTransitions('runtime-finished');
               endStructuredStory('runtime-finished');
             } catch (error) {
               fail(error, false);
@@ -2792,6 +2809,7 @@ export function createDsl4RuntimeController({
             structuredAction = null;
             structuredActionResources = null;
           }
+          if (presentationEffectsEnabled) finishPresentationTransitions('save-restore');
           abandonQuiesce('save-restore');
           actionAbortController?.abort('save-restore');
           actionAbortController = null;

@@ -114,6 +114,7 @@ test('rejects invalid, colliding, duplicate, and non-canonical registrations', (
     );
   }
   for (const name of dsl4CoreActionNames) {
+    if (name === 'animate' || name === 'presentationEffect') continue;
     assert.throws(
       () => createDsl4ActionRegistrySnapshot([registryEntry(name)]),
       (error) =>
@@ -292,4 +293,34 @@ test('dispatches custom actions through one fixed runtime port', async () => {
       actionPath: '/scenes/opening/actions/0',
     },
   ]);
+});
+
+test('keeps old presentation names available to registered actor custom hats', () => {
+  const actionRegistry = createDsl4ActionRegistrySnapshot([
+    registryEntry('animate'),
+    registryEntry('presentationEffect'),
+  ]);
+  const frontend = createDsl4SourceFrontend(schema, {actionRegistry});
+  for (const [body, command, handler] of [
+    ['Hero.animate: {}', 'animate', 'custom'],
+    ['Hero.animate: {stableId: oldMotion}', 'animate', 'custom'],
+    ['Hero.animate: {to: {x: 1}, seconds: 0}', 'animate', undefined],
+    ['Hero.presentationEffect: {}', 'presentationEffect', 'custom'],
+    [
+      'presentationEffect: {scope: stage, effect: fade, seconds: 0, params: {}}',
+      'presentationEffect',
+      undefined,
+    ],
+  ] as const) {
+    const result = frontend.parse(`kamishibai: '4.0'
+assets: {Idle: costume:Hero}
+actors: {Hero: Idle}
+scenes:
+  opening:
+    - ${body}
+`);
+    assert.equal(result.ok, true, JSON.stringify(result.diagnostics));
+    assert.equal(firstAction(result).command, command);
+    assert.equal(firstAction(result).handler, handler);
+  }
 });

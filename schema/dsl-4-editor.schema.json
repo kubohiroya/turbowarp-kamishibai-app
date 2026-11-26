@@ -3198,6 +3198,266 @@
         }
       }
     },
+    "animateArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "to",
+        "seconds"
+      ],
+      "properties": {
+        "stableId": {
+          "$ref": "#/$defs/stableId"
+        },
+        "to": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "scale": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "direction": {
+              "type": "number"
+            },
+            "transparency": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "minProperties": 1
+        },
+        "seconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "easing": {
+          "enum": [
+            "linear",
+            "easeIn",
+            "easeOut",
+            "easeInOut"
+          ]
+        },
+        "delaySeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "repeat": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "alternate": {
+          "type": "boolean"
+        },
+        "background": {
+          "type": "boolean"
+        }
+      }
+    },
+    "presentationEffectArgs": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "$ref": "#/$defs/stableId"
+            },
+            "scope": {
+              "enum": [
+                "stage",
+                "presentation"
+              ]
+            },
+            "effect": {
+              "const": "shake"
+            },
+            "seconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "amplitude"
+              ],
+              "properties": {
+                "amplitude": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 64
+                },
+                "axis": {
+                  "enum": [
+                    "x",
+                    "y",
+                    "both"
+                  ]
+                },
+                "cycles": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "$ref": "#/$defs/stableId"
+            },
+            "scope": {
+              "enum": [
+                "stage",
+                "presentation"
+              ]
+            },
+            "effect": {
+              "const": "zoom"
+            },
+            "seconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "scale"
+              ],
+              "properties": {
+                "scale": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 3
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "$ref": "#/$defs/stableId"
+            },
+            "scope": {
+              "enum": [
+                "stage",
+                "presentation"
+              ]
+            },
+            "effect": {
+              "const": "wipe"
+            },
+            "seconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "direction": {
+                  "enum": [
+                    "left",
+                    "right",
+                    "up",
+                    "down"
+                  ]
+                },
+                "color": {
+                  "type": "string",
+                  "pattern": "^#[0-9A-Fa-f]{6}$"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "$ref": "#/$defs/stableId"
+            },
+            "scope": {
+              "enum": [
+                "stage",
+                "presentation"
+              ]
+            },
+            "effect": {
+              "const": "fade"
+            },
+            "seconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "color": {
+                  "type": "string",
+                  "pattern": "^#[0-9A-Fa-f]{6}$"
+                },
+                "opacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
     "speechArgs": {
       "type": "object",
       "additionalProperties": false,
@@ -3567,6 +3827,18 @@
         }
       }
     },
+    "presentationEffectAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "presentationEffect"
+      ],
+      "properties": {
+        "presentationEffect": {
+          "$ref": "#/$defs/presentationEffectArgs"
+        }
+      }
+    },
     "bgmAction": {
       "type": "object",
       "additionalProperties": false,
@@ -3848,6 +4120,17 @@
         }
       }
     },
+    "animateAction": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[\\p{L}_][\\p{L}\\p{N}_-]*\\.animate$": {
+          "$ref": "#/$defs/animateArgs"
+        }
+      }
+    },
     "sayAction": {
       "type": "object",
       "minProperties": 1,
@@ -3953,6 +4236,9 @@
           "$ref": "#/$defs/stageAction"
         },
         {
+          "$ref": "#/$defs/presentationEffectAction"
+        },
+        {
           "$ref": "#/$defs/bgmAction"
         },
         {
@@ -4026,6 +4312,9 @@
         },
         {
           "$ref": "#/$defs/moveToAction"
+        },
+        {
+          "$ref": "#/$defs/animateAction"
         },
         {
           "$ref": "#/$defs/sayAction"
@@ -10063,6 +10352,518 @@
         }
       }
     },
+    "editorAction_animateArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "to",
+        "seconds"
+      ],
+      "properties": {
+        "stableId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/editorAction_stableId"
+            },
+            {
+              "$ref": "#/$defs/editorScopedNarrative_reference"
+            }
+          ]
+        },
+        "to": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "y": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "scale": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "direction": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "transparency": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            }
+          },
+          "minProperties": 1
+        },
+        "seconds": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 60
+            },
+            {
+              "$ref": "#/$defs/editorScopedNarrative_reference"
+            }
+          ]
+        },
+        "easing": {
+          "anyOf": [
+            {
+              "enum": [
+                "linear",
+                "easeIn",
+                "easeOut",
+                "easeInOut"
+              ]
+            },
+            {
+              "$ref": "#/$defs/editorScopedNarrative_reference"
+            }
+          ]
+        },
+        "delaySeconds": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 60
+            },
+            {
+              "$ref": "#/$defs/editorScopedNarrative_reference"
+            }
+          ]
+        },
+        "repeat": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            {
+              "$ref": "#/$defs/editorScopedNarrative_reference"
+            }
+          ]
+        },
+        "alternate": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/editorScopedNarrative_reference"
+            }
+          ]
+        },
+        "background": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/editorScopedNarrative_reference"
+            }
+          ]
+        }
+      }
+    },
+    "editorAction_presentationEffectArgs": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/editorAction_stableId"
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "scope": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "stage",
+                    "presentation"
+                  ]
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "effect": {
+              "anyOf": [
+                {
+                  "const": "shake"
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "seconds": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 30
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "amplitude"
+              ],
+              "properties": {
+                "amplitude": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 64
+                    },
+                    {
+                      "$ref": "#/$defs/editorScopedNarrative_reference"
+                    }
+                  ]
+                },
+                "axis": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "x",
+                        "y",
+                        "both"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/editorScopedNarrative_reference"
+                    }
+                  ]
+                },
+                "cycles": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 12
+                    },
+                    {
+                      "$ref": "#/$defs/editorScopedNarrative_reference"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/editorAction_stableId"
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "scope": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "stage",
+                    "presentation"
+                  ]
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "effect": {
+              "anyOf": [
+                {
+                  "const": "zoom"
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "seconds": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 30
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "scale"
+              ],
+              "properties": {
+                "scale": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 1,
+                      "maximum": 3
+                    },
+                    {
+                      "$ref": "#/$defs/editorScopedNarrative_reference"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/editorAction_stableId"
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "scope": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "stage",
+                    "presentation"
+                  ]
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "effect": {
+              "anyOf": [
+                {
+                  "const": "wipe"
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "seconds": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 30
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "direction": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "left",
+                        "right",
+                        "up",
+                        "down"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/editorScopedNarrative_reference"
+                    }
+                  ]
+                },
+                "color": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^#[0-9A-Fa-f]{6}$"
+                    },
+                    {
+                      "$ref": "#/$defs/editorScopedNarrative_reference"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/editorAction_stableId"
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "scope": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "stage",
+                    "presentation"
+                  ]
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "effect": {
+              "anyOf": [
+                {
+                  "const": "fade"
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "seconds": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 30
+                },
+                {
+                  "$ref": "#/$defs/editorScopedNarrative_reference"
+                }
+              ]
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "color": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^#[0-9A-Fa-f]{6}$"
+                    },
+                    {
+                      "$ref": "#/$defs/editorScopedNarrative_reference"
+                    }
+                  ]
+                },
+                "opacity": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    {
+                      "$ref": "#/$defs/editorScopedNarrative_reference"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
     "editorAction_speechArgs": {
       "type": "object",
       "additionalProperties": false,
@@ -10775,6 +11576,18 @@
         }
       }
     },
+    "editorAction_presentationEffectAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "presentationEffect"
+      ],
+      "properties": {
+        "presentationEffect": {
+          "$ref": "#/$defs/editorAction_presentationEffectArgs"
+        }
+      }
+    },
     "editorAction_bgmAction": {
       "type": "object",
       "additionalProperties": false,
@@ -11161,6 +11974,17 @@
         }
       }
     },
+    "editorAction_animateAction": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[\\p{L}_][\\p{L}\\p{N}_-]*\\.animate$": {
+          "$ref": "#/$defs/editorAction_animateArgs"
+        }
+      }
+    },
     "editorAction_sayAction": {
       "type": "object",
       "minProperties": 1,
@@ -11280,6 +12104,9 @@
           "$ref": "#/$defs/editorAction_stageAction"
         },
         {
+          "$ref": "#/$defs/editorAction_presentationEffectAction"
+        },
+        {
           "$ref": "#/$defs/editorAction_bgmAction"
         },
         {
@@ -11353,6 +12180,9 @@
         },
         {
           "$ref": "#/$defs/editorAction_moveToAction"
+        },
+        {
+          "$ref": "#/$defs/editorAction_animateAction"
         },
         {
           "$ref": "#/$defs/editorAction_sayAction"

@@ -17,6 +17,11 @@ import type {Dsl4SourceFrontend} from './source-frontend.js';
 import {deepFreeze, sourceOriginForStoryPath} from './story-document.js';
 import type {Dsl4SubtleCrypto} from './subtle-crypto.js';
 import {dsl4FirstCrossfadeStoryPath} from './transition-spec.js';
+import {
+  dsl4FirstPresentationEffectStoryPath,
+  dsl4PresentationEffectsFlagError,
+  dsl4PresentationEffectsFlagMessage,
+} from './presentation-effects-gate.js';
 
 export {
   dsl4DefaultFeatureFlags,
@@ -307,6 +312,28 @@ export async function createDsl4RuntimeStartup(
       ],
     });
   }
+  const presentationPath = dsl4FirstPresentationEffectStoryPath(component.storyDocument);
+  if (presentationPath !== null && !featureFlags.dsl4PresentationEffects) {
+    const origin = sourceOriginForStoryPath(component.storyDocument, presentationPath);
+    return deepFreeze({
+      ok: false,
+      enabled: true,
+      featureFlags,
+      diagnostics: [
+        {
+          version: 1,
+          code: dsl4PresentationEffectsFlagError,
+          severity: 'error',
+          message: dsl4PresentationEffectsFlagMessage,
+          sourceId: origin.sourceId,
+          range: origin.range,
+          storyPath: presentationPath,
+          path: presentationPath,
+          related: [],
+        },
+      ],
+    });
+  }
   const startupContext = deepFreeze({channel: component.channel, featureFlags});
   let runtimeEnvironment: RuntimeEnvironment | null = null;
 
@@ -428,6 +455,7 @@ export async function createDsl4RuntimeStartup(
         featureFlags.dsl4TurboWarpBubbleAdvancedPresentation,
       broadcastMessageAndWaitEnabled: featureFlags.dsl4BroadcastMessageAndWait,
       crossfadeTransitionsEnabled: featureFlags.dsl4CrossfadeTransitions,
+      presentationEffectsEnabled: featureFlags.dsl4PresentationEffects,
       narrativeControlEnabled: featureFlags.dsl4NarrativeControl,
       inputArbitration: runtimeEnvironment?.inputArbitration,
     });

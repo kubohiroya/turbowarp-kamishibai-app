@@ -275,7 +275,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     badge: {color: '#4c8fe0', glyph: 'M2 20 9 10l5 6 3-3 5 7Z', filled: true},
     color2: '#4079be',
     color3: '#35649c',
-    opcodes: ['stage', 'transition'],
+    opcodes: ['stage', 'transition', 'presentationEffect'],
   },
   {
     id: 'sound',
@@ -331,7 +331,16 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     },
     color2: '#23857f',
     color3: '#1d6d69',
-    opcodes: ['show', 'hide', 'setTransparency', 'moveTo', 'setSkin', 'setLayer', 'loop'],
+    opcodes: [
+      'show',
+      'hide',
+      'setTransparency',
+      'moveTo',
+      'animate',
+      'setSkin',
+      'setLayer',
+      'loop',
+    ],
   },
   {
     id: 'speech',
@@ -454,6 +463,8 @@ export const dsl4RuntimeTranslations: Dsl4BlockTranslations = Object.freeze({
       debugger: 'デバッガーで止める',
       broadcastMessageAndWait: '[MESSAGE] を送って待つ',
       transition: '[EFFECT] で [SECONDS] 秒かけて切り替える',
+      presentationEffect:
+        '[SCOPE] に [EFFECT] の演出を [SECONDS] 秒適用する パラメーター JSON [PARAMS]',
       goto: 'シーン [SCENE] へ移る',
       gotoSegment: '台本の区切り [SEGMENT] へ移る',
       branch: '分岐 [BRANCH] を選ぶ',
@@ -468,6 +479,7 @@ export const dsl4RuntimeTranslations: Dsl4BlockTranslations = Object.freeze({
       hide: '登場人物 [TARGET] を隠す',
       setTransparency: '登場人物 [TARGET] の透明度を [SPEC] にする',
       moveTo: '登場人物 [TARGET] を [SECONDS] 秒で x [X] y [Y] へ動かす [EASING]',
+      animate: '登場人物 [TARGET] をアニメーションさせる 指定 JSON [SPEC]',
       say: '登場人物 [TARGET] が言う 指定 [SPEC]',
       think: '登場人物 [TARGET] が考える 指定 [SPEC]',
       setSkin: '登場人物 [TARGET] のコスチュームを [SKIN] にする 大きさ [SCALE]',
@@ -527,6 +539,7 @@ export const dsl4RuntimeTranslations: Dsl4BlockTranslations = Object.freeze({
         fadeFromWhite: '白からフェード',
         reset: '元に戻す',
       },
+      dsl4PresentationEffectScope: {stage: '舞台', presentation: '画面全体'},
       dsl4MoveEasing: {
         linear: '一定の速さ',
         easeIn: 'だんだん速く',

@@ -1,5 +1,5 @@
 import {
-  dsl4ActorCoreActionNames,
+  isDsl4ActorCoreSourceAction,
   dsl4EmptyActionRegistrySnapshot,
   validateDsl4ActionRegistrySnapshot,
 } from './action-registry.js';
@@ -15,7 +15,6 @@ const identifierSections = [
   'variables',
   'branches',
 ];
-const actorCoreActionNames = new Set(dsl4ActorCoreActionNames);
 const speechPresentationFields = [
   'characterIntervalSeconds',
   'characterSound',
@@ -661,7 +660,7 @@ export function validateDsl4Semantics(
               `${actionPath}.steps[${stepIndex}].sound`,
             );
           });
-        } else if (!actorCoreActionNames.has(opcode)) {
+        } else if (!isDsl4ActorCoreSourceAction(opcode, value)) {
           const registration = customActions.get(opcode);
           if (!registration) {
             issues.push({

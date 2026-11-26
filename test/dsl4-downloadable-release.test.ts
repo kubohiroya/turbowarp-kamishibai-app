@@ -13,6 +13,7 @@ import {buildSb3, importSb3} from '@kubohiroya/sb3-toolchain';
 import {readCameraSourceRuntime} from '@kubohiroya/turbowarp-camera-source/runtime';
 
 import {createKamishibaiSb3} from '../scripts/sb3/build.ts';
+import {dsl4PlaybackRuntimeSitePath} from '../scripts/sb3/playback-runtime-site.ts';
 import {readDsl4TeachableMachineRuntimeSite} from '../scripts/sb3/teachable-machine-runtime.ts';
 import {authorDsl4BlockSourceSb3} from '../src/builder/dsl4-block-source-author.js';
 import {
@@ -1726,7 +1727,7 @@ test('opens the fixed official website through the Runtime 4 opcode', async () =
   }
 });
 
-test('registers all DSL 4.0 runtime blocks as visible VM primitives', async () => {
+test('registers the standard DSL 4.0 runtime blocks as visible VM primitives', async () => {
   const result = await buildRelease();
   const restoreGlobals = installUnsandboxedScriptDom();
   const vm = new VirtualMachine();
@@ -1739,7 +1740,9 @@ test('registers all DSL 4.0 runtime blocks as visible VM primitives', async () =
     await loadProjectQuietly(vm, result.archive);
 
     const commands = [
-      ...dsl4CoreActionManifest.map(({command}) => command),
+      ...dsl4CoreActionManifest
+        .filter(({featureFlag}) => featureFlag === undefined)
+        .map(({command}) => command),
       'sayText',
       'thinkText',
     ];
@@ -1778,6 +1781,13 @@ test('registers all DSL 4.0 runtime blocks as visible VM primitives', async () =
         .map(({info}: VmCategoryBlock) => info.opcode),
       bundledCommands,
     );
+    for (const command of ['animate', 'presentationEffect']) {
+      assert.equal(
+        vm.runtime.getOpcodeFunction(`${bundleExtensionId}_${runtimeExtensionId}__${command}`),
+        undefined,
+      );
+    }
+
     const sourceMarker = category.blocks.find(
       ({info}: VmCategoryBlock) => info.opcode === `${runtimeExtensionId}__embeddedYaml`,
     );
@@ -2502,6 +2512,27 @@ scenes:
       },
     };
     const restorePreviewGlobals = installPreviewBrowserGlobals(project.root, {saveFileHandle});
+    // An unpublished version cannot be fetched from Pages. Exercise the real authoring
+    // fallback deterministically, without waiting for a remote 404 in this filesystem test.
+    const playbackUrl = new URL(
+      dsl4PlaybackRuntimeSitePath(releasePins.release.version),
+      'https://kubohiroya.github.io/turbowarp-kamishibai-app/',
+    ).href;
+    const originalFetch = globalThis.fetch;
+    const fetchDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'fetch');
+    let playbackRequests = 0;
+    Object.defineProperty(globalThis, 'fetch', {
+      configurable: true,
+      writable: true,
+      value(input: RequestInfo | URL, init?: RequestInit) {
+        if (String(input) === playbackUrl) {
+          playbackRequests += 1;
+          return Promise.resolve(new Response(null, {status: 404}));
+        }
+        return originalFetch(input, init);
+      },
+    });
+
     const vm = new VirtualMachine();
     try {
       vm.setCompatibilityMode(false);
@@ -2605,6 +2636,7 @@ scenes:
         await new Promise((resolve) => setTimeout(resolve, 20));
       }
       assert(savedDistribution, await extensionReporter(vm, 'lastErrorReporter'));
+      assert.equal(playbackRequests, 1);
       const distributionArchive = unzipSync(savedDistribution);
       const distributionProject = projectOf(
         JSON.parse(strFromU8(entryOf(distributionArchive, 'project.json'))),
@@ -2724,6 +2756,8 @@ scenes:
       await assertFreshBrowserBuiltStoryRuns(savedDistribution);
     } finally {
       vm.quit();
+      if (fetchDescriptor) Object.defineProperty(globalThis, 'fetch', fetchDescriptor);
+      else Reflect.deleteProperty(globalThis, 'fetch');
       restorePreviewGlobals();
       restoreGlobals();
     }

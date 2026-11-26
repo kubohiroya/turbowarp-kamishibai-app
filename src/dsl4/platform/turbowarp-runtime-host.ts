@@ -6,6 +6,10 @@ import {
 } from '../creation-cleanup.js';
 import {createDsl4RetryableCleanup} from '../retryable-cleanup.js';
 import {createDsl4ViewportOwner} from '../viewport.js';
+import {
+  createDsl4PresentationEffectPort,
+  type Dsl4PresentationEffectSurface,
+} from './presentation-effect-port.js';
 import {createDsl4PresentationSavePort} from './presentation-save-port.js';
 import {dsl4CoreActionManifest} from '../core-action-manifest.js';
 import {createDsl4AssetDependencyIndex} from '../asset-dependency-index.js';
@@ -183,6 +187,11 @@ interface TurboWarpRuntimeHostOptions extends SessionBackingHostOptions {
   readonly onPoseState?: (event: Readonly<Record<string, unknown>>) => unknown;
   readonly poseArchiveLimits?: Readonly<Record<string, unknown>>;
   readonly poseFeedbackPresenter?: Readonly<Record<string, unknown>>;
+  /** Explicit story-owned surfaces; host application chrome is never an implicit target. */
+  readonly presentationEffectSurfaces?: Readonly<{
+    stage?: Dsl4PresentationEffectSurface;
+    presentation?: Dsl4PresentationEffectSurface;
+  }>;
   readonly poseNow?: Dsl4ForwardedFactory;
   readonly poseSchedule?: Dsl4ForwardedFactory;
   readonly project?: unknown;
@@ -594,6 +603,7 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
   let audioPort: ReturnType<typeof createDsl4AudioActionPort> | null = null;
   let videoPort: ReturnType<typeof createDsl4VideoActionPort> | null = null;
   let crossfadePlatform: ReturnType<typeof createDsl4TurboWarpCrossfadePlatform> | null = null;
+  let presentationEffects: ReturnType<typeof createDsl4PresentationEffectPort> | null = null;
   let svgTextPlatform: ReturnType<typeof createDsl4SvgTextPlatform> | null = null;
   let bubblePlatform: ReturnType<typeof createDsl4BubblePlatform> | null = null;
   let scratchPoseFeedbackAdapter: ReturnType<typeof createDsl4ScratchPoseFeedbackAdapter> | null =
@@ -1039,6 +1049,17 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
     }
 
     const port: Record<string, Dsl4RuntimePortOperation | undefined> = {};
+    if (featureFlags.dsl4PresentationEffects) {
+      presentationEffects = createDsl4PresentationEffectPort(
+        options.presentationEffectSurfaces ?? {},
+      );
+      addPortMethods(
+        port,
+        presentationEffects,
+        ['presentationEffect'],
+        'presentation effects port',
+      );
+    }
     addPortMethods(
       port,
       mediaPort,
@@ -1062,6 +1083,7 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
         'setLayer',
         'setTransparency',
         'moveTo',
+        ...(featureFlags.dsl4PresentationEffects ? ['animate'] : []),
         'say',
         ...(speechAdvanceTypewriterEnabled ? ['think'] : []),
       ],
@@ -1160,11 +1182,28 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
       'presentation save port',
     );
     const activeActorPlatformForTransitions = actorPlatform;
-    port.finishPresentationTransitions = () => {
+    port.finishPresentationTransitions = (reason: unknown) => {
       const errors = [];
       for (const finish of [
         activeActorPlatformForTransitions.finishTransparencyTransitions,
         crossfadePlatform?.finishAll,
+        ...(featureFlags.dsl4PresentationEffects
+          ? [
+              () => {
+                if (
+                  reason === 'save-restore' ||
+                  reason === 'runtime-failed' ||
+                  reason === 'restart' ||
+                  reason === 'dispose'
+                ) {
+                  activeActorPlatformForTransitions.cancelActorAnimations();
+                } else {
+                  activeActorPlatformForTransitions.finishActorAnimations();
+                }
+              },
+              presentationEffects?.finishAll,
+            ]
+          : []),
       ]) {
         try {
           finish?.();
@@ -1503,6 +1542,7 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
         () => videoPort?.dispose(),
         () => audioPort?.dispose(),
         () => crossfadePlatform?.dispose(),
+        () => presentationEffects?.dispose(),
         () => actorPlatform?.dispose(),
         () => scratchPoseFeedbackAdapter?.dispose(),
         () => poseFeedbackPresenter?.dispose(),
@@ -1550,6 +1590,7 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
         () => videoPort?.dispose(),
         () => audioPort?.dispose(),
         () => crossfadePlatform?.dispose(),
+        () => presentationEffects?.dispose(),
         () => actorPlatform?.dispose(),
         () => scratchPoseFeedbackAdapter?.dispose(),
         () => poseFeedbackPresenter?.dispose(),

@@ -4,6 +4,7 @@ import {validateCompositionMethods} from './composition-contract.js';
 import {normalizeDsl4BubbleMotions} from '../bubble-motion.js';
 import {dsl4MoveEasingNames, isDsl4MoveEasing} from '../move-easing.js';
 import {dsl4RotationStyleNames, isDsl4RotationStyle} from '../rotation-style.js';
+import {normalizeDsl4ActorAnimation} from './actor-animation-timeline.js';
 import {createDsl4OrderedCursorNotifier} from './ordered-cursor-notifier.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -43,7 +44,7 @@ function validateHost(value: unknown, speechAdvanceTypewriterEnabled: boolean) {
   // crossfade member optional because the port probes for it before every use.
   return validateCompositionMethods<
     (typeof baseMethods)[number] | (typeof typewriterMethods)[number],
-    'createVisibilityTransition'
+    'createVisibilityTransition' | 'createAnimation'
   >(value, 'Actor presentation host', [
     ...baseMethods,
     ...(speechAdvanceTypewriterEnabled ? typewriterMethods : []),
@@ -224,7 +225,7 @@ async function runCancellable<T>(start: () => T | Promise<T>, signal: AbortSigna
 
 function validatePresentationOperation(
   value: unknown,
-  command: 'setTransparency' | 'moveTo' | 'say' | 'think' | 'show' | 'hide',
+  command: 'setTransparency' | 'moveTo' | 'animate' | 'say' | 'think' | 'show' | 'hide',
 ) {
   if (!isRecord(value) || typeof value.start !== 'function' || typeof value.finish !== 'function') {
     throw portError(
@@ -799,6 +800,39 @@ export function createDsl4ActorActionPort(options: {
         throw portError(
           'K4-ACTOR-PORT-004',
           'setTransparency background operation must provide startBackground',
+        );
+      }
+      operation.startBackground();
+    },
+
+    async animate(payload: unknown, context: unknown) {
+      if (typeof host.createAnimation !== 'function') {
+        throw portError('K4-ACTOR-PORT-004', 'The presentation host cannot animate actors');
+      }
+      if (!isRecord(payload))
+        throw portError('K4-ACTOR-PORT-001', 'animate payload must be an object');
+      const {target: rawTarget, ...rawAnimation} = payload;
+      const target = requireNonEmptyString(rawTarget, 'target', 'animate');
+      let animation;
+      try {
+        animation = normalizeDsl4ActorAnimation(rawAnimation);
+      } catch (error) {
+        throw portError('K4-ACTOR-PORT-001', (error as Error).message);
+      }
+      const signal = validateContext(context);
+      if (signal.aborted) throw abortError();
+      const actionContext = context as Readonly<Record<string, unknown>>;
+      const actor = await resolveTarget(target, actionContext, signal);
+      const operation = validatePresentationOperation(
+        host.createAnimation(actor, animation, actionContext),
+        'animate',
+      );
+      if (!animation.background) return runPresentationOperation(operation, signal);
+      if (signal.aborted) throw abortError();
+      if (!operation.startBackground) {
+        throw portError(
+          'K4-ACTOR-PORT-004',
+          'animate background operation must provide startBackground',
         );
       }
       operation.startBackground();

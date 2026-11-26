@@ -1,3 +1,4 @@
+import {createDsl4BrowserStagePresentationEffectSurfaces} from '../dsl4/platform/presentation-effect-surfaces.js';
 import {createDsl4BrowserPreviewRuntimeBridge} from '../dsl4/browser-preview-runtime-bridge.js';
 import {
   createDsl4BrowserTurboWarpStage,
@@ -509,11 +510,20 @@ export function createDsl4LocalPreviewBrowserRuntime(optionsInput: object) {
           globalObject,
           activeStage.getRuntime(),
         );
+        const presentationElements = activeStage.getPresentationElements();
         const createSession = createDsl4TurboWarpPreviewSessionFactory({
           ...runtimeOptions,
           featureFlags,
           runtimeComponent: component,
           runtime: activeStage.getRuntime(),
+          ...(isRecord(featureFlags) && featureFlags.dsl4PresentationEffects === true
+            ? {
+                presentationEffectSurfaces: createDsl4BrowserStagePresentationEffectSurfaces({
+                  canvas: presentationElements.canvas as unknown as HTMLCanvasElement,
+                  stageLayers: presentationElements.stageLayers as unknown as HTMLElement,
+                }),
+              }
+            : {}),
           resetManagedPresentation: () => activeStage.resetManagedPresentation(),
           inputTarget: canvas,
           stagePointerTarget: canvas,

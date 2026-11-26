@@ -1,3 +1,4 @@
+import {dsl4FirstPresentationEffectStoryPath} from '../dsl4/presentation-effects-gate.js';
 import {
   createDsl4EmbeddedAssetBundle,
   Dsl4AssetBundleError,
@@ -231,6 +232,8 @@ export async function buildDsl4RuntimeComponent(options: {
   maxAssetConfigBytes?: number;
   maxAssetLockBytes?: number;
   runtimeExtensionSource?: string;
+  /** Internal: the loopback browser runs its own opt-in runtime rather than the packaged runner. */
+  localPreviewRuntime?: boolean;
   /**
    * PoseNet model data to store with the work: a descriptor, or a function that picks one once the
    * asset profile is known (`network: 'forbidden'` builds must embed the model data).
@@ -281,6 +284,7 @@ export async function buildDsl4RuntimeComponent(options: {
     maxAssetConfigBytes,
     maxAssetLockBytes,
     runtimeExtensionSource,
+    localPreviewRuntime = false,
     poseNetBundle,
     tmRuntime,
     distributionProfile = 'source',
@@ -416,6 +420,16 @@ export async function buildDsl4RuntimeComponent(options: {
   }
   if (!parsed.ok) failDiagnostics(parsed.diagnostics, 'dsl4-parse');
   let storyDocument = parsed.storyDocument;
+  if (
+    dsl4FirstPresentationEffectStoryPath(storyDocument) !== null &&
+    !(localPreviewRuntime && featureFlags.dsl4PresentationEffects)
+  ) {
+    throw new Dsl4BuildError(
+      'Actor animation and presentation effects are available only in the opt-in local preview; they cannot be packaged for the Standard SB3 runtime.',
+      {stage: 'dsl4-runtime-capability', code: 'K4-PRESENTATION-EFFECTS-RUNTIME-001'},
+    );
+  }
+
   if (sealAssetSources) {
     storyDocument = {
       ...storyDocument,

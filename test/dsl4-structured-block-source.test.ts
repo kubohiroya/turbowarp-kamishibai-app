@@ -155,6 +155,92 @@ test('places real action blocks in scene substacks and retains metadata and opti
   assert.ok(!Object.hasOwn(decoded.scenes.opening.actions[2]['Hero.moveTo'], 'easing'));
 });
 
+test('round-trips motion and presentation effects through actual YAML-authored SB3 blocks', () => {
+  const original = source.replace(
+    '      - Hero.say:',
+    `      - Hero.animate:
+          to: {x: 0, scale: 120, direction: 0, transparency: 12}
+          seconds: 1
+          easing: easeInOut
+          delaySeconds: 0
+          repeat: 0
+          alternate: false
+          background: false
+          stableId: actorMotion
+      - Hero.animate: {to: {y: -12}, seconds: 0}
+      - presentationEffect:
+          scope: presentation
+          effect: shake
+          seconds: 1.5
+          params: {amplitude: 0, axis: x}
+          stableId: sceneShake
+      - presentationEffect: {scope: stage, effect: fade, seconds: 0, params: {}}
+      - Hero.say:`,
+  );
+  const project = authored(original);
+  const blocks = Object.values(blocksOf(project));
+  assert.equal(blocks.filter(({opcode}) => opcode === `${runtimePrefix}animate`).length, 2);
+  assert.equal(
+    blocks.filter(({opcode}) => opcode === `${runtimePrefix}presentationEffect`).length,
+    2,
+  );
+  assert.deepEqual(parse(extracted(project)), parse(original));
+  assert.equal(comparable(extracted(project)), comparable(original));
+
+  // Runtime authoring (without the combined bundle prefix) uses the same saved input ABI.
+  const runtime = createDsl4StructuredBlockSourceDeclaration({
+    source: parse(original),
+    form: 'runtime',
+    hatId: 'hat',
+  });
+  assert.deepEqual(
+    parse(
+      extracted({
+        targets: [{name: 'Stage', isStage: true, blocks: runtime}],
+        extensions: [],
+        extensionURLs: {},
+      }),
+    ),
+    parse(original),
+  );
+});
+
+test('keeps legacy animate and presentationEffect on the custom actor block', () => {
+  const raw = {
+    kamishibai: '4.0',
+    scenes: {
+      opening: {
+        actions: [
+          {'Hero.animate': {arguments: {transition: 1}}},
+          {'Hero.animate': {stableId: 'oldMotion'}},
+          {'Hero.presentationEffect': {arguments: {cue: 'old'}}},
+        ],
+      },
+    },
+  };
+  const blocks = createDsl4StructuredBlockSourceDeclaration({
+    source: raw,
+    form: 'runtime',
+    hatId: 'hat',
+  });
+  assert.equal(
+    Object.values(blocks).filter(({opcode}) => opcode.endsWith('_customAction')).length,
+    3,
+  );
+  const roundtrip = parse(
+    extracted({
+      targets: [{name: 'Stage', isStage: true, blocks}],
+      extensions: [],
+      extensionURLs: {},
+    }),
+  );
+  assert.deepEqual(roundtrip.scenes.opening, [
+    {'Hero.animate': {arguments: {transition: 1}}},
+    {'Hero.animate': {arguments: {}, stableId: 'oldMotion'}},
+    {'Hero.presentationEffect': {arguments: {cue: 'old'}}},
+  ]);
+});
+
 test('retains meaning for the comprehensive production fixture', async () => {
   const fixture = await readFile(
     new URL('fixtures/dsl4/valid/comprehensive.kamishibai.yaml', import.meta.url),
@@ -378,7 +464,7 @@ test('exports edits to optional properties, scene ordering and story metadata', 
   assert.equal(yaml.scenes.opening.actions[2]['Hero.moveTo'].easing, 'easeIn');
 });
 
-test('round-trips all 34 core actions using their own opcodes, including scalar/long arguments', () => {
+test('round-trips all 36 core actions using their own opcodes, including scalar/long arguments', () => {
   const actions = [
     {stage: {backdrop: 'Beach', stableId: 'stageId'}},
     {bgm: {sound: 'Music', restart: false, volume: 35}},
@@ -432,6 +518,8 @@ test('round-trips all 34 core actions using their own opcodes, including scalar/
     {audio: {id: 'music', url: 'https://example.com/music.mp3'}},
     {audioControl: {id: 'music', operation: 'play'}},
     {gotoSegment: 'chapter2'},
+    {presentationEffect: {scope: 'stage', effect: 'zoom', seconds: 1, params: {scale: 2}}},
+    {'Hero.animate': {to: {x: 15, y: 20}, seconds: 2}},
   ];
   for (const form of ['runtime', 'bundle'] as const) {
     const blocks = createDsl4StructuredBlockSourceDeclaration({
@@ -442,7 +530,7 @@ test('round-trips all 34 core actions using their own opcodes, including scalar/
     const project = {targets: [{isStage: true, name: 'Stage', blocks}]};
     const decoded = parse(extractDsl4BlockSourcesFromProject(project).sources['Stage.k4.yml']!);
     const output = decoded.scenes.opening;
-    assert.equal(output.length, 34);
+    assert.equal(output.length, 36);
     for (const {command} of dsl4TurboWarpCoreActionBlockSpecs) {
       assert.ok(
         Object.values(blocks).some(({opcode}) =>
@@ -878,6 +966,10 @@ test('retains dedicated definitions, scenes and labeled includes through a pinne
   const infoJson = JSON.stringify(info)
     .replaceAll('dsl4TransitionEffect', 'kubohiroyakamishibairuntime4__dsl4TransitionEffect')
     .replaceAll('dsl4MoveEasing', 'kubohiroyakamishibairuntime4__dsl4MoveEasing')
+    .replaceAll(
+      'dsl4PresentationEffectScope',
+      'kubohiroyakamishibairuntime4__dsl4PresentationEffectScope',
+    )
     .replaceAll('dsl4VariableValueType', 'kubohiroyakamishibairuntime4__dsl4VariableValueType');
   const runtime =
     'Scratch.extensions.register(Object.assign({getInfo(){return ' +
@@ -891,6 +983,8 @@ test('retains dedicated definitions, scenes and labeled includes through a pinne
       'HeroIdle: costume:Hero\n  HeroOther: costume:Hero\n  Ocean: backdrop',
     ) +
     '    - setVariable: {name: score, value: 5}\n    - transition: {effect: fadeOut, seconds: 1}\n' +
+    '    - Hero.animate: {to: {x: 30}, seconds: 1, alternate: false}\n' +
+    '    - presentationEffect: {scope: stage, effect: shake, seconds: 1, params: {amplitude: 8}}\n' +
     'textStyles:\n  title: {size: 24}\ncover: {backdrop: Beach}\n' +
     'loading: {backdrop: Beach, costumes: [HeroIdle]}\nrecognition: {}\n' +
     'controls:\n  keymaps:\n    production: {Space: navigation.nextAction}\n';
@@ -1001,10 +1095,35 @@ test('retains dedicated definitions, scenes and labeled includes through a pinne
       name: 'kubohiroyakamishibairuntime4__dsl4TransitionEffect',
       value: 'fadeUp',
     });
+    const [animateId] = blockWith(blocksOf(project), `${runtimePrefix}animate`);
+    stage.blocks.changeBlock({
+      id: stage.blocks.getBlock(animateId).inputs.SPEC.block,
+      element: 'field',
+      name: 'TEXT',
+      value: '{"to":{"scale":120},"seconds":2,"alternate":false}',
+    });
+    const [effectId] = blockWith(blocksOf(project), `${runtimePrefix}presentationEffect`);
+    stage.blocks.changeBlock({
+      id: stage.blocks.getBlock(effectId).inputs.SCOPE.block,
+      element: 'field',
+      name: 'kubohiroyakamishibairuntime4__dsl4PresentationEffectScope',
+      value: 'presentation',
+    });
     const saved = JSON.parse(vm.toJSON()) as Project;
     const yaml = parse(extracted(saved));
     assert.equal(yaml.scenes.opening.actions[4].wait, 12);
     assert.equal(yaml.scenes.ending[2].transition.effect, 'fadeUp');
+    assert.deepEqual(yaml.scenes.ending[3]['Hero.animate'], {
+      to: {scale: 120},
+      seconds: 2,
+      alternate: false,
+    });
+    assert.deepEqual(yaml.scenes.ending[4].presentationEffect, {
+      scope: 'presentation',
+      effect: 'shake',
+      seconds: 1,
+      params: {amplitude: 8},
+    });
     assert.deepEqual(yaml.assets.Beach, {kind: 'backdrop', name: 'EditedBeach'});
     assert.equal(yaml.actors.Hero, 'HeroOther');
     assert.deepEqual(yaml.textStyles.title, {size: 48});

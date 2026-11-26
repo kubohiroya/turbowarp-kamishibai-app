@@ -18,6 +18,12 @@ import {
   scratchDsl4RotationStyle,
 } from '../rotation-style.js';
 
+import {
+  createDsl4ActorAnimationTimeline,
+  normalizeDsl4ActorAnimation,
+  type Dsl4ActorAnimationProperty,
+} from './actor-animation-timeline.js';
+
 const defaultFrameMilliseconds = 1000 / 60;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -324,6 +330,7 @@ export function createDsl4TurboWarpActorPlatform(options: {
   if (frameMilliseconds <= 0) {
     throw new TypeError('frameMilliseconds must be greater than zero');
   }
+  const animations = createDsl4ActorAnimationTimeline(scheduler, frameMilliseconds);
   const activeTransparencyTransitions: Map<
     ReturnType<typeof validateEffectActor>,
     {finish: () => void}
@@ -805,6 +812,10 @@ export function createDsl4TurboWarpActorPlatform(options: {
       const y = finiteNumber(value.y, 'showActor.y');
       const scale = finiteNumber(value.scale, 'showActor.scale');
       if (scale <= 0) throw adapterError('K4-TW-ACTOR-002', 'showActor.scale must be positive');
+      animations.release(
+        actor,
+        Object.hasOwn(value, 'direction') ? ['x', 'y', 'scale', 'direction'] : ['x', 'y', 'scale'],
+      );
       actor.setXY(x, y);
       actor.setSize(scale);
       applyActorRotation(actor, value);
@@ -822,7 +833,9 @@ export function createDsl4TurboWarpActorPlatform(options: {
       if (value <= 0) {
         throw adapterError('K4-TW-ACTOR-002', 'setActorScale.scale must be positive');
       }
-      validateActor(target).setSize(value);
+      const actor = validateActor(target);
+      animations.release(actor, ['scale']);
+      actor.setSize(value);
     },
 
     setActorLayer(target: unknown, layer: unknown) {
@@ -862,6 +875,7 @@ export function createDsl4TurboWarpActorPlatform(options: {
         );
       }
       activeTransparencyTransitions.get(actor)?.finish();
+      animations.release(actor, ['transparency']);
       actor.setEffect('ghost', transparency);
     },
 
@@ -958,6 +972,7 @@ export function createDsl4TurboWarpActorPlatform(options: {
         backgroundOwned = background;
         const startTime = finiteNumber(scheduler.now(), 'scheduler.now()');
         activeTransparencyTransitions.get(actor)?.finish();
+        animations.release(actor, ['transparency']);
         actor.setEffect('ghost', from);
         state = 'running';
         activeTransparencyTransitions.set(actor, operation);
@@ -1086,6 +1101,7 @@ export function createDsl4TurboWarpActorPlatform(options: {
             throw adapterError('K4-TW-ACTOR-003', 'visibility transition can only start once');
           }
           activeTransparencyTransitions.get(actor)?.finish();
+          animations.release(actor, ['transparency']);
           const startTime = finiteNumber(scheduler.now(), 'scheduler.now()');
           state = 'running';
           activeTransparencyTransitions.set(actor, operation);
@@ -1131,6 +1147,54 @@ export function createDsl4TurboWarpActorPlatform(options: {
       return operation;
     },
 
+    createAnimation(target: unknown, input: unknown) {
+      ensureActive();
+      const actor = validateActor(target);
+      const spec = normalizeDsl4ActorAnimation(input);
+      const effectActor = spec.to.transparency === undefined ? null : validateEffectActor(target);
+      if (spec.to.direction !== undefined && typeof actor.setDirection !== 'function') {
+        throw adapterError('K4-TW-ACTOR-002', 'TurboWarp actor must provide setDirection');
+      }
+      const read = (property: Dsl4ActorAnimationProperty) => {
+        if (property === 'transparency') {
+          const effects = isRecord(effectActor?.effects) ? effectActor.effects : {};
+          return Math.max(0, Math.min(100, finiteNumber(effects.ghost ?? 0, 'actor transparency')));
+        }
+        return finiteNumber(actor[property === 'scale' ? 'size' : property], `actor ${property}`);
+      };
+      const operation = animations.create(
+        actor,
+        {
+          read,
+          write(values) {
+            if (values.x !== undefined || values.y !== undefined) {
+              actor.setXY(values.x ?? actor.x, values.y ?? actor.y);
+            }
+            if (values.scale !== undefined) actor.setSize(values.scale);
+            if (values.direction !== undefined) actor.setDirection!(values.direction);
+            if (values.transparency !== undefined)
+              effectActor!.setEffect('ghost', values.transparency);
+          },
+        },
+        spec,
+      );
+      const start = () => {
+        ensureActive();
+        if (effectActor) activeTransparencyTransitions.get(effectActor)?.finish();
+      };
+      return Object.freeze({
+        start() {
+          start();
+          return operation.start();
+        },
+        startBackground() {
+          start();
+          operation.startBackground();
+        },
+        finish: operation.finish,
+      });
+    },
+
     createMove(target: unknown, destination: unknown) {
       const actor = validateActor(target);
       const value = validateSpec(destination, ['x', 'y', 'seconds'], 'moveTo', ['easing']);
@@ -1173,6 +1237,7 @@ export function createDsl4TurboWarpActorPlatform(options: {
           if (state !== 'idle') {
             throw adapterError('K4-TW-ACTOR-003', 'moveTo operation can only start once');
           }
+          animations.release(actor, ['x', 'y']);
           const startX = finiteNumber(actor.x, 'actor.x');
           const startY = finiteNumber(actor.y, 'actor.y');
           const startTime = finiteNumber(scheduler.now(), 'scheduler.now()');
@@ -1246,8 +1311,11 @@ export function createDsl4TurboWarpActorPlatform(options: {
       }
     },
     finishTransparencyTransitions,
+    finishActorAnimations: animations.finishAll,
+    cancelActorAnimations: animations.cancelAll,
     dispose() {
       if (disposed) return;
+      animations.cancelAll();
       finishTransparencyTransitions();
       disposed = true;
     },

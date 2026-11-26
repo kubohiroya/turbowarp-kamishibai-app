@@ -22,6 +22,21 @@ export const dsl4CoreActionNames = Object.freeze([
 ]);
 
 const coreActionNames = new Set(dsl4CoreActionNames);
+const actorCoreActionNames = new Set(dsl4ActorCoreActionNames);
+
+// These two additions must not reserve names in existing DSL 4.0 custom hats.
+const presentationCompatibilityNames = new Set(['animate', 'presentationEffect']);
+
+export function isDsl4ReservedCustomActionName(name: string): boolean {
+  return coreActionNames.has(name) && !presentationCompatibilityNames.has(name);
+}
+
+/** Classify only dotted source actions; global presentationEffect is not an actor action. */
+export function isDsl4ActorCoreSourceAction(command: string, value: unknown): boolean {
+  return command === 'animate'
+    ? isRecord(value) && Object.hasOwn(value, 'to')
+    : actorCoreActionNames.has(command);
+}
 
 export class Dsl4ActionRegistryError extends TypeError {
   readonly code: string;
@@ -109,7 +124,7 @@ export function createDsl4ActionRegistrySnapshot(inputEntries: unknown) {
       'source',
     ]);
     const name = requireIdentifier(inputEntry.name, `Action Registry entry ${entryIndex} name`);
-    if (coreActionNames.has(name)) {
+    if (isDsl4ReservedCustomActionName(name)) {
       throw new Dsl4ActionRegistryError(
         'K4-REGISTRY-COLLISION-001',
         `Custom action ${name} collides with a DSL 4.0 core action`,

@@ -69,29 +69,38 @@ function normalizeBlockArguments(command: string, sourceValue: unknown) {
  */
 export function createDsl4TurboWarpCoreActionBlockSurface(
   Scratch: TurboWarpScratchBlockBoundary,
-  {visible = false}: {visible?: boolean} = {},
+  {visible = false, includeOptIn = true}: {visible?: boolean; includeOptIn?: boolean} = {},
 ) {
   if (!isRecord(Scratch) || !isRecord(Scratch.ArgumentType) || !isRecord(Scratch.BlockType)) {
     throw new TypeError('TurboWarp action block surface requires ArgumentType and BlockType');
   }
   if (typeof visible !== 'boolean') throw new TypeError('visible must be boolean');
+  if (typeof includeOptIn !== 'boolean') throw new TypeError('includeOptIn must be boolean');
+  const optIn = new Set(
+    dsl4CoreActionManifest
+      .filter(({featureFlag}) => featureFlag !== undefined)
+      .map(({command}) => command),
+  );
+
   const blocks = createTurboWarpBlockDefinitions(
     Scratch,
-    dsl4TurboWarpActionBlockSpecs.map((spec) => ({
-      opcode: spec.command,
-      blockType: 'COMMAND',
-      text: spec.text,
-      arguments: Object.fromEntries(
-        spec.arguments.map((input) => [
-          input.name,
-          {
-            type: input.type === 'number' ? 'NUMBER' : 'STRING',
-            defaultValue: input.defaultValue,
-            ...(input.menu ? {menu: input.menu} : {}),
-          },
-        ]),
-      ),
-    })),
+    dsl4TurboWarpActionBlockSpecs
+      .filter(({command}) => includeOptIn || !optIn.has(command))
+      .map((spec) => ({
+        opcode: spec.command,
+        blockType: 'COMMAND',
+        text: spec.text,
+        arguments: Object.fromEntries(
+          spec.arguments.map((input) => [
+            input.name,
+            {
+              type: input.type === 'number' ? 'NUMBER' : 'STRING',
+              defaultValue: input.defaultValue,
+              ...(input.menu ? {menu: input.menu} : {}),
+            },
+          ]),
+        ),
+      })),
     {hideFromPalette: !visible},
   );
   return deepFreeze({
@@ -104,6 +113,7 @@ export function createDsl4TurboWarpCoreActionBlockSurface(
         acceptReporters: true,
         items: ['fadeOut', 'fadeUp', 'fadeToWhite', 'fadeFromWhite', 'reset'],
       },
+      dsl4PresentationEffectScope: {acceptReporters: true, items: ['stage', 'presentation']},
       dsl4MoveEasing: {
         acceptReporters: true,
         items: ['linear', 'easeIn', 'easeOut', 'easeInOut'],

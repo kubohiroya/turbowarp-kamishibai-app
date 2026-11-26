@@ -356,6 +356,19 @@ for (const failedBuild of ['runtime', 'bundle'] as const) {
   });
 }
 
+test('allows preview presentation effects only with the explicit opt-in', () => {
+  const defaults = parsedOptions(parseCliArguments(previewArguments()), 'preview-dsl4');
+  assert.equal(
+    (defaults.featureFlags as Record<string, unknown> | undefined)?.dsl4PresentationEffects,
+    undefined,
+  );
+  const optedIn = parsedOptions(
+    parseCliArguments(previewArguments(['--enable-presentation-effects'])),
+    'preview-dsl4',
+  );
+  assert.deepEqual(optedIn.featureFlags, {dsl4Runtime: true, dsl4PresentationEffects: true});
+});
+
 test('parses preview-dsl4 defaults and rejects unsafe arguments', () => {
   const parsed = parseCliArguments(previewArguments(['--port', '0', '--replace-existing']));
   assert.equal(parsed.action, 'preview-dsl4');

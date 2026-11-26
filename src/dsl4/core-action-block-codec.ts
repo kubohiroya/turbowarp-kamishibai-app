@@ -82,6 +82,16 @@ export const dsl4TurboWarpCoreActionBlockSpecs = Object.freeze([
     argument('EFFECT', 'string', 'fadeOut', 'dsl4TransitionEffect'),
     argument('SECONDS', 'number', 1),
   ]),
+  block(
+    'presentationEffect',
+    'apply [EFFECT] to [SCOPE] for [SECONDS] seconds with params JSON [PARAMS]',
+    [
+      argument('SCOPE', 'string', 'stage', 'dsl4PresentationEffectScope'),
+      argument('EFFECT', 'string', 'shake'),
+      argument('SECONDS', 'number', 1),
+      argument('PARAMS', 'string', '{"amplitude":8}'),
+    ],
+  ),
   block('goto', 'go to scene [SCENE]', [argument('SCENE', 'string', 'scene')]),
   block('gotoSegment', 'go to story segment [SEGMENT]', [argument('SEGMENT', 'string', 'chapter')]),
   block('branch', 'choose branch [BRANCH]', [argument('BRANCH', 'string', 'branch')]),
@@ -132,6 +142,10 @@ export const dsl4TurboWarpCoreActionBlockSpecs = Object.freeze([
     argument('Y', 'number', 0),
     argument('SECONDS', 'number', 1),
     argument('EASING', 'string', 'linear', 'dsl4MoveEasing'),
+  ]),
+  block('animate', 'animate actor [TARGET] with spec JSON [SPEC]', [
+    argument('TARGET', 'string', 'Actor'),
+    argument('SPEC', 'string', '{"to":{"x":0},"seconds":1}'),
   ]),
   block('say', 'actor [TARGET] say spec [SPEC]', [
     argument('TARGET', 'string', 'Actor'),
@@ -397,6 +411,13 @@ export function sourceValueForBlock(
         effect: String(args.EFFECT),
         seconds: numberValue(args.SECONDS, 'SECONDS'),
       };
+    case 'presentationEffect':
+      return {
+        scope: String(args.SCOPE),
+        effect: String(args.EFFECT),
+        seconds: numberValue(args.SECONDS, 'SECONDS'),
+        params: parseJson(args.PARAMS, limits),
+      };
     case 'goto':
       return String(args.SCENE);
     case 'gotoSegment':
@@ -447,6 +468,7 @@ export function sourceValueForBlock(
         seconds: numberValue(args.SECONDS, 'SECONDS'),
         easing: String(args.EASING),
       };
+    case 'animate':
     case 'say':
     case 'think':
       return parseJson(args.SPEC, limits);
