@@ -133,7 +133,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.14';
+const extensionVersion = '4.0.15';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -640,6 +640,9 @@ class KamishibaiDsl4RuntimeExtension {
   // Keep the capability marker when a static bundle strips its member Gallery headers.
   readonly narrativeControlCapability = DSL4_NARRATIVE_CONTROL
     ? '// Kamishibai capabilities: narrative-control-v1'
+    : undefined;
+  readonly invalidationSourceCapability = DSL4_NARRATIVE_CONTROL
+    ? '// Kamishibai capabilities: invalidate-source-v1'
     : undefined;
   lastError: string;
   titleLocale: RuntimeEntryLocale;

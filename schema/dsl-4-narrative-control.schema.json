@@ -4,10 +4,7 @@
   "title": "DSL 4.0 RC narrative control structure",
   "description": "Structural validation precedes bounded expansion; ordinary actions are validated using dsl-4.schema.json after typed reference resolution.",
   "type": "object",
-  "required": [
-    "kamishibai",
-    "scenes"
-  ],
+  "required": ["kamishibai", "scenes"],
   "properties": {
     "kamishibai": {
       "const": "4.0"
@@ -22,9 +19,7 @@
           },
           {
             "type": "object",
-            "required": [
-              "actions"
-            ],
+            "required": ["actions"],
             "properties": {
               "actions": {
                 "$ref": "#/$defs/actions"
@@ -39,9 +34,7 @@
     "reference": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "ref"
-      ],
+      "required": ["ref"],
       "properties": {
         "ref": {
           "type": "string",
@@ -52,19 +45,13 @@
     "variable": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "variable"
-      ],
+      "required": ["variable"],
       "properties": {
         "variable": {
           "type": "string",
           "pattern": "^[\\p{L}_][\\p{L}\\p{N}_-]*$",
           "not": {
-            "enum": [
-              "__proto__",
-              "constructor",
-              "prototype"
-            ]
+            "enum": ["__proto__", "constructor", "prototype"]
           }
         }
       }
@@ -110,31 +97,18 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "compare"
-          ],
+          "required": ["compare"],
           "properties": {
             "compare": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "left",
-                "operator",
-                "right"
-              ],
+              "required": ["left", "operator", "right"],
               "properties": {
                 "left": {
                   "$ref": "#/$defs/operand"
                 },
                 "operator": {
-                  "enum": [
-                    "==",
-                    "!=",
-                    "<",
-                    "<=",
-                    ">",
-                    ">="
-                  ]
+                  "enum": ["==", "!=", "<", "<=", ">", ">="]
                 },
                 "right": {
                   "$ref": "#/$defs/operand"
@@ -146,9 +120,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "all"
-          ],
+          "required": ["all"],
           "properties": {
             "all": {
               "type": "array",
@@ -163,9 +135,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "any"
-          ],
+          "required": ["any"],
           "properties": {
             "any": {
               "type": "array",
@@ -180,9 +150,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "not"
-          ],
+          "required": ["not"],
           "properties": {
             "not": {
               "$ref": "#/$defs/condition"
@@ -200,11 +168,7 @@
           "type": "string",
           "pattern": "^[\\p{L}_][\\p{L}\\p{N}_-]*$",
           "not": {
-            "enum": [
-              "__proto__",
-              "constructor",
-              "prototype"
-            ]
+            "enum": ["__proto__", "constructor", "prototype"]
           }
         },
         "additionalProperties": {
@@ -232,10 +196,7 @@
     "if": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "condition",
-        "then"
-      ],
+      "required": ["condition", "then"],
       "properties": {
         "condition": {
           "$ref": "#/$defs/condition"
@@ -251,10 +212,7 @@
     "repeat": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "times",
-        "do"
-      ],
+      "required": ["times", "do"],
       "properties": {
         "times": {
           "type": "integer",
@@ -265,11 +223,7 @@
           "type": "string",
           "pattern": "^[\\p{L}_][\\p{L}\\p{N}_-]*$",
           "not": {
-            "enum": [
-              "__proto__",
-              "constructor",
-              "prototype"
-            ]
+            "enum": ["__proto__", "constructor", "prototype"]
           }
         },
         "do": {
@@ -280,21 +234,13 @@
     "forEach": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "as",
-        "items",
-        "do"
-      ],
+      "required": ["as", "items", "do"],
       "properties": {
         "as": {
           "type": "string",
           "pattern": "^[\\p{L}_][\\p{L}\\p{N}_-]*$",
           "not": {
-            "enum": [
-              "__proto__",
-              "constructor",
-              "prototype"
-            ]
+            "enum": ["__proto__", "constructor", "prototype"]
           }
         },
         "items": {
@@ -310,9 +256,17 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "if"
-          ],
+          "required": ["invalidate"],
+          "properties": {
+            "invalidate": {
+              "$ref": "#/$defs/invalidate"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["if"],
           "properties": {
             "if": {
               "$ref": "#/$defs/if"
@@ -322,9 +276,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "repeat"
-          ],
+          "required": ["repeat"],
           "properties": {
             "repeat": {
               "$ref": "#/$defs/repeat"
@@ -334,9 +286,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "forEach"
-          ],
+          "required": ["forEach"],
           "properties": {
             "forEach": {
               "$ref": "#/$defs/forEach"
@@ -349,11 +299,7 @@
           "maxProperties": 1,
           "propertyNames": {
             "not": {
-              "enum": [
-                "if",
-                "repeat",
-                "forEach"
-              ]
+              "enum": ["if", "repeat", "forEach", "invalidate"]
             }
           },
           "additionalProperties": {}
@@ -366,6 +312,19 @@
       "maxItems": 32,
       "items": {
         "$ref": "#/$defs/condition"
+      }
+    },
+    "invalidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["condition", "then"],
+      "properties": {
+        "condition": {
+          "type": "boolean"
+        },
+        "then": {
+          "$ref": "#/$defs/actions"
+        }
       }
     }
   }

@@ -11760,6 +11760,18 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "invalidate"
+          ],
+          "properties": {
+            "invalidate": {
+              "$ref": "#/$defs/editorNarrative_invalidate"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
             "if"
           ],
           "properties": {
@@ -11803,6 +11815,22 @@
       "maxItems": 32,
       "items": {
         "$ref": "#/$defs/editorNarrative_condition"
+      }
+    },
+    "editorNarrative_invalidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "condition",
+        "then"
+      ],
+      "properties": {
+        "condition": {
+          "type": "boolean"
+        },
+        "then": {
+          "$ref": "#/$defs/editorNarrative_actions"
+        }
       }
     },
     "editorScopedNarrative_reference": {
@@ -12080,6 +12108,18 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "invalidate"
+          ],
+          "properties": {
+            "invalidate": {
+              "$ref": "#/$defs/editorScopedNarrative_invalidate"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
             "if"
           ],
           "properties": {
@@ -12123,6 +12163,22 @@
       "maxItems": 32,
       "items": {
         "$ref": "#/$defs/editorScopedNarrative_condition"
+      }
+    },
+    "editorScopedNarrative_invalidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "condition",
+        "then"
+      ],
+      "properties": {
+        "condition": {
+          "type": "boolean"
+        },
+        "then": {
+          "$ref": "#/$defs/editorScopedNarrative_actions"
+        }
       }
     }
   },

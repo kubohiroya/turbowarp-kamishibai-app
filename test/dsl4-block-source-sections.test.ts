@@ -11,7 +11,7 @@ import {
 } from '../src/dsl4/structured-block-source.js';
 import {readDsl4SectionAuthoringState} from '../src/dsl4/block-source-section-state.js';
 import {extractDsl4BlockSourcesFromProject} from '../src/dsl4/turbowarp-yaml-json-block-source.js';
-import {dsl4TestSourceFrontend as frontend} from './helpers/dsl4-test-frontend.ts';
+import {dsl4TestProductionSourceFrontend as frontend} from './helpers/dsl4-test-frontend.ts';
 
 const prefix = 'kubohiroyakamishibaiauthoring4_';
 type Blocks = ReturnType<typeof createDsl4StructuredBlockSourceDeclaration>;
@@ -108,10 +108,18 @@ test('omits an off action group and restores its original order when enabled', (
   const blocks = fixture();
   const ids = actionIds(blocks);
   const section = wrap(blocks, ids[1]!);
-  assert.deepEqual(parse(read(blocks)).scenes.opening, [{wait: 1}, {wait: 3}]);
-  assert(readDsl4SectionAuthoringState(read(blocks)));
+  assert.deepEqual(parse(read(blocks)).scenes.opening, [
+    {wait: 1},
+    {invalidate: {condition: false, then: [{wait: 2}]}},
+    {wait: 3},
+  ]);
+  assert.equal(readDsl4SectionAuthoringState(read(blocks)), undefined);
   mode(blocks, section, 'on');
-  assert.deepEqual(parse(read(blocks)).scenes.opening, source.scenes.opening);
+  assert.deepEqual(parse(read(blocks)).scenes.opening, [
+    {wait: 1},
+    {invalidate: {condition: true, then: [{wait: 2}]}},
+    {wait: 3},
+  ]);
 });
 test('omits disabled definitions without losing their editable values', () => {
   const blocks = fixture();
@@ -141,9 +149,11 @@ test('an outer off choice suppresses nested on groups', () => {
   const ids = actionIds(blocks);
   const inner = wrap(blocks, ids[1]!, ids[1]!, 'on');
   const outer = wrap(blocks, inner);
-  assert.deepEqual(parse(read(blocks)).scenes.opening, [{wait: 1}, {wait: 3}]);
+  assert.deepEqual(parse(read(blocks)).scenes.opening[1], {
+    invalidate: {condition: false, then: [{invalidate: {condition: true, then: [{wait: 2}]}}]},
+  });
   mode(blocks, outer, 'on');
-  assert.deepEqual(parse(read(blocks)).scenes.opening, source.scenes.opening);
+  assert.equal(parse(read(blocks)).scenes.opening[1].invalidate.condition, true);
 });
 test('YAML to SB3 reauthoring retains disabled sections and lets them be enabled again', () => {
   const blocks = fixture();
@@ -162,6 +172,8 @@ test('YAML to SB3 reauthoring retains disabled sections and lets them be enabled
     sourceText: yaml,
     sourceFrontend: frontend,
     sourceSections: true,
+    narrativeRuntimeSource:
+      '// Kamishibai capabilities: narrative-control-v1\n// Kamishibai capabilities: invalidate-source-v1\n',
   });
   assert(result.ok, JSON.stringify(result.diagnostics));
   const project = JSON.parse(strFromU8(unzipSync(result.bytes)['project.json']!));
@@ -172,14 +184,18 @@ test('YAML to SB3 reauthoring retains disabled sections and lets them be enabled
   assert(section);
   mode(restored, id, 'on');
   const exported = extractDsl4BlockSourcesFromProject(project);
-  assert.deepEqual(
-    parse(Object.values(exported.sources)[0]!).scenes.opening,
-    source.scenes.opening,
-  );
+  assert.deepEqual(parse(Object.values(exported.sources)[0]!).scenes.opening, [
+    {wait: 1},
+    {invalidate: {condition: true, then: [{wait: 2}]}},
+    {wait: 3},
+  ]);
 });
-test('rejects stale or malformed authoring comments rather than overwriting YAML edits', () => {
+test('rejects stale or malformed legacy definition comments rather than overwriting YAML edits', () => {
   const blocks = fixture();
-  wrap(blocks, actionIds(blocks)[1]!);
+  wrap(
+    blocks,
+    Object.keys(blocks).find((id) => blocks[id]!.opcode === prefix + 'variable')!,
+  );
   const yaml = read(blocks);
   assert.throws(
     () => readDsl4SectionAuthoringState(yaml.replace('wait: 1', 'wait: 9')),
@@ -264,6 +280,8 @@ test('retains section choices when included modules are relabeled during graph r
     sourceGraph: graph,
     sourceFrontend: frontend,
     sourceSections: true,
+    narrativeRuntimeSource:
+      '// Kamishibai capabilities: narrative-control-v1\n// Kamishibai capabilities: invalidate-source-v1\n',
   });
   assert(result.ok, JSON.stringify(result.diagnostics));
   const restored = JSON.parse(strFromU8(unzipSync(result.bytes)['project.json']!));
@@ -298,6 +316,8 @@ test('the file export API preserves disabled sections through canonical YAML ser
     sourceText: read(blocks),
     sourceFrontend: frontend,
     sourceSections: true,
+    narrativeRuntimeSource:
+      '// Kamishibai capabilities: narrative-control-v1\n// Kamishibai capabilities: invalidate-source-v1\n',
   });
   assert(authored.ok);
   const folder = await mkdtemp(path.join(tmpdir(), 'dsl4-section-export-'));
@@ -312,17 +332,16 @@ test('the file export API preserves disabled sections through canonical YAML ser
       maxSourceBytes: 262144,
     });
     const yaml = await readFile(path.join(folder, 'sections.k4.yml'), 'utf8');
-    const state = readDsl4SectionAuthoringState(yaml);
-    assert(state);
-    assert(
-      Object.values(state.blocks).some(
-        (b) => (b as {opcode: string}).opcode === prefix + 'useSection',
-      ),
-    );
+    assert.equal(readDsl4SectionAuthoringState(yaml), undefined);
+    assert.deepEqual(parse(yaml).scenes.opening[1], {
+      invalidate: {condition: false, then: [{wait: 2}]},
+    });
     const restored = authorDsl4BlockSourceSb3({
       baseBytes,
       sourceText: yaml,
       sourceFrontend: frontend,
+      narrativeRuntimeSource:
+        '// Kamishibai capabilities: narrative-control-v1\n// Kamishibai capabilities: invalidate-source-v1\n',
     });
     assert(restored.ok);
   } finally {

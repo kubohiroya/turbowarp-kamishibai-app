@@ -8,7 +8,10 @@ import {
 } from '../src/dsl4/platform/embedded-block-story.js';
 import {loadDsl4RuntimeComponent} from '../src/dsl4/runtime-artifact-loader.js';
 import {createDsl4StructuredBlockSourceDeclaration} from '../src/dsl4/structured-block-source.js';
-import {dsl4TestSourceFrontend as frontend} from './helpers/dsl4-test-frontend.ts';
+import {
+  dsl4TestSourceFrontend as frontend,
+  dsl4TestProductionSourceFrontend as sectionFrontend,
+} from './helpers/dsl4-test-frontend.ts';
 import {okResult} from './helpers/result-outcome.ts';
 import {requireArray, requireRecord} from './helpers/require-value.ts';
 
@@ -49,10 +52,10 @@ function project(declarations = blocks()) {
   };
 }
 
-async function loaded(input: Record<string, unknown>) {
-  const prepared = await prepareDsl4EmbeddedBlockStoryProject(input, frontend, options);
+async function loaded(input: Record<string, unknown>, sourceFrontend = frontend) {
+  const prepared = await prepareDsl4EmbeddedBlockStoryProject(input, sourceFrontend, options);
   const result = okResult(
-    await loadDsl4RuntimeComponent(prepared, frontend, options),
+    await loadDsl4RuntimeComponent(prepared, sourceFrontend, options),
     'the compiled block component',
   );
   return {prepared, story: requireRecord(result.storyDocument, 'the current block story')};
@@ -154,16 +157,18 @@ test('compiles only enabled section actions from the current project on each sto
   scene[1].inputs.SUBSTACK = [2, 'section'];
   const input = project(declarations);
   const before = structuredClone(input);
-  const off = await loaded(input);
+  // Sections now retain dedicated invalidate source and require its matching frontend.
+  const off = await loaded(input, sectionFrontend);
   const sceneActions = (story: Record<string, unknown>) =>
     requireArray(
       requireRecord(requireArray(story.scenes, 'scenes')[0], 'opening').actions,
       'actions',
     ).map((action) => requireRecord(requireRecord(action, 'action').args, 'arguments').seconds);
-  assert.deepEqual(sceneActions(off.story), [43]);
+  // The compiler retains a zero-duration boundary for source navigation.
+  assert.deepEqual(sceneActions(off.story), [0, 43]);
   assert.deepEqual(input, before);
   declarations.section.fields.ENABLED = ['on', null];
-  assert.deepEqual(sceneActions((await loaded(input)).story), [1, 43]);
+  assert.deepEqual(sceneActions((await loaded(input, sectionFrontend)).story), [0, 1, 43]);
 });
 
 test('fails at runtime startup for duplicate configuration names, including an empty name', async () => {

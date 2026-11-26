@@ -439,6 +439,28 @@ export function createDsl4StructuredBlockSourceDeclaration({
     const command = sourceCommand.slice(separator + 1);
     const target = separator < 0 ? null : sourceCommand.slice(0, separator);
     const value = sourceAction[sourceCommand];
+    if (command === 'invalidate') {
+      if (
+        version !== '4.0' ||
+        !isRecord(value) ||
+        typeof value.condition !== 'boolean' ||
+        !Array.isArray(value.then) ||
+        Object.keys(value).some((key) => !['condition', 'then'].includes(key))
+      )
+        fail('Invalidation requires a static boolean condition and an action sequence');
+      const id = add(`${prefix}useSection`);
+      blocks[id]!.fields = {ENABLED: [value.condition ? 'on' : 'off', null]};
+      let previous = id;
+      for (const child of value.then) {
+        if (!isRecord(child)) fail('Invalidation body action must be a mapping');
+        const next = action(child);
+        blocks[next]!.parent = previous;
+        if (previous === id) blocks[id]!.inputs.SUBSTACK = [2, next];
+        else blocks[previous]!.next = next;
+        previous = next;
+      }
+      return id;
+    }
     if (['if', 'repeat', 'forEach'].includes(command)) {
       if (version !== '4.0' || !isRecord(value))
         fail(
@@ -1084,8 +1106,8 @@ export function readDsl4StructuredBlockSource(
         : '';
     return {[`${target}${command}`]: value};
   }
-  function sectionEnabled(block: Block): boolean {
-    hasSections = true;
+  function sectionEnabled(block: Block, legacyState = true): boolean {
+    if (legacyState) hasSections = true;
     const field = block.fields?.ENABLED;
     const enabled = Array.isArray(field) && field.length === 2 ? field[0] : undefined;
     if (enabled !== 'on' && enabled !== 'off')
@@ -1105,8 +1127,14 @@ export function readDsl4StructuredBlockSource(
       const block = readBlock(id, parent);
       if (enabled) activeBlockIds.add(id);
       if (block.opcode === `${prefix}useSection`) {
-        const selected = sectionEnabled(block);
-        actions.push(...actionChain(substack(block), id, enabled && selected, depth + 1));
+        const selected = sectionEnabled(block, false);
+        const value = {
+          invalidate: {
+            condition: selected,
+            then: actionChain(substack(block), id, enabled, depth + 1),
+          },
+        };
+        if (enabled) actions.push(located(value, id));
       } else if (
         ['narrativeIf', 'narrativeRepeat', 'narrativeForEach'].some(
           (name) => block.opcode === `${prefix}${name}`,

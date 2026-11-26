@@ -11,6 +11,7 @@ export interface NarrativeOrigin {
 }
 export interface NarrativeCompilation {
   story: RecordValue;
+  hasInvalidation: boolean;
   origins: Record<string, NarrativeOrigin[]>;
   validation: Record<string, {action: RecordValue; origin: NarrativeOrigin}[]>;
 }
@@ -33,6 +34,26 @@ function record(value: unknown): value is RecordValue {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** Detect the dedicated source form only in scene action positions, including nested controls. */
+export function hasDsl4Invalidation(input: unknown): boolean {
+  if (!record(input) || !record(input.scenes)) return false;
+  const visit = (items: unknown, depth = 0): boolean => {
+    if (!Array.isArray(items) || depth > 32) return false;
+    return items.some((action) => {
+      if (!record(action)) return false;
+      if (Object.hasOwn(action, 'invalidate')) return true;
+      if (record(action.if))
+        return visit(action.if.then, depth + 1) || visit(action.if.else, depth + 1);
+      if (record(action.repeat)) return visit(action.repeat.do, depth + 1);
+      if (record(action.forEach)) return visit(action.forEach.do, depth + 1);
+      return false;
+    });
+  };
+  return Object.values(input.scenes).some((scene) =>
+    visit(Array.isArray(scene) ? scene : record(scene) ? scene.actions : undefined),
+  );
+}
+
 /** Detect control commands in scene action positions, never in arbitrary literal payloads. */
 export function findDsl4NarrativeControlPath(input: unknown): NarrativePath | undefined {
   if (!record(input) || !record(input.scenes)) return undefined;
@@ -41,7 +62,7 @@ export function findDsl4NarrativeControlPath(input: unknown): NarrativePath | un
     if (!Array.isArray(body)) continue;
     for (const [index, action] of body.entries()) {
       if (!record(action)) continue;
-      for (const command of ['if', 'repeat', 'forEach']) {
+      for (const command of ['if', 'repeat', 'forEach', 'invalidate']) {
         if (Object.hasOwn(action, command))
           return ['scenes', sceneId, ...(Array.isArray(scene) ? [] : ['actions']), index, command];
       }
@@ -167,6 +188,7 @@ export function compileDsl4NarrativeSource(
       body: actions(Array.isArray(scene) ? scene : scene.actions, path),
     };
   });
+  let hasInvalidation = false;
   // Count bounded control boundaries as well as both arms before allocating an expanded sequence.
   function cost(body: RecordValue[], path: NarrativePath, depth: number): number {
     if (depth > maxNesting) fail(`Narrative nesting exceeds ${maxNesting}`, path, true);
@@ -175,9 +197,15 @@ export function compileDsl4NarrativeSource(
       const [command] = Object.keys(action);
       const at = [...path, index, command!];
       const value = action[command!];
-      if (['if', 'repeat', 'forEach'].includes(command!)) {
+      if (['if', 'repeat', 'forEach', 'invalidate'].includes(command!)) {
         if (!record(value)) fail('Narrative arguments must be a mapping', at);
-        if (command === 'if') {
+        if (command === 'invalidate') {
+          hasInvalidation = true;
+          keys(value, ['condition', 'then'], at);
+          if (typeof value.condition !== 'boolean')
+            fail('Invalidation condition must be a static boolean', [...at, 'condition']);
+          count += 1 + cost(actions(value.then, [...at, 'then']), [...at, 'then'], depth + 1);
+        } else if (command === 'if') {
           keys(value, ['condition', 'then', 'else'], at);
           if (!Object.hasOwn(value, 'condition')) fail('Condition is required', at);
           count +=
@@ -336,7 +364,19 @@ export function compileDsl4NarrativeSource(
           frames: [...parent.frames],
           guards: [...parent.guards],
         };
-        if (command === 'if') {
+        if (command === 'invalidate') {
+          const args = value as RecordValue;
+          emit({wait: 0}, {...origin, boundary: true}, active);
+          // Disabled authoring content remains in YAML, but is neither resolved nor dispatched.
+          if (args.condition === true)
+            walk(
+              args.then as RecordValue[],
+              [...path, 'invalidate', 'then'],
+              scopes,
+              parent,
+              active,
+            );
+        } else if (command === 'if') {
           const args = value as RecordValue;
           const resolvedCondition = resolveCondition(args.condition, scopes, [
             ...path,
@@ -412,5 +452,5 @@ export function compileDsl4NarrativeSource(
     walk(body, path, new Map(), {frames: [], guards: []}, true);
     scenes[sceneId] = Array.isArray(scene) ? expanded : {...scene, actions: expanded};
   }
-  return {story: {...input, kamishibai: '4.0', scenes}, origins, validation};
+  return {story: {...input, kamishibai: '4.0', scenes}, hasInvalidation, origins, validation};
 }
