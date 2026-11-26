@@ -1,0 +1,20 @@
+{
+  "version": "4.0.21",
+  "extension": "kubohiroyakamishibai4",
+  "runtimes": [
+    {
+      "file": "kamishibai-playback.js",
+      "profile": "playback",
+      "url": "https://kubohiroya.github.io/turbowarp-kamishibai-app/runtime/4.0.21/kamishibai-playback.js",
+      "sha256": "b437611973add9f1477e58b9bbe8df94397cf1e3369b6e1a1314e5a31b6320aa",
+      "size": 3321245
+    },
+    {
+      "file": "kamishibai-authoring.js",
+      "profile": "authoring",
+      "url": "https://kubohiroya.github.io/turbowarp-kamishibai-app/runtime/4.0.21/kamishibai-authoring.js",
+      "sha256": "d39ffd3e79c591165f15f4fccaa68d2c1fc574a77a20864eb3c91068d313f974",
+      "size": 3788918
+    }
+  ]
+}
