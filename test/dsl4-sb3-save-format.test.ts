@@ -491,6 +491,27 @@ test('the command refuses a remote SB3 its URL cannot serve, unless told to skip
     ];
 
     await assert.rejects(
+      runCli(
+        [
+          'save-sb3-format',
+          '--input',
+          input,
+          '--output',
+          output,
+          '--remote-compatibility-carriers',
+          id,
+        ],
+        io,
+      ),
+      /requires a remote --extensions format/u,
+    );
+    await assert.rejects(
+      runCli([...args, '--remote-compatibility-carriers', id, '--keep-embedded-data'], io),
+      /cannot be combined with --keep-embedded-data/u,
+    );
+    await assert.rejects(readFile(output), {code: 'ENOENT'});
+
+    await assert.rejects(
       runCli(args, io, {fetch: fakeFetch({[url]: '// other\n'})}),
       /does not serve the bytes/u,
     );

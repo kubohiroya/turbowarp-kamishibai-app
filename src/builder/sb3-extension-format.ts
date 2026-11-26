@@ -22,6 +22,7 @@ import {
   type Sb3ExtensionPayload,
   type Sb3ExtensionUrlCheckOptions,
 } from '@kubohiroya/turbowarp-sb3-save-format/writer';
+import * as sb3Writer from '@kubohiroya/turbowarp-sb3-save-format/writer';
 
 import {
   dsl4BlockAuthoringExtensionId,
@@ -38,8 +39,11 @@ export type {Sb3ExtensionFormatResult, Sb3ExtensionPayload, Sb3ExtensionUrlCheck
 /** The options this App's callers pass; it supplies the capabilities and its own IDs itself. */
 export type Sb3ExtensionFormatCallerOptions = Omit<
   Sb3ExtensionFormatOptions,
-  'capabilities' | 'unsandboxed'
-> & {readonly unsandboxed?: readonly string[] | undefined};
+  'capabilities' | 'unsandboxed' | 'remoteCompatibilityCarriers'
+> & {
+  readonly unsandboxed?: readonly string[] | undefined;
+  readonly remoteCompatibilityCarriers?: readonly string[] | undefined;
+};
 
 /**
  * The App's own DSL 4.0 extensions read the host `Scratch` surface and refuse a sandboxed host.
@@ -73,6 +77,18 @@ export async function writeSb3ExtensionFormat(
   format: Sb3SaveFormat,
   {unsandboxed = [], ...options}: Sb3ExtensionFormatCallerOptions = {},
 ): Promise<Sb3ExtensionFormatResult> {
+  if (
+    options.remoteCompatibilityCarriers?.length &&
+    (!('supportsRemoteCompatibilityCarriers' in sb3Writer) ||
+      sb3Writer.supportsRemoteCompatibilityCarriers !== true)
+  )
+    throw new Sb3BuilderError(
+      'This build of the SB3 writer does not support remote compatibility carriers.',
+      {
+        stage: 'sb3-extension-format',
+        code: 'K4-EXT-FORMAT-010',
+      },
+    );
   try {
     return await writeExtensionFormat(archive, project, format, {
       ...options,
