@@ -2440,6 +2440,266 @@
         }
       }
     },
+    "animateArgs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "to",
+        "seconds"
+      ],
+      "properties": {
+        "stableId": {
+          "$ref": "#/$defs/stableId"
+        },
+        "to": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "scale": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "direction": {
+              "type": "number"
+            },
+            "transparency": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          },
+          "minProperties": 1
+        },
+        "seconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "easing": {
+          "enum": [
+            "linear",
+            "easeIn",
+            "easeOut",
+            "easeInOut"
+          ]
+        },
+        "delaySeconds": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "repeat": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "alternate": {
+          "type": "boolean"
+        },
+        "background": {
+          "type": "boolean"
+        }
+      }
+    },
+    "presentationEffectArgs": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "$ref": "#/$defs/stableId"
+            },
+            "scope": {
+              "enum": [
+                "stage",
+                "presentation"
+              ]
+            },
+            "effect": {
+              "const": "shake"
+            },
+            "seconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "amplitude"
+              ],
+              "properties": {
+                "amplitude": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 64
+                },
+                "axis": {
+                  "enum": [
+                    "x",
+                    "y",
+                    "both"
+                  ]
+                },
+                "cycles": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 12
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "$ref": "#/$defs/stableId"
+            },
+            "scope": {
+              "enum": [
+                "stage",
+                "presentation"
+              ]
+            },
+            "effect": {
+              "const": "zoom"
+            },
+            "seconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "scale"
+              ],
+              "properties": {
+                "scale": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 3
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "$ref": "#/$defs/stableId"
+            },
+            "scope": {
+              "enum": [
+                "stage",
+                "presentation"
+              ]
+            },
+            "effect": {
+              "const": "wipe"
+            },
+            "seconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "direction": {
+                  "enum": [
+                    "left",
+                    "right",
+                    "up",
+                    "down"
+                  ]
+                },
+                "color": {
+                  "type": "string",
+                  "pattern": "^#[0-9A-Fa-f]{6}$"
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "scope",
+            "effect",
+            "seconds",
+            "params"
+          ],
+          "properties": {
+            "stableId": {
+              "$ref": "#/$defs/stableId"
+            },
+            "scope": {
+              "enum": [
+                "stage",
+                "presentation"
+              ]
+            },
+            "effect": {
+              "const": "fade"
+            },
+            "seconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "color": {
+                  "type": "string",
+                  "pattern": "^#[0-9A-Fa-f]{6}$"
+                },
+                "opacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
     "speechArgs": {
       "type": "object",
       "additionalProperties": false,
@@ -2646,6 +2906,18 @@
       "required": ["stage"],
       "properties": {"stage": {"$ref": "#/$defs/stageArgs"}}
     },
+    "presentationEffectAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "presentationEffect"
+      ],
+      "properties": {
+        "presentationEffect": {
+          "$ref": "#/$defs/presentationEffectArgs"
+        }
+      }
+    },
     "bgmAction": {
       "type": "object",
       "additionalProperties": false,
@@ -2821,6 +3093,17 @@
         }
       }
     },
+    "animateAction": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[\\p{L}_][\\p{L}\\p{N}_-]*\\.animate$": {
+          "$ref": "#/$defs/animateArgs"
+        }
+      }
+    },
     "sayAction": {
       "type": "object",
       "minProperties": 1,
@@ -2923,6 +3206,7 @@
     "action": {
       "oneOf": [
         {"$ref": "#/$defs/stageAction"},
+        {"$ref": "#/$defs/presentationEffectAction"},
         {"$ref": "#/$defs/bgmAction"},
         {"$ref": "#/$defs/stopBgmAction"},
         {"$ref": "#/$defs/setBgmVolumeAction"},
@@ -2948,6 +3232,7 @@
         {"$ref": "#/$defs/showAction"},
         {"$ref": "#/$defs/setTransparencyAction"},
         {"$ref": "#/$defs/moveToAction"},
+        {"$ref": "#/$defs/animateAction"},
         {"$ref": "#/$defs/sayAction"},
         {"$ref": "#/$defs/thinkAction"},
         {"$ref": "#/$defs/setSkinAction"},

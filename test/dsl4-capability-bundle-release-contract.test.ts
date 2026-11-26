@@ -227,7 +227,9 @@ test('ships the Standard artifact as one compact static extension bundle', async
   assert.equal((entrypoint.match(/hideFromPalette: true/gu) ?? []).length, opcodes.length);
   assert.deepEqual(
     sourceVisibleOpcodes,
-    dsl4CoreActionManifest.map(({command}) => command),
+    dsl4CoreActionManifest
+      .filter(({featureFlag}) => featureFlag === undefined)
+      .map(({command}) => command),
   );
   assert.deepEqual(
     dsl4TurboWarpCoreActionBlockSpecs.map(({command}) => command),

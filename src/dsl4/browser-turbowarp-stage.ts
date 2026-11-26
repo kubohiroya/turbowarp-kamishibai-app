@@ -599,6 +599,10 @@ export function createDsl4BrowserTurboWarpStage(options: {
     return canvas;
   }
 
+  function getPresentationElements() {
+    return Object.freeze({canvas: getCanvas(), stageLayers});
+  }
+
   function showApplicationMenu(locale: 'en' | 'ja') {
     if (status !== 'ready' || !runtimeHost) {
       throw new TypeError('TurboWarp browser stage is not ready');
@@ -665,6 +669,7 @@ export function createDsl4BrowserTurboWarpStage(options: {
     dispose,
     getRuntime,
     getCanvas,
+    getPresentationElements,
     showApplicationMenu,
     showApplicationTitle,
     hideApplicationOverlay,

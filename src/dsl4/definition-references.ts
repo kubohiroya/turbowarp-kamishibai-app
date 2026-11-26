@@ -1,4 +1,4 @@
-import {dsl4ActorCoreActionNames} from './action-registry.js';
+import {isDsl4ActorCoreSourceAction} from './action-registry.js';
 
 export type Dsl4DefinitionPath = (string | number)[];
 export interface Dsl4DefinitionReference {
@@ -16,7 +16,6 @@ export function definitionRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-const actorCommands = new Set(dsl4ActorCoreActionNames);
 const referenceNamespaces: Record<string, string> = {
   assetId: 'assets',
   actorId: 'actors',
@@ -248,7 +247,7 @@ export function collectDsl4DefinitionReferences(story: Record<string, unknown>, 
           if (command.includes('.')) {
             const separator = command.lastIndexOf('.');
             add('actors', command.slice(0, separator), [...at, command]);
-            if (!actorCommands.has(command.slice(separator + 1)))
+            if (!isDsl4ActorCoreSourceAction(command.slice(separator + 1), value))
               uncertain.push({
                 path: [...at, command],
                 namespaces: allNamespaces,

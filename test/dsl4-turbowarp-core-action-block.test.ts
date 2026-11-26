@@ -25,9 +25,24 @@ test('defines one distinct public block for every manifest core action', () => {
     dsl4TurboWarpCoreActionBlockSpecs.map(({command}) => command),
     commands,
   );
-  assert.equal(new Set(commands).size, 34);
+  assert.equal(new Set(commands).size, 36);
 
   const enabled = createDsl4TurboWarpCoreActionBlockSurface(Scratch, {visible: true});
+  const standard = createDsl4TurboWarpCoreActionBlockSurface(Scratch, {
+    visible: true,
+    includeOptIn: false,
+  });
+  assert.equal(
+    standard.blocks.filter(({opcode}) => opcode === 'animate' || opcode === 'presentationEffect')
+      .length,
+    0,
+  );
+  assert.equal(
+    enabled.blocks.filter(({opcode}) => opcode === 'animate' || opcode === 'presentationEffect')
+      .length,
+    2,
+  );
+
   assert.deepEqual(
     enabled.blocks.map(({opcode}) => opcode),
     [...commands, 'sayText', 'thinkText'],
@@ -66,6 +81,68 @@ test('defines one distinct public block for every manifest core action', () => {
     'setPlaybackRate',
   ]);
   assert.deepEqual(enabled.menus.dsl4VideoPlane.items, ['front', 'background']);
+});
+
+test('new motion and effect blocks keep the declared values and bound JSON input', () => {
+  const adapter = createDsl4TurboWarpCoreActionBlockAdapter(schema);
+  const animation = {
+    to: {x: 0, y: -8, scale: 125, direction: 0, transparency: 50},
+    seconds: 0,
+    easing: 'easeInOut',
+    delaySeconds: 0,
+    repeat: 0,
+    alternate: false,
+    background: false,
+  };
+  assert.deepEqual(
+    adapter.createAction('animate', {TARGET: 'Hero', SPEC: JSON.stringify(animation)}),
+    {target: 'Hero', command: 'animate', args: animation, handler: 'core'},
+  );
+  const effect = {scope: 'presentation', effect: 'shake', seconds: 1, params: {amplitude: 0}};
+  assert.deepEqual(
+    adapter.createAction('presentationEffect', {
+      SCOPE: effect.scope,
+      EFFECT: effect.effect,
+      SECONDS: effect.seconds,
+      PARAMS: JSON.stringify(effect.params),
+    }),
+    {target: null, command: 'presentationEffect', args: effect, handler: 'core'},
+  );
+  assert.throws(
+    () => adapter.createAction('animate', {TARGET: 'Hero', SPEC: '{"to":{},"seconds":1}'}),
+    {code: 'K4-BLOCK-ACTION-SCHEMA-001'},
+  );
+  assert.throws(
+    () =>
+      adapter.createAction('presentationEffect', {
+        SCOPE: 'stage',
+        EFFECT: 'shake',
+        SECONDS: 1,
+        PARAMS: '{"__proto__":{"amplitude":8}}',
+      }),
+    {code: 'K4-BLOCK-ACTION-JSON-001'},
+  );
+  assert.throws(
+    () =>
+      adapter.createAction('presentationEffect', {
+        SCOPE: 'stage',
+        EFFECT: 'shake',
+        SECONDS: 1,
+        PARAMS: '{}',
+      }),
+    {code: 'K4-BLOCK-ACTION-SCHEMA-001'},
+  );
+  const palette = createDsl4TurboWarpCoreActionBlockSurface(Scratch, {visible: true});
+  for (const command of ['animate', 'presentationEffect']) {
+    const spec = dsl4TurboWarpCoreActionBlockSpecs.find(
+      (candidate) => candidate.command === command,
+    )!;
+    const args = Object.fromEntries(
+      spec.arguments.map((input) => [input.name, input.defaultValue]),
+    );
+    assert.equal(adapter.createAction(command, args).command, command);
+  }
+  assert.deepEqual(palette.menus.dsl4PresentationEffectScope.items, ['stage', 'presentation']);
 });
 
 test('normalizes block inputs through their manifest Schema definitions', () => {

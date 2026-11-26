@@ -200,6 +200,7 @@ test('defaults OFF and does not inspect runtime inputs or adapters', async () =>
     dsl4Runtime: false,
     dsl4Video: false,
     dsl4CrossfadeTransitions: false,
+    dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
     dsl4SourceIncludes: false,
@@ -300,6 +301,52 @@ test('enables crossfade syntax in the Standard profile and preserves explicit ro
   requireSession(enabled).dispose();
 });
 
+test('DSL 4.0 presentation effects fail closed before host creation unless opted in', async () => {
+  const component = await packagedProject(
+    'production',
+    false,
+    sourceText.replace(
+      '- wait: 0',
+      '- presentationEffect: {scope: stage, effect: fade, seconds: 0, params: {}}',
+    ),
+  );
+  let hostCalls = 0;
+  const operations: unknown[] = [];
+  const createRuntimeEnvironment = () => {
+    hostCalls += 1;
+    return {
+      port: {
+        presentationEffect(payload: unknown) {
+          operations.push(payload);
+        },
+      },
+      dispose() {},
+    };
+  };
+  const disabled = await createDsl4RuntimeStartup(
+    enabledOptions(component.project, {port: undefined, createRuntimeEnvironment}),
+  );
+  assert.equal(disabled.ok, false);
+  assert.equal(hostCalls, 0);
+  assert.equal(firstDiagnostic(disabled).code, 'K4-PRESENTATION-EFFECTS-FLAG-001');
+  assert.equal(firstDiagnostic(disabled).storyPath, '/scenes/opening/actions/0');
+
+  const enabled = await createDsl4RuntimeStartup(
+    enabledOptions(component.project, {
+      port: undefined,
+      createRuntimeEnvironment,
+      featureFlags: {dsl4Runtime: true, dsl4PresentationEffects: true},
+    }),
+  );
+  assert.equal(enabled.ok, true, JSON.stringify(enabled.diagnostics));
+  assert.equal(hostCalls, 1);
+  const session = requireSession(enabled);
+  assert.equal((await session.start()).status, 'finished');
+  const [payload] = operations;
+  assert.equal(requireRecord(payload, 'effect payload').effect, 'fade');
+  session.dispose();
+});
+
 test('strictly resolves one immutable startup flag snapshot', async () => {
   assert.deepEqual(dsl4StandardProductionFeatureFlags, {
     dsl4NarrativeControl: true,
@@ -367,6 +414,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4Runtime: false,
     dsl4Video: false,
     dsl4CrossfadeTransitions: false,
+    dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
     dsl4SourceIncludes: false,
@@ -394,6 +442,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4Runtime: true,
     dsl4Video: false,
     dsl4CrossfadeTransitions: false,
+    dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
     dsl4SourceIncludes: false,
@@ -420,6 +469,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4Runtime: false,
     dsl4Video: false,
     dsl4CrossfadeTransitions: false,
+    dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
     dsl4SourceIncludes: false,
@@ -446,6 +496,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4Runtime: false,
     dsl4Video: false,
     dsl4CrossfadeTransitions: false,
+    dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
     dsl4SourceIncludes: false,
@@ -472,6 +523,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4Runtime: false,
     dsl4Video: false,
     dsl4CrossfadeTransitions: false,
+    dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
     dsl4SourceIncludes: false,
@@ -504,6 +556,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
       dsl4Runtime: true,
       dsl4Video: false,
       dsl4CrossfadeTransitions: false,
+      dsl4PresentationEffects: false,
       dsl4BroadcastMessageAndWait: false,
       dsl4IndexedDBAssetSessionStore: false,
       dsl4SourceIncludes: false,
@@ -528,6 +581,24 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     },
   );
   assert.throws(() => resolveDsl4FeatureFlags({dsl4Runtime: 1}), TypeError);
+  assert.equal(
+    resolveDsl4FeatureFlags(dsl4StandardProductionFeatureFlags).dsl4PresentationEffects,
+    false,
+  );
+  assert.equal(
+    resolveDsl4FeatureFlags(dsl4NonEmbeddedDevelopmentFeatureFlags).dsl4PresentationEffects,
+    false,
+  );
+  assert.throws(
+    () => resolveDsl4FeatureFlags({dsl4PresentationEffects: true}),
+    /dsl4PresentationEffects requires dsl4Runtime/u,
+  );
+  assert.equal(
+    resolveDsl4FeatureFlags({dsl4Runtime: true, dsl4PresentationEffects: true})
+      .dsl4PresentationEffects,
+    true,
+  );
+
   assert.throws(
     () => resolveDsl4FeatureFlags({dsl4CrossfadeTransitions: true}),
     /requires dsl4Runtime/u,
@@ -623,6 +694,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
       dsl4Runtime: true,
       dsl4Video: false,
       dsl4CrossfadeTransitions: false,
+      dsl4PresentationEffects: false,
       dsl4BroadcastMessageAndWait: false,
       dsl4IndexedDBAssetSessionStore: false,
       dsl4SourceIncludes: false,
@@ -716,6 +788,7 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4Runtime: true,
     dsl4Video: false,
     dsl4CrossfadeTransitions: false,
+    dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
     dsl4SourceIncludes: false,
@@ -895,6 +968,7 @@ test('enables internal Structured Data independently without exposing a generic 
     dsl4Runtime: true,
     dsl4Video: false,
     dsl4CrossfadeTransitions: false,
+    dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
     dsl4SourceIncludes: false,
@@ -982,6 +1056,7 @@ test('creates a component-aware asset lifecycle after validation and releases it
       dsl4Runtime: true,
       dsl4Video: false,
       dsl4CrossfadeTransitions: false,
+      dsl4PresentationEffects: false,
       dsl4BroadcastMessageAndWait: false,
       dsl4IndexedDBAssetSessionStore: false,
       dsl4SourceIncludes: false,
@@ -1130,6 +1205,7 @@ test('creates an atomic runtime environment only after component validation', as
       dsl4Runtime: true,
       dsl4Video: false,
       dsl4CrossfadeTransitions: false,
+      dsl4PresentationEffects: false,
       dsl4BroadcastMessageAndWait: false,
       dsl4IndexedDBAssetSessionStore: false,
       dsl4SourceIncludes: false,

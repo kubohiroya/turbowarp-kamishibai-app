@@ -1,10 +1,8 @@
-import {dsl4ActorCoreActionNames} from './action-registry.js';
+import {isDsl4ActorCoreSourceAction} from './action-registry.js';
 import {normalizeDsl4ContentRuns} from './content-run.js';
 import {encodeDsl4StoryPathSegment} from './story-path.js';
 import {normalizeDsl4AudioTransition, normalizeDsl4VisualTransition} from './transition-spec.js';
 import {resolveDsl4Viewport} from './viewport.js';
-
-const actorCoreActionNames = new Set(dsl4ActorCoreActionNames);
 
 export interface SourcePosition {
   line: number;
@@ -415,7 +413,7 @@ function normalizeAction(
   const target = separator === -1 ? null : sourceCommand.slice(0, separator);
   const command = separator === -1 ? sourceCommand : sourceCommand.slice(separator + 1);
   const sourceArguments = sourceAction[sourceCommand];
-  const customAction = separator !== -1 && !actorCoreActionNames.has(command);
+  const customAction = separator !== -1 && !isDsl4ActorCoreSourceAction(command, sourceArguments);
   const actionPath = `/scenes/${encodeDsl4StoryPathSegment(sceneId)}/actions/${actionIndex}`;
   const actionRange = sourceRangeForNode(actionNode, lineCounter);
   const argumentNode = asYamlNode(actionNode?.get?.(sourceCommand, true));
@@ -505,14 +503,12 @@ function normalizeAction(
       fieldNode,
       lineCounter,
     );
-    if (field === 'transition') {
-      mapNestedNode(
-        sourceMap,
-        args[field],
-        fieldNode,
-        lineCounter,
-        `${actionPath}/args/transition`,
-      );
+    if (
+      field === 'transition' ||
+      (command === 'animate' && field === 'to') ||
+      (command === 'presentationEffect' && field === 'params')
+    ) {
+      mapNestedNode(sourceMap, args[field], fieldNode, lineCounter, `${actionPath}/args/${field}`);
     }
     if (field === 'styles' && Array.isArray(args[field])) {
       args[field].forEach((_, styleIndex) => {

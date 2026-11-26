@@ -17,6 +17,7 @@ function defineCoreAction(
   schemaDefinition: string,
   quiesce: 'finish-only' | 'cancel-replay-safe',
   runtimeDispatch: Dsl4CoreActionDispatch,
+  featureFlag?: 'dsl4PresentationEffects',
 ) {
   return Object.freeze({
     command,
@@ -25,6 +26,7 @@ function defineCoreAction(
     schemaRef: `#/$defs/${schemaDefinition}`,
     quiesce,
     runtimeDispatch,
+    ...(featureFlag === undefined ? {} : {featureFlag}),
     requiredTurboWarpBlock: Object.freeze({
       opcode: command,
       visibility: 'visible',
@@ -54,6 +56,14 @@ export const dsl4CoreActionManifest = Object.freeze([
     'port',
   ),
   defineCoreAction('transition', 'global', 'transitionAction', 'cancel-replay-safe', 'port'),
+  defineCoreAction(
+    'presentationEffect',
+    'global',
+    'presentationEffectAction',
+    'cancel-replay-safe',
+    'port',
+    'dsl4PresentationEffects',
+  ),
   defineCoreAction('goto', 'global', 'gotoAction', 'finish-only', 'navigation'),
   defineCoreAction('gotoSegment', 'global', 'gotoSegmentAction', 'finish-only', 'port'),
   defineCoreAction('branch', 'global', 'branchAction', 'finish-only', 'branch'),
@@ -92,6 +102,14 @@ export const dsl4CoreActionManifest = Object.freeze([
   defineCoreAction('hide', 'actor', 'hideAction', 'finish-only', 'port'),
   defineCoreAction('setTransparency', 'actor', 'setTransparencyAction', 'finish-only', 'port'),
   defineCoreAction('moveTo', 'actor', 'moveToAction', 'cancel-replay-safe', 'port'),
+  defineCoreAction(
+    'animate',
+    'actor',
+    'animateAction',
+    'finish-only',
+    'port',
+    'dsl4PresentationEffects',
+  ),
   defineCoreAction('say', 'actor', 'sayAction', 'cancel-replay-safe', 'port'),
   defineCoreAction('think', 'actor', 'thinkAction', 'cancel-replay-safe', 'port'),
   defineCoreAction('setSkin', 'actor', 'setSkinAction', 'finish-only', 'port'),

@@ -110,6 +110,7 @@ export function createDsl4NavigationSession({
   turboWarpBubbleAdvancedPresentationEnabled = false,
   broadcastMessageAndWaitEnabled = false,
   crossfadeTransitionsEnabled = false,
+  presentationEffectsEnabled = false,
   narrativeControlEnabled = false,
   inputArbitration,
   resolveActionQuiesceMode,
@@ -144,6 +145,7 @@ export function createDsl4NavigationSession({
   turboWarpBubbleAdvancedPresentationEnabled?: boolean;
   broadcastMessageAndWaitEnabled?: boolean;
   crossfadeTransitionsEnabled?: boolean;
+  presentationEffectsEnabled?: boolean;
   narrativeControlEnabled?: boolean;
   inputArbitration?: unknown;
   resolveActionQuiesceMode?: (
@@ -330,6 +332,7 @@ export function createDsl4NavigationSession({
       turboWarpBubbleAdvancedPresentationEnabled,
       broadcastMessageAndWaitEnabled,
       crossfadeTransitionsEnabled,
+      presentationEffectsEnabled,
       narrativeControlEnabled,
       ...(quiesceTimeoutMs === undefined ? {} : {quiesceTimeoutMs}),
       ...(scheduleQuiesceTimeout === undefined ? {} : {scheduleQuiesceTimeout}),

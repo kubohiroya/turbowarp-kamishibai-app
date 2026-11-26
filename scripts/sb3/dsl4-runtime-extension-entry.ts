@@ -797,7 +797,7 @@ class KamishibaiDsl4RuntimeExtension {
     const {ArgumentType, BlockType} = this.Scratch;
     const coreActionSurface = createDsl4TurboWarpCoreActionBlockSurface(
       {ArgumentType, BlockType},
-      {visible: productionFeatureFlags.dsl4TurboWarpActionSurface},
+      {visible: productionFeatureFlags.dsl4TurboWarpActionSurface, includeOptIn: false},
     );
     const runtimeVariableSurface = createDsl4TurboWarpRuntimeVariableBlockSurface(
       {ArgumentType, BlockType},

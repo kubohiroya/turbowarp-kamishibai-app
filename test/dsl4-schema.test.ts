@@ -1816,3 +1816,92 @@ test('keeps StoryPath stable across comments and whitespace-only edits', () => {
   assert.equal(actionAt(sceneAt(storyOf(results[0]), 0), 0).id, '/scenes/opening/actions/0');
   assert.equal(actionAt(sceneAt(storyOf(results[1]), 0), 0).id, '/scenes/opening/actions/0');
 });
+
+const presentationActionStory = (actions: string) => `
+kamishibai: '4.0'
+assets: {Idle: costume:Hero, Beach: backdrop}
+actors: {Hero: Idle}
+scenes:
+  opening:
+${actions}
+`;
+
+test('normalizes DSL 4.0 animation and typed presentation parameters without shadowing legacy actions', () => {
+  const result = frontend.parse(
+    presentationActionStory(`    - Hero.animate: {to: {x: 12, y: -8, scale: 125, direction: -90, transparency: 40}, seconds: 2, delaySeconds: 1, repeat: 0, alternate: true, background: true, easing: easeInOut, stableId: hero-enter}
+    - presentationEffect: {scope: stage, effect: shake, seconds: 1, params: {amplitude: 8, axis: x, cycles: 4}}
+    - presentationEffect: {scope: stage, effect: zoom, seconds: 1, params: {scale: 2}}
+    - presentationEffect: {scope: presentation, effect: wipe, seconds: 1, params: {direction: left, color: '#123AbC'}}
+    - presentationEffect: {scope: presentation, effect: fade, seconds: 0, params: {opacity: 0.5}}
+    - stage: Beach
+    - Hero.moveTo: {x: 0, y: 0, seconds: 1}
+    - Hero.setTransparency: 0
+    - Hero.setSkin: Idle`),
+    {sourceId: 'presentation.kamishibai.yaml'},
+  );
+  assert.equal(result.ok, true, JSON.stringify(result.diagnostics));
+  const story = storyOf(result);
+  assert.equal(story.version, '4.0');
+  const {actions} = sceneAt(story, 0);
+  assert.deepEqual(
+    actions.map(({command}) => command),
+    [
+      'animate',
+      'presentationEffect',
+      'presentationEffect',
+      'presentationEffect',
+      'presentationEffect',
+      'stage',
+      'moveTo',
+      'setTransparency',
+      'setSkin',
+    ],
+  );
+  const actor = requireDefined(actions[0], 'animation action');
+  assert.equal(actor.target, 'Hero');
+  assert.equal(actor.stableId, 'hero-enter');
+  assert.deepEqual(actor.args, {
+    to: {x: 12, y: -8, scale: 125, direction: -90, transparency: 40},
+    seconds: 2,
+    delaySeconds: 1,
+    repeat: 0,
+    alternate: true,
+    background: true,
+    easing: 'easeInOut',
+  });
+  const stage = requireDefined(actions[1], 'presentation action');
+  assert.equal(stage.target, null);
+  assert.deepEqual(stage.args, {
+    scope: 'stage',
+    effect: 'shake',
+    seconds: 1,
+    params: {amplitude: 8, axis: 'x', cycles: 4},
+  });
+  assert.ok(story.sourceMap['/scenes/opening/actions/0/args/to/x']);
+});
+
+test.each([
+  'Hero.animate: {to: {}, seconds: 1}',
+  'Hero.animate: {arguments: {seconds: 1}, to: {x: 0}, seconds: 1}',
+  'Hero.animate: {to: {rotation: 90}, seconds: 1}',
+  'Hero.animate: {to: {scale: 0}, seconds: 1}',
+  'Hero.animate: {to: {transparency: 101}, seconds: 1}',
+  'Hero.animate: {to: {x: 0}, seconds: 61}',
+  'Hero.animate: {to: {x: 0}, seconds: 1, repeat: 21}',
+  'Hero.animate: {to: {x: 0}, seconds: 1, easing: bounce}',
+  'presentationEffect: {scope: camera, effect: shake, seconds: 1, params: {amplitude: 4}}',
+  'presentationEffect: {scope: stage, effect: custom, seconds: 1, params: {}}',
+  'presentationEffect: {scope: stage, effect: shake, seconds: 1, params: {amplitude: 65}}',
+  'presentationEffect: {scope: stage, effect: shake, seconds: 1, params: {amplitude: 4, cycles: 0}}',
+  'presentationEffect: {scope: stage, effect: zoom, seconds: 1, params: {scale: 0.5}}',
+  'presentationEffect: {scope: stage, effect: wipe, seconds: 31, params: {}}',
+  'presentationEffect: {scope: stage, effect: wipe, seconds: 1, params: {color: red}}',
+  'presentationEffect: {scope: stage, effect: fade, seconds: 1, params: {direction: left}}',
+  'presentationEffect: {scope: stage, effect: fade, seconds: 1, params: {opacity: 1.01}}',
+])('rejects out-of-contract presentation arguments: %s', (action) => {
+  const result = frontend.parse(presentationActionStory(`    - ${action}`), {
+    sourceId: 'invalid-presentation.kamishibai.yaml',
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.diagnostics.some(({code}) => code.startsWith('K4-SCHEMA')));
+});

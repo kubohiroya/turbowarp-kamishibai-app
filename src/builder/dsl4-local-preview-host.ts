@@ -300,6 +300,7 @@ function previewHtml(
     maxTotalAssetBytes: number;
   },
   narrativeControlEnabled = false,
+  presentationEffectsEnabled = false,
 ) {
   const safeName = sourceDisplayName.replaceAll('&', '&amp;').replaceAll('<', '&lt;');
   const runtimeDescription =
@@ -311,7 +312,7 @@ function previewHtml(
       ? '/runtime/browser.js'
       : '/modules/builder/dsl4-local-preview-client.js';
   return `<!doctype html>
-<html lang="en" data-dsl4-max-project-bytes="${runtimeLimits.maxProjectBytes}" data-dsl4-max-project-json-bytes="${runtimeLimits.maxProjectJsonBytes}" data-dsl4-max-asset-files="${runtimeLimits.maxAssetFiles}" data-dsl4-max-total-asset-bytes="${runtimeLimits.maxTotalAssetBytes}"${narrativeControlEnabled ? ' data-dsl4-narrative-control="true"' : ''}>
+<html lang="en" data-dsl4-max-project-bytes="${runtimeLimits.maxProjectBytes}" data-dsl4-max-project-json-bytes="${runtimeLimits.maxProjectJsonBytes}" data-dsl4-max-asset-files="${runtimeLimits.maxAssetFiles}" data-dsl4-max-total-asset-bytes="${runtimeLimits.maxTotalAssetBytes}"${narrativeControlEnabled ? ' data-dsl4-narrative-control="true"' : ''}${presentationEffectsEnabled ? ' data-dsl4-presentation-effects="true"' : ''}>
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1142,6 +1143,7 @@ export function createDsl4LocalPreviewHost(options: {
             maxTotalAssetBytes: runtimeMaxTotalAssetBytes,
           },
           featureFlags.dsl4NarrativeControl,
+          featureFlags.dsl4PresentationEffects,
         );
         const browserRuntimeSources =
           runtimeOwner === 'browser' ? "; worker-src 'self' blob:; font-src 'self' data:" : '';

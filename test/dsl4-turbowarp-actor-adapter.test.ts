@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import {test} from 'vitest';
 
-import {createDsl4TurboWarpActorPlatform} from '../src/dsl4/platform/index.js';
+import {
+  createDsl4ActorActionPort,
+  createDsl4TurboWarpActorPlatform,
+} from '../src/dsl4/platform/index.js';
 import {createTestTurboWarpRuntimeHost} from './helpers/turbowarp-runtime-host.ts';
 import {requireArray, requireRecord, requireString} from './helpers/require-value.ts';
 import {thrown} from './helpers/thrown-error.ts';
@@ -1398,4 +1401,118 @@ test('an actor whose host cannot turn it reports the missing capability', () => 
     ['setSize', 50],
     ['setVisible', true],
   ]);
+});
+
+function animationFixture() {
+  const {target} = fakeActor();
+  target.size = 100;
+  target.direction = 170;
+  target.effects = {ghost: 20};
+  target.setEffect = (name, value) => {
+    target.effects![name] = value;
+  };
+  const clock = manualScheduler();
+  const fake = fakeRuntime([target]);
+  const platform = createDsl4TurboWarpActorPlatform({
+    runtimeHost: fake.runtimeHost,
+    bubbleComposition: fake.bubbleComposition,
+    scheduler: clock.scheduler,
+    frameMilliseconds: 250,
+  });
+  const port = createDsl4ActorActionPort({
+    host: platform.host,
+    resolveActor: platform.resolveActor,
+    composition: {
+      isRegistered() {
+        return false;
+      },
+      getMimeType() {},
+      applyToTarget() {},
+    },
+  });
+  const values = () => [target.x, target.y, target.size, target.direction, target.effects?.ghost];
+  const animate = (settings: Record<string, unknown>, signal = new AbortController().signal) =>
+    port.animate({target: 'Hero', ...settings}, {signal});
+  return {target, clock, platform, values, animate};
+}
+
+test('actor port uses one clock for all tracks, delay, Scratch direction, and alternating repeats', async () => {
+  const {clock, values, animate} = animationFixture();
+  await animate({
+    to: {x: 100, y: 80, scale: 200, direction: -170, transparency: 80},
+    seconds: 1,
+    delaySeconds: 0.25,
+    repeat: 1,
+    alternate: true,
+    background: true,
+  });
+  assert.equal(clock.pendingCount(), 1);
+  clock.advance(249);
+  assert.deepEqual(values(), [0, 0, 100, 170, 20]);
+  clock.advance(501);
+  assert.deepEqual(values(), [50, 40, 150, 180, 50]);
+  assert.equal(clock.pendingCount(), 1);
+  clock.advance(500);
+  assert.deepEqual(values(), [100, 80, 200, -170, 80]);
+  clock.advance(1000);
+  assert.deepEqual(values(), [0, 0, 100, 170, 20]);
+  assert.equal(clock.pendingCount(), 0);
+});
+
+test('replacement leaves disjoint tracks running and a legacy setter keeps the new value', async () => {
+  const {clock, platform, target, values, animate} = animationFixture();
+  await animate({to: {x: 100, y: 100, transparency: 100}, seconds: 1, background: true});
+  clock.advance(250);
+  assert.deepEqual(values(), [25, 25, 100, 170, 40]);
+  await animate({to: {x: 225, scale: 200}, seconds: 2, background: true});
+  clock.advance(250);
+  assert.deepEqual(values().slice(0, 2), [50, 50]);
+  platform.host.setTransparency(target, {transparency: 7});
+  platform.finishActorAnimations();
+  assert.deepEqual(values(), [225, 100, 200, 170, 7]);
+  clock.advance(5000);
+  assert.deepEqual(values(), [225, 100, 200, 170, 7]);
+  assert.equal(clock.pendingCount(), 0);
+});
+
+test('foreground abort finishes only owned tracks; restore cleanup and dispose leave no stale writes', async () => {
+  const {clock, platform, target, values, animate} = animationFixture();
+  const controller = new AbortController();
+  const foreground = animate({to: {x: 100, y: 100}, seconds: 1}, controller.signal);
+  const abort = assert.rejects(foreground, {name: 'AbortError'});
+  for (let count = 0; count < 20 && clock.pendingCount() === 0; count++) await Promise.resolve();
+  assert.equal(clock.pendingCount(), 1);
+  clock.advance(250);
+  await animate({to: {x: 225}, seconds: 1, background: true});
+  controller.abort();
+  await abort;
+  assert.deepEqual(values().slice(0, 2), [25, 100]);
+  platform.cancelActorAnimations();
+  assert.deepEqual(values().slice(0, 2), [25, 100], 'cancel itself does not write terminal values');
+  target.setXY(-10, -20);
+  await animate({to: {y: 55, direction: 450}, seconds: 1, delaySeconds: 1, background: true});
+  platform.dispose();
+  clock.advance(5000);
+  assert.deepEqual(values().slice(0, 4), [-10, -20, 100, 170]);
+  assert.equal(clock.pendingCount(), 0);
+});
+
+test('actor port rejects out-of-range timing before scheduling and supports zero-duration actions', async () => {
+  const {clock, values, animate} = animationFixture();
+  for (const options of [
+    {to: {}, seconds: 1},
+    {to: {transparency: 101}, seconds: 1},
+    {to: {scale: 0}, seconds: 1},
+    {to: {x: Infinity}, seconds: 1},
+    {to: {x: 1}, seconds: 61},
+    {to: {x: 1}, seconds: 60, repeat: 5},
+    {to: {x: 1}, seconds: 1, repeat: 1.5},
+    {to: {x: 1}, seconds: 1, background: 'true'},
+  ]) {
+    await assert.rejects(animate(options), {code: 'K4-ACTOR-PORT-001'});
+  }
+  assert.equal(clock.pendingCount(), 0);
+  await animate({to: {x: 10, direction: 450}, seconds: 0});
+  assert.deepEqual(values().slice(0, 4), [10, 0, 100, 90]);
+  assert.equal(clock.pendingCount(), 0);
 });

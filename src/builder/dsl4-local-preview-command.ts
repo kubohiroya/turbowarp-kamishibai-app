@@ -499,6 +499,7 @@ export async function runDsl4LocalPreviewCommand(
             maxAssetFiles,
             maxTotalAssetBytes,
             featureFlags,
+            ...(featureFlags.dsl4PresentationEffects ? {localPreviewRuntime: true} : {}),
             ...graphOptions,
             ...(replaceExisting === undefined ? {} : {replaceExisting}),
           }),

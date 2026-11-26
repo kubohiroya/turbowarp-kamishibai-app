@@ -158,6 +158,7 @@ describe('Japanese texts', () => {
       ],
       menus: {
         dsl4MoveEasing: {acceptReporters: true, items: ['linear', 'other']},
+        dsl4PresentationEffectScope: {acceptReporters: true, items: ['stage', 'presentation']},
         plain: ['linear'],
         dynamic: {items: 'menuFunction'},
       },
@@ -170,6 +171,10 @@ describe('Japanese texts', () => {
       {opcode: 'unknown', text: 'x'},
     ]);
     expect(ja.menus.dsl4MoveEasing.items).toEqual([{text: '一定の速さ', value: 'linear'}, 'other']);
+    expect(ja.menus.dsl4PresentationEffectScope.items).toEqual([
+      {text: '舞台', value: 'stage'},
+      {text: '画面全体', value: 'presentation'},
+    ]);
     expect(ja.menus.plain).toEqual(['linear']);
     expect(ja.menus.dynamic).toEqual({items: 'menuFunction'});
     expect(localizeDsl4ExtensionInfo(info, dsl4RuntimeTranslations, 'en')).toBe(info);

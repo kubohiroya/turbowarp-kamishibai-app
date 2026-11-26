@@ -247,6 +247,7 @@ DSL 4.0 build-dsl4 options:
 
 DSL 4.0 preview-dsl4 options:
   --watch                         Keep watching the selected source (required)
+  --enable-presentation-effects   Opt into actor animation and scoped effects (default OFF)
   --enable-source-includes        Enable transactional Source Graph watching
   --max-source-files N            Maximum files in the include graph
   --max-total-source-bytes N      Maximum graph total and composed source bytes
@@ -1368,6 +1369,7 @@ function parsePreviewDsl4Arguments(rest: string[]): Dsl4PreviewCliOptions {
     '--watch',
     '--replace-existing',
     '--enable-source-includes',
+    '--enable-presentation-effects',
     '--allow-large-preview-artifacts',
   ]);
   const requiredValueOptions = new Set([
@@ -1407,6 +1409,7 @@ function parsePreviewDsl4Arguments(rest: string[]): Dsl4PreviewCliOptions {
   }
   requireCliValueOptions(values, requiredValueOptions);
   const sourceIncludesEnabled = flags.has('--enable-source-includes');
+  const presentationEffectsEnabled = flags.has('--enable-presentation-effects');
   if (sourceIncludesEnabled) {
     requireCliValueOptions(values, graphValueOptions);
   } else {
@@ -1525,9 +1528,17 @@ function parsePreviewDsl4Arguments(rest: string[]): Dsl4PreviewCliOptions {
     maxProjectBytes,
     maxProjectJsonBytes,
     allowLargePreviewArtifacts,
+    ...(sourceIncludesEnabled || presentationEffectsEnabled
+      ? {
+          featureFlags: {
+            dsl4Runtime: true,
+            ...(sourceIncludesEnabled ? {dsl4SourceIncludes: true} : {}),
+            ...(presentationEffectsEnabled ? {dsl4PresentationEffects: true} : {}),
+          },
+        }
+      : {}),
     ...(sourceIncludesEnabled
       ? {
-          featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
           maxSourceFiles: positiveInteger('--max-source-files'),
           maxTotalSourceBytes: maxTotalSourceBytes as number,
           maxIncludeDepth: positiveInteger('--max-include-depth'),

@@ -35,7 +35,9 @@ test('freezes the #265 Standard author and template-internal palette boundary', 
   assert.equal(contract.standardRuntime.runtimeComponentId, 'kubohiroyakamishibairuntime4');
   assert.deepEqual(
     contract.standardRuntime.visibleOpcodes,
-    dsl4CoreActionManifest.map(({command}) => command),
+    dsl4CoreActionManifest
+      .filter(({featureFlag}) => featureFlag === undefined)
+      .map(({command}) => command),
   );
   assert.equal(new Set(contract.standardRuntime.visibleOpcodes).size, 34);
   assert.deepEqual(contract.standardRuntime.hiddenOpcodes, [

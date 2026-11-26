@@ -1,3 +1,4 @@
+import {isDsl4ActorCoreSourceAction, isDsl4ReservedCustomActionName} from './action-registry.js';
 import {dsl4BlockAuthoringIconSvg} from './authoring-icon.js';
 import {dsl4AuthoringPaletteGroups, withDsl4PaletteGroups} from './block-palette-i18n.js';
 import {stringify} from 'yaml';
@@ -111,6 +112,8 @@ const argumentFields: Readonly<Record<string, string>> = {
   VOLUME: 'volume',
   MESSAGE: 'message',
   EFFECT: 'effect',
+  SCOPE: 'scope',
+  PARAMS: 'params',
   SCENE: 'scene',
   SEGMENT: 'segment',
   BRANCH: 'branch',
@@ -137,7 +140,7 @@ const optionalInputs: Readonly<Record<string, Readonly<Record<string, string>>>>
   moveTo: {EASING: 'easing'},
   setText: {STYLE: 'style'},
 };
-const jsonInputs = new Set(['ROUTES', 'STEPS']);
+const jsonInputs = new Set(['ROUTES', 'STEPS', 'PARAMS']);
 
 type Block = {
   opcode: string;
@@ -521,7 +524,7 @@ export function createDsl4StructuredBlockSourceDeclaration({
       return id;
     }
     const spec = specs.get(blockCommand);
-    if (!spec) {
+    if (!spec || (target !== null && !isDsl4ActorCoreSourceAction(command, value))) {
       if (!isRecord(value)) fail(`Invalid custom action ${sourceCommand}`);
       return add(`${prefix}customAction`, {
         TARGET: target,
@@ -997,7 +1000,11 @@ export function readDsl4StructuredBlockSource(
       fail('Pose step blocks must be placed inside recognize actor pose steps', blockId);
     if (block.opcode === `${prefix}customAction`) {
       const command = String(input(block, 'COMMAND'));
-      if (specs.has(command)) fail('Core actions must use their own runtime blocks');
+      if (
+        isDsl4ReservedCustomActionName(command) ||
+        (specs.has(command) && coreActionCommandForBlock(command) !== command)
+      )
+        fail('Core actions must use their own runtime blocks');
       const args = recordJson(block, 'ARGUMENTS');
       const stableId = String(input(block, 'STABLEID'));
       return {

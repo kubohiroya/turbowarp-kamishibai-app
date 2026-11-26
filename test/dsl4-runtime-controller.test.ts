@@ -543,6 +543,8 @@ scenes:
           y: 20
           seconds: 0
           easing: easeOut
+      - Hero.animate: {to: {x: 40, direction: 180}, seconds: 0}
+      - presentationEffect: {scope: stage, effect: fade, seconds: 0, params: {}}
       - Hero.say:
           text: hello
           seconds: 0
@@ -703,6 +705,8 @@ test('dispatches every core action and keeps transition separate from scene move
       'loop',
       'setTransparency',
       'moveTo',
+      'animate',
+      'presentationEffect',
       'say',
       'think',
       'setSkin',
@@ -753,6 +757,7 @@ test('dispatches every core action and keeps transition separate from scene move
     storyDocument,
     port,
     speechAdvanceTypewriterEnabled: true,
+    presentationEffectsEnabled: true,
     broadcastMessageAndWaitEnabled: true,
     evaluateCondition(expression, variables) {
       evaluated.push(expression);
@@ -784,6 +789,8 @@ test('dispatches every core action and keeps transition separate from scene move
       'loop',
       'setTransparency',
       'moveTo',
+      'animate',
+      'presentationEffect',
       'say',
       'think',
       'setSkin',
@@ -932,8 +939,8 @@ test('dispatches every core action and keeps transition separate from scene move
         requireString(storyPath, 'a trace story path').startsWith('/scenes/'),
       ),
   );
-  assert.equal(trace.filter(({type}) => type === 'action.start').length, 34);
-  assert.equal(trace.filter(({type}) => type === 'action.commit').length, 34);
+  assert.equal(trace.filter(({type}) => type === 'action.start').length, 36);
+  assert.equal(trace.filter(({type}) => type === 'action.commit').length, 36);
   assert.equal(requireDefined(trace.at(-1), 'the last trace event').type, 'runtime.finish');
   const transitions = trace
     .filter(({type}) => type === 'scene.transition')

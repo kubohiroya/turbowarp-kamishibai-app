@@ -143,7 +143,7 @@ test('invalid ordinary scalar types, narrative bounds and top-level typos remain
 });
 
 test('every current core action retains its exact base schema vocabulary in the editing view', () => {
-  assert.equal(dsl4CoreActionManifest.length, 34);
+  assert.equal(dsl4CoreActionManifest.length, 36);
   for (const action of dsl4CoreActionManifest) {
     const definitions = editor.$defs as Record<string, unknown>;
     const baseDefinitions = base.$defs as Record<string, unknown>;
