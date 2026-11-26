@@ -143,6 +143,8 @@ jobs:
           retention-days: 7
       - name: Run full release checks
         if: ${{ steps.scope.outputs.full == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: pnpm verify:full
       # Record the exact tree the full validation passed. Release compares it with the tag's tree
       # and skips repeating the same checks; any difference makes Release run them itself.
