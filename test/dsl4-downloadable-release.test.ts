@@ -1741,7 +1741,9 @@ test('registers the standard DSL 4.0 runtime blocks as visible VM primitives', a
 
     const commands = [
       ...dsl4CoreActionManifest
-        .filter(({featureFlag}) => featureFlag === undefined)
+        .filter(
+          ({featureFlag}) => featureFlag === undefined || featureFlag === 'dsl4PresentationEffects',
+        )
         .map(({command}) => command),
       'sayText',
       'thinkText',
@@ -1781,13 +1783,6 @@ test('registers the standard DSL 4.0 runtime blocks as visible VM primitives', a
         .map(({info}: VmCategoryBlock) => info.opcode),
       bundledCommands,
     );
-    for (const command of ['animate', 'presentationEffect']) {
-      assert.equal(
-        vm.runtime.getOpcodeFunction(`${bundleExtensionId}_${runtimeExtensionId}__${command}`),
-        undefined,
-      );
-    }
-
     const sourceMarker = category.blocks.find(
       ({info}: VmCategoryBlock) => info.opcode === `${runtimeExtensionId}__embeddedYaml`,
     );
