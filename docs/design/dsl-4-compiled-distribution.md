@@ -53,6 +53,8 @@ profileはビルドの出力形式として明示的に選ぶもので、runtime
   - YAMLのcommentとlayoutは、StoryDocumentになった時点でもともと含まれない。
   - narrative controlのstoryもcompileできる。各actionの`narrative`（scene IDと位置・分岐条件で、ファイルや行は含まない）と、
     `metadata.sourceVersion`／`metadata.narrativeControl`は、runtimeが読むため残す。
+  - 無効区間だけの認識モデルの先読みを抑える`metadata.invalidatedRecognitionScenes`も保持する。既存シーンIDの重複のない配列として検証する。
+    この項目がある出力は`invalidate-model-preload-v1`対応runtimeと組み合わせる。旧compiled成果物には項目を要求せず、旧台本の依存準備を維持する。
 - `cacheIdentity`は、`id`と`databaseName`を残して`label`だけを`compiled`に置き換える。
   `label`はsourceファイルのbasenameであるため。`id`と`databaseName`は作者が一度決めて保存しているstoryの識別子で、
   これを残すと検証済みremote cacheが`source`と`compiled`の間で引き継がれる。
@@ -65,7 +67,8 @@ profileはビルドの出力形式として明示的に選ぶもので、runtime
 1. envelope: 未知のkey・不足key・未知のformatVersionを拒否（`decodeDsl4Envelope`）。
 2. `storyIntegrity`: storyのJSON（`JSON.stringify`）のSHA-256が一致するか。
 3. Story IR: JSONとして表現できる値だけで構成され、どの深さにも`sourceMap`／`sourceRange`／`sourceOrigins`がない。
-   `metadata`は`sourceId: 'compiled'`と、runtimeが読む`sourceVersion`・`narrativeControl`だけ。
+   `metadata`は`sourceId: 'compiled'`と、runtimeが読む`sourceVersion`・`narrativeControl`・`invalidatedRecognitionScenes`・`implicitProjectActors`・`implicitProjectAssets`・`sealedAssetSources`の許可リストだけ。
+   無効認識のシーンIDは既存シーンを指す一意な配列で、`narrativeControl: true`の場合だけ受理する。
 4. StoryDocumentの構造: scene・action・各mapの形。
 5. 以降は`source`と同じ: asset distribution、runtime artifact descriptor（control profile・keymap）、asset bundle。
 

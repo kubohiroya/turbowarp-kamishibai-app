@@ -30,6 +30,7 @@ const compiledMetadataKeys = new Set([
   'sourceId',
   'sourceVersion',
   'narrativeControl',
+  'invalidatedRecognitionScenes',
   'implicitProjectActors',
   'implicitProjectAssets',
   'sealedAssetSources',
@@ -146,6 +147,18 @@ function assertStoryShape(story: Record<string, unknown>) {
         fail('K4-COMPILED-STORY-001', `Story IR action is malformed in scene ${scene.id}`);
     }
   }
+  const invalidated = metadata.invalidatedRecognitionScenes;
+  if (
+    invalidated !== undefined &&
+    (metadata.narrativeControl !== true ||
+      !Array.isArray(invalidated) ||
+      invalidated.some((id) => typeof id !== 'string' || !sceneIds.has(id)) ||
+      new Set(invalidated).size !== invalidated.length)
+  )
+    fail(
+      'K4-COMPILED-STORY-001',
+      'Invalidated recognition metadata must name unique existing narrative scenes',
+    );
   for (const field of [
     'assets',
     'actors',
@@ -213,6 +226,9 @@ export async function createDsl4CompiledStoryArtifact(
     ...(metadata.narrativeControl === undefined
       ? {}
       : {narrativeControl: metadata.narrativeControl}),
+    ...(metadata.invalidatedRecognitionScenes === undefined
+      ? {}
+      : {invalidatedRecognitionScenes: metadata.invalidatedRecognitionScenes}),
     ...(metadata.implicitProjectActors === undefined
       ? {}
       : {implicitProjectActors: metadata.implicitProjectActors}),

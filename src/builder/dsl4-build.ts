@@ -21,6 +21,10 @@ import type {Dsl4SourceFrontend} from '../dsl4/source-frontend.js';
 import {Dsl4SourceGraphError} from '../dsl4/source-graph.js';
 import {createDsl4SourceGraphFrontend} from '../dsl4/source-graph-frontend.js';
 import {deepFreeze} from '../dsl4/story-document.js';
+import {
+  dsl4InvalidatedRecognitionPreloadCapability,
+  hasDsl4InvalidatedRecognitionMetadata,
+} from '../dsl4/recognition-actions.js';
 import type {Dsl4SubtleCrypto} from '../dsl4/subtle-crypto.js';
 import {
   Dsl4BlockSourceError,
@@ -478,6 +482,29 @@ export async function buildDsl4RuntimeComponent(options: {
         stage: 'dsl4-runtime-capability',
         code: 'K4-INVALIDATE-RUNTIME-001',
       });
+  }
+  if (hasDsl4InvalidatedRecognitionMetadata(storyDocument)) {
+    const project = readSb3(baseSb3Bytes).project;
+    const urls = isRecord(project.extensionURLs) ? Object.values(project.extensionURLs) : [];
+    const capable =
+      runtimeExtensionSource !== undefined
+        ? runtimeExtensionSource.includes(dsl4InvalidatedRecognitionPreloadCapability)
+        : urls.some(
+            (url) =>
+              typeof url === 'string' &&
+              url.startsWith('data:text/javascript;base64,') &&
+              Buffer.from(url.slice(url.indexOf(',') + 1), 'base64')
+                .toString('utf8')
+                .includes(dsl4InvalidatedRecognitionPreloadCapability),
+          );
+    if (!capable)
+      throw new Dsl4BuildError(
+        'Invalidated recognition requires a runtime that suppresses model preloading.',
+        {
+          stage: 'dsl4-runtime-capability',
+          code: 'K4-INVALIDATE-PRELOAD-RUNTIME-001',
+        },
+      );
   }
   let assetDistribution;
   if (assetConfig !== undefined || assetLock !== undefined || assetProfile !== undefined) {

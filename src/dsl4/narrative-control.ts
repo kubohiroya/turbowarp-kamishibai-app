@@ -1,3 +1,5 @@
+import {isDsl4RecognitionSourceCommand} from './recognition-actions.js';
+
 /** Compile bounded narrative structure without executing Scratch or evaluating expressions. */
 export type NarrativePath = (string | number)[];
 type RecordValue = Record<string, unknown>;
@@ -12,6 +14,7 @@ export interface NarrativeOrigin {
 export interface NarrativeCompilation {
   story: RecordValue;
   hasInvalidation: boolean;
+  invalidatedRecognitionScenes: string[];
   origins: Record<string, NarrativeOrigin[]>;
   validation: Record<string, {action: RecordValue; origin: NarrativeOrigin}[]>;
 }
@@ -100,6 +103,24 @@ function actions(value: unknown, path: NarrativePath): RecordValue[] {
     fail('Narrative body must be a sequence of single-command mappings', path);
   }
   return value as RecordValue[];
+}
+
+/** Inspect only action positions; never resolve the contents of an OFF draft. */
+function containsRecognitionAction(list: RecordValue[]): boolean {
+  return list.some((action) => {
+    const command = Object.keys(action)[0]!;
+    if (isDsl4RecognitionSourceCommand(command)) return true;
+    const value = action[command];
+    if (!record(value)) return false;
+    if (command === 'if')
+      return (
+        containsRecognitionAction(value.then as RecordValue[]) ||
+        containsRecognitionAction((value.else ?? []) as RecordValue[])
+      );
+    if (command === 'repeat' || command === 'forEach')
+      return containsRecognitionAction(value.do as RecordValue[]);
+    return command === 'invalidate' && containsRecognitionAction(value.then as RecordValue[]);
+  });
 }
 
 /** Convert the declarative condition tree to the existing bounded expression language. */
@@ -274,6 +295,7 @@ export function compileDsl4NarrativeSource(
   const origins: NarrativeCompilation['origins'] = Object.create(null);
   const validation: NarrativeCompilation['validation'] = Object.create(null);
   const scenes: RecordValue = Object.create(null);
+  const invalidatedRecognitionScenes = new Set<string>();
   let sequence = 0;
   for (const {sceneId, scene, path, body} of sourceBodies) {
     const expanded: RecordValue[] = [];
@@ -376,6 +398,8 @@ export function compileDsl4NarrativeSource(
               parent,
               active,
             );
+          else if (containsRecognitionAction(args.then as RecordValue[]))
+            invalidatedRecognitionScenes.add(sceneId);
         } else if (command === 'if') {
           const args = value as RecordValue;
           const resolvedCondition = resolveCondition(args.condition, scopes, [
@@ -452,5 +476,11 @@ export function compileDsl4NarrativeSource(
     walk(body, path, new Map(), {frames: [], guards: []}, true);
     scenes[sceneId] = Array.isArray(scene) ? expanded : {...scene, actions: expanded};
   }
-  return {story: {...input, kamishibai: '4.0', scenes}, hasInvalidation, origins, validation};
+  return {
+    story: {...input, kamishibai: '4.0', scenes},
+    hasInvalidation,
+    invalidatedRecognitionScenes: [...invalidatedRecognitionScenes],
+    origins,
+    validation,
+  };
 }

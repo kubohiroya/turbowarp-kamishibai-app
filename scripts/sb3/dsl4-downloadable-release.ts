@@ -698,7 +698,7 @@ export async function createDsl4RuntimeBundleSource({
     narrativeControlEnabled
       ? text.replace(
           '\n// ID:',
-          '\n// Kamishibai capabilities: narrative-control-v1\n// Kamishibai capabilities: invalidate-source-v1\n// ID:',
+          '\n// Kamishibai capabilities: narrative-control-v1\n// Kamishibai capabilities: invalidate-source-v1\n// Kamishibai capabilities: invalidate-model-preload-v1\n// ID:',
         )
       : text,
   );
