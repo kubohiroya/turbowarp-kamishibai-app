@@ -253,7 +253,7 @@
     "@kubohiroya/turbowarp-named-data": "0.9.0",
     "@kubohiroya/turbowarp-runtime-adapter": "^0.6.0",
     "@kubohiroya/turbowarp-runtime-expression": "^0.12.0",
-    "@kubohiroya/turbowarp-sb3-save-format": "github:kubohiroya/turbowarp-sb3-save-format#73b3c7c617b51ec671dea52388fc0b19d33c04a4",
+    "@kubohiroya/turbowarp-sb3-save-format": "0.5.3",
     "@kubohiroya/turbowarp-svg-text": "^0.17.0",
     "@kubohiroya/turbowarp-teachable-machine": "^4.4.0",
     "@kubohiroya/turbowarp-yaml-json": "0.12.0",
