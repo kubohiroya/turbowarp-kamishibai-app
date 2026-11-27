@@ -491,6 +491,27 @@ test('the command refuses a remote SB3 its URL cannot serve, unless told to skip
     ];
 
     await assert.rejects(
+      runCli(
+        [
+          'save-sb3-format',
+          '--input',
+          input,
+          '--output',
+          output,
+          '--remote-compatibility-carriers',
+          id,
+        ],
+        io,
+      ),
+      /requires a remote --extensions format/u,
+    );
+    await assert.rejects(
+      runCli([...args, '--remote-compatibility-carriers', id, '--keep-embedded-data'], io),
+      /cannot be combined with --keep-embedded-data/u,
+    );
+    await assert.rejects(readFile(output), {code: 'ENOENT'});
+
+    await assert.rejects(
       runCli(args, io, {fetch: fakeFetch({[url]: '// other\n'})}),
       /does not serve the bytes/u,
     );
@@ -498,10 +519,25 @@ test('the command refuses a remote SB3 its URL cannot serve, unless told to skip
 
     await runCli(args, io, {fetch: fakeFetch({[url]: code})});
     assert.match(writes.join(''), /1 URL\(s\) checked/u);
+    const remoteProject = readSb3(await readFile(output)).project;
+    assert.deepEqual(remoteProject.extensionURLs, {});
     // Writing the reference is not the same as the work running offline. The copy a cacheable
     // reference permits is made by a viewer's browser, which no command can reach, so the
     // command says so rather than letting the chosen form imply it.
     assert.match(writes.join(''), /No copy is kept here/u);
+
+    await rm(output);
+    await runCli([...args, '--remote-compatibility-carriers', id], io, {
+      fetch: fakeFetch({[url]: code}),
+    });
+    const carrierProject = readSb3(await readFile(output)).project;
+    const carrier = (carrierProject.extensionURLs as Record<string, string>)[id]!;
+    assert.match(carrier, /^data:text\/javascript;base64,/u);
+    assert.match(
+      Buffer.from(carrier.slice(carrier.indexOf(',') + 1), 'base64').toString('utf8'),
+      /^\/\/ TurboWarp Plus remote compatibility carrier v1\n/u,
+    );
+    assert.deepEqual(discoverManifest(carrierProject), discoverManifest(remoteProject));
 
     await rm(output);
     await runCli([...args, '--skip-url-check'], io, {fetch: fakeFetch({})});

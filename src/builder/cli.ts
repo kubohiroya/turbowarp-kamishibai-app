@@ -142,13 +142,14 @@ export function usage() {
 
   turbowarp-kamishibai save-sb3-format --input IN.sb3 --output OUT.sb3 \\
     [--extensions remote-non-cacheable|remote-cacheable|embedded-file|embedded-data] \\
-    [--keep-embedded-data] \\
+    [--keep-embedded-data | --remote-compatibility-carriers ID,ID] \\
     [--extension-urls URLS.json] [--skip-url-check] [--unsandboxed-extensions ID,ID] \\
     [--source FORMAT] [--assets FORMAT] [--assets-as-project-assets] \\
     [--max-input-bytes N]
     Writable today: ${describeSb3SaveFormats()}. An option left unset keeps that payload as it is.
-    Only embedded-data, or --keep-embedded-data beside another form, loads in a standard
-    TurboWarp host; every form keeps the Manifest, so a Plus host always has the digest.
+    For a standard TurboWarp host, use embedded-data, --keep-embedded-data, or opt in to
+    a small remote carrier for specified unsandboxed extensions. A remote carrier needs
+    the network. Every form keeps the Manifest so a Plus host has the digest.
     The two remote forms differ in whether the opener's browser may keep a copy, which the
     author decides: non-cacheable forbids one, cacheable permits one the opener may decline.
     Neither remote form keeps a copy here. A copy lives in a viewer's browser cache, which no
@@ -1629,6 +1630,7 @@ function parseSaveSb3FormatArguments(arguments_: string[]) {
       '--assets',
       '--extension-urls',
       '--unsandboxed-extensions',
+      '--remote-compatibility-carriers',
       '--max-input-bytes',
     ]),
   });
@@ -1638,6 +1640,21 @@ function parseSaveSb3FormatArguments(arguments_: string[]) {
     : saveSb3FormatDefaultMaxInputBytes;
   if (!Number.isSafeInteger(maxInputBytes) || maxInputBytes < 1)
     throw new Sb3BuilderError('--max-input-bytes must be an integer >= 1.', {stage: 'cli'});
+  const carrierIds: string | undefined = values.get('--remote-compatibility-carriers');
+  const remoteCompatibilityCarriers = carrierIds?.split(',').map((id) => id.trim());
+  if (remoteCompatibilityCarriers?.some((id) => !id))
+    throw new Sb3BuilderError('--remote-compatibility-carriers requires a list of extension IDs.', {
+      stage: 'cli',
+    });
+  if (
+    remoteCompatibilityCarriers &&
+    (!['remote-non-cacheable', 'remote-cacheable'].includes(values.get('--extensions') ?? '') ||
+      flags.has('--keep-embedded-data'))
+  )
+    throw new Sb3BuilderError(
+      '--remote-compatibility-carriers requires a remote --extensions format and cannot be combined with --keep-embedded-data.',
+      {stage: 'cli'},
+    );
   return {
     input: path.resolve(values.get('--input')!),
     output: path.resolve(values.get('--output')!),
@@ -1658,6 +1675,7 @@ function parseSaveSb3FormatArguments(arguments_: string[]) {
           .filter(Boolean)
       : [],
     keepEmbeddedData: flags.has('--keep-embedded-data'),
+    remoteCompatibilityCarriers,
     skipUrlCheck: flags.has('--skip-url-check'),
     maxInputBytes,
   };
@@ -1888,6 +1906,7 @@ export async function runCli(
               urls: extensionURLs,
               unsandboxed: parsed.options.unsandboxed,
               keepEmbeddedData: parsed.options.keepEmbeddedData,
+              remoteCompatibilityCarriers: parsed.options.remoteCompatibilityCarriers,
               fetch: dependencies.fetch,
             })
           ).converted;
