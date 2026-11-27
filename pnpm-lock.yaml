@@ -59,8 +59,8 @@ importers:
         specifier: ^0.12.0
         version: 0.12.0
       '@kubohiroya/turbowarp-sb3-save-format':
-        specifier: github:kubohiroya/turbowarp-sb3-save-format#73b3c7c617b51ec671dea52388fc0b19d33c04a4
-        version: https://codeload.github.com/kubohiroya/turbowarp-sb3-save-format/tar.gz/73b3c7c617b51ec671dea52388fc0b19d33c04a4
+        specifier: 0.5.3
+        version: 0.5.3
       '@kubohiroya/turbowarp-svg-text':
         specifier: ^0.17.0
         version: 0.17.0
@@ -547,9 +547,8 @@ packages:
     resolution: {integrity: sha512-N24O3zlIR8V3LKo7ku5ALzjhcHs2olXcvIjOYE3r5hC7jjKkODuJ5xfNchMMKyG55+W6GQehSTlW6KOFFNO5Ug==}
     engines: {node: '>=24'}
 
-  '@kubohiroya/turbowarp-sb3-save-format@https://codeload.github.com/kubohiroya/turbowarp-sb3-save-format/tar.gz/73b3c7c617b51ec671dea52388fc0b19d33c04a4':
-    resolution: {gitHosted: true, integrity: sha512-YjiGvlWdavma90nFVYXgaciFjfUp5S61Ei+Kbhyw4EAJfmoCtE7kY1L6hlr+T3+dhSbbkYddGi+D8VNgwsgNzQ==, tarball: https://codeload.github.com/kubohiroya/turbowarp-sb3-save-format/tar.gz/73b3c7c617b51ec671dea52388fc0b19d33c04a4}
-    version: 0.5.2
+  '@kubohiroya/turbowarp-sb3-save-format@0.5.3':
+    resolution: {integrity: sha512-Oudnqo7rbUz2bVgYWb2OgG5b066kGEKq4OLXEuHnv2HZBIg6v7Vh7AX5TgP+hO2k/ybTpNXDCgwotDrBvZNVVw==}
     engines: {node: '>=24'}
     peerDependencies:
       react: ^16.14.0 || ^17 || ^18 || ^19
@@ -4065,7 +4064,7 @@ snapshots:
 
   '@kubohiroya/turbowarp-runtime-expression@0.12.0': {}
 
-  '@kubohiroya/turbowarp-sb3-save-format@https://codeload.github.com/kubohiroya/turbowarp-sb3-save-format/tar.gz/73b3c7c617b51ec671dea52388fc0b19d33c04a4':
+  '@kubohiroya/turbowarp-sb3-save-format@0.5.3':
     dependencies:
       '@kubohiroya/turbowarp-extension-loader': 0.16.1
       '@turbowarp/jszip': 3.12.0

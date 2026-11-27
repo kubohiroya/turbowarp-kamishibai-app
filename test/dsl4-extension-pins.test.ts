@@ -23,20 +23,24 @@ test('locks every DSL4 extension to a reviewed npm release with matching caret s
   const lockfile = parse(lockfileSource);
   const workspace = parse(workspaceSource);
   const allowedBuilds = Object.keys(workspace.allowBuilds ?? {});
-  // pnpm 11 groups finite exact exclusions for one package into an OR expression.
-  const ageExclusions = new Set(
-    (workspace.minimumReleaseAgeExclude ?? []).flatMap((entry: string) => {
-      assert.equal(typeof entry, 'string', 'Age exceptions must be strings.');
-      const exactVersions =
-        /^(@[^/]+\/[^@]+)@(\d+\.\d+\.\d+(?:-[\w.-]+)?(?: \|\| \d+\.\d+\.\d+(?:-[\w.-]+)?)*)$/u.exec(
-          entry,
-        );
-      assert(exactVersions, 'Age exceptions must enumerate exact package releases.');
-      const [, packageName, versions] = exactVersions;
-      assert(packageName && versions, 'An exact age exception must name its package and versions.');
-      return versions.split(' || ').map((version) => `${packageName}@${version}`);
-    }),
-  );
+  const ageExclusions = new Set<string>();
+  assert.equal(workspace.minimumReleaseAge ?? 1440, 1440, 'Keep the 24-hour release age.');
+  for (const entry of workspace.minimumReleaseAgeExclude ?? []) {
+    assert.equal(typeof entry, 'string', 'Age exceptions must be strings.');
+    assert.match(
+      entry,
+      /^@kubohiroya\/(?:turbowarp-[a-z0-9-]+|vite-plugin-turbowarp-extension|sb3-toolchain)$/u,
+      'Age exceptions must name one family package, never a wildcard or external package.',
+    );
+    assert(
+      Object.hasOwn(packageJson.dependencies, entry) ||
+        Object.hasOwn(packageJson.devDependencies, entry),
+      `Age exception must be for a declared dependency: ${entry}`,
+    );
+    assert(!ageExclusions.has(entry), `Duplicate age exception: ${entry}`);
+    ageExclusions.add(entry);
+  }
+  assert(ageExclusions.has('@kubohiroya/turbowarp-sb3-save-format'));
 
   assert.equal(releasePins.formatVersion, 1);
   for (const [name, version] of Object.entries(releasePins.extensions)) {
@@ -60,7 +64,7 @@ test('locks every DSL4 extension to a reviewed npm release with matching caret s
       false,
       `${name} must use the prebuilt npm artifact`,
     );
-    assert.equal(ageExclusions.has(`${name}@${version}`), true, `${name} exact age exception`);
+    assert.equal(ageExclusions.has(name), true, `${name} family age exception`);
   }
   const toolchainName = '@kubohiroya/sb3-toolchain';
   const toolchainVersion = releasePins.devDependencies[toolchainName];
@@ -75,7 +79,7 @@ test('locks every DSL4 extension to a reviewed npm release with matching caret s
     lockfile.packages[`${toolchainName}@${toolchainVersion}`].resolution.integrity,
     /^sha512-/u,
   );
-  assert.equal(ageExclusions.has(`${toolchainName}@${toolchainVersion}`), true);
+  assert.equal(ageExclusions.has(toolchainName), true);
 });
 
 test('runtime provenance matches the resolved dependency versions', async () => {
