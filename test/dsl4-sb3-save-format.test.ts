@@ -432,6 +432,134 @@ function fakeFetch(
   }) as typeof fetch;
 }
 
+test('the command follows an explicit project format only when asked', async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'save-project-format-'));
+  try {
+    const input = path.join(directory, 'in.sb3');
+    const output = path.join(directory, 'out.sb3');
+    const url = `https://example.test/runtime/4.0.21/${id}.js`;
+    const archive: Record<string, Uint8Array> = {'retained.txt': new Uint8Array([42])};
+    const project = embeddedDataProject();
+    await writeSb3ExtensionFormat(archive, project, 'remote-non-cacheable', {urls: {[id]: url}});
+    const uri = 'https://example.test/projects/story.sb3';
+    project.turboWarpPlus = {...discoverManifest(project), uri};
+    const inputWithFormat = (sb3Format: string) =>
+      serializeSb3(archive, {
+        ...project,
+        turboWarpPlusProject: {schemaVersion: 1, sb3Format},
+      });
+    const args = ['save-sb3-format', '--input', input, '--output', output];
+    const io = {stdout: {write: () => true}, stderr: {write: () => true}};
+    const options = {fetch: fakeFetch({[url]: code})};
+    const readOutput = async () => readSb3(await readFile(output));
+
+    await writeFile(input, inputWithFormat('standard'));
+    await runCli(args, io);
+    assert.equal(
+      discoverManifest((await readOutput()).project)?.extensions[0]?.source.type,
+      'remote-non-cacheable',
+    );
+
+    await runCli([...args, '--use-project-format'], io, options);
+    const standard = await readOutput();
+    assert.equal(standard.project.turboWarpPlus, undefined);
+    assert.deepEqual(standard.project.extensionURLs, {[id]: dataUrl(code)});
+    assert.deepEqual(standard.project.turboWarpPlusProject, {
+      schemaVersion: 1,
+      sb3Format: 'standard',
+    });
+    assert.deepEqual(standard.archive['retained.txt'], archive['retained.txt']);
+
+    await runCli([...args, '--use-project-format', '--extensions', 'embedded-data'], io, options);
+    assert.equal(
+      discoverManifest((await readOutput()).project)?.extensions[0]?.source.type,
+      'embedded-data',
+    );
+
+    await writeFile(input, inputWithFormat('plus'));
+    await runCli([...args, '--use-project-format'], io, options);
+    const plusBytes = await readFile(output);
+    const plus = readSb3(plusBytes).project;
+    assert.deepEqual(discoverManifest(plus)?.extensions[0]?.source, {
+      type: 'remote-cacheable',
+      url,
+    });
+    assert.equal(discoverManifest(plus)?.extensions[0]?.sha256, hex(code));
+    assert.equal(discoverManifest(plus)?.uri, uri);
+    assert.deepEqual(plus.extensionURLs, {});
+    await assert.rejects(
+      runCli([...args, '--use-project-format'], io, {fetch: fakeFetch({[url]: '// mismatched'})}),
+      /does not serve the bytes/u,
+    );
+    await assert.rejects(
+      runCli([...args, '--use-project-format', '--skip-url-check'], io, options),
+      /must verify its extension URLs/u,
+    );
+    assert.deepEqual(await readFile(output), plusBytes);
+
+    const unverified = embeddedDataProject();
+    unverified.extensionURLs[id] = url;
+    unverified.turboWarpPlusProject = {schemaVersion: 1, sb3Format: 'standard'};
+    await writeFile(input, serializeSb3({}, unverified));
+    await assert.rejects(
+      runCli([...args, '--use-project-format'], io, options),
+      /no verified source/u,
+    );
+    assert.deepEqual(await readFile(output), plusBytes);
+
+    await writeFile(input, inputWithFormat('unknown'));
+    await assert.rejects(
+      runCli([...args, '--use-project-format'], io, options),
+      /saved SB3 project format is unsupported/u,
+    );
+
+    await writeFile(input, serializeSb3(archive, project));
+    await runCli([...args, '--use-project-format'], io, options);
+    assert.equal(
+      discoverManifest((await readOutput()).project)?.extensions[0]?.source.type,
+      'remote-cacheable',
+    );
+
+    await writeFile(input, serializeSb3({}, embeddedDataProject()));
+    await runCli([...args, '--use-project-format'], io);
+    assert.deepEqual((await readOutput()).project, embeddedDataProject());
+  } finally {
+    await rm(directory, {recursive: true, force: true});
+  }
+});
+
+test('a Standard project save verifies embedded bytes offline before dropping the manifest', async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'save-standard-offline-'));
+  try {
+    const input = path.join(directory, 'in.sb3');
+    const output = path.join(directory, 'out.sb3');
+    const project = embeddedDataProject();
+    const archive: Record<string, Uint8Array> = {};
+    await writeSb3ExtensionFormat(archive, project, 'embedded-file', {
+      urls: {[id]: `https://example.test/runtime/${id}.js`},
+    });
+    project.turboWarpPlusProject = {schemaVersion: 1, sb3Format: 'standard'};
+    const args = ['save-sb3-format', '--input', input, '--output', output, '--use-project-format'];
+    const io = {stdout: {write: () => true}, stderr: {write: () => true}};
+    const options = {fetch: () => assert.fail('The saved file has no remote extension URL')};
+
+    await writeFile(input, serializeSb3(archive, project));
+    await runCli(args, io, options);
+    const outputBytes = await readFile(output);
+    const saved = readSb3(outputBytes);
+    assert.equal(discoverManifest(saved.project), null);
+    assert.deepEqual(saved.project.extensionURLs, {[id]: dataUrl(code)});
+    assert.equal(saved.archive[sb3PlusExtensionPath(id)], undefined);
+
+    archive[sb3PlusExtensionPath(id)] = new TextEncoder().encode('// altered bytes');
+    await writeFile(input, serializeSb3(archive, project));
+    await assert.rejects(runCli(args, io, options), /do not match its SHA-256 digest/u);
+    assert.deepEqual(await readFile(output), outputBytes);
+  } finally {
+    await rm(directory, {recursive: true, force: true});
+  }
+});
+
 test('remote and cached URLs must serve the bytes their digest pins', async () => {
   const url = `https://example.test/${id}.js`;
   for (const format of ['remote-non-cacheable', 'remote-cacheable'] as const) {
