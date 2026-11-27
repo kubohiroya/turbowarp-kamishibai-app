@@ -33,7 +33,12 @@ import {
 import {Sb3BuilderError} from './errors.js';
 import {readSb3, serializeSb3} from './sb3.js';
 import {describeSb3SaveFormats, normalizeSb3SaveSelection} from './sb3-save-format.js';
-import {verifySb3ExtensionUrls, writeSb3ExtensionFormat} from './sb3-extension-format.js';
+import {
+  applySb3ProjectFormat,
+  readSb3ProjectFormat,
+  verifySb3ExtensionUrls,
+  writeSb3ExtensionFormat,
+} from './sb3-extension-format.js';
 import {
   auditDsl4AssetDistribution,
   buildDsl4RuntimeComponentFile,
@@ -141,15 +146,20 @@ export function usage() {
     [--entry-file story.k4.yml] [--report REPORT.json] [--document-map PATHS.json]
 
   turbowarp-kamishibai save-sb3-format --input IN.sb3 --output OUT.sb3 \\
-    [--extensions remote-non-cacheable|remote-cacheable|embedded-file|embedded-data] \\
+    [--extensions remote-non-cacheable|remote-cacheable|embedded-file|embedded-data] [--use-project-format] \\
     [--keep-embedded-data | --remote-compatibility-carriers ID,ID] \\
     [--extension-urls URLS.json] [--skip-url-check] [--unsandboxed-extensions ID,ID] \\
     [--source FORMAT] [--assets FORMAT] [--assets-as-project-assets] \\
     [--max-input-bytes N]
     Writable today: ${describeSb3SaveFormats()}. An option left unset keeps that payload as it is.
+    --use-project-format follows the recorded format, or infers Plus from a valid Manifest
+    and Standard when there is no Manifest. An explicit --extensions overrides this choice.
+    Standard embeds the extensions and removes the Plus Manifest. Plus writes verified
+    remote-cacheable HTTPS references and requires URL checks.
     For a standard TurboWarp host, use embedded-data, --keep-embedded-data, or opt in to
     a small remote carrier for specified unsandboxed extensions. A remote carrier needs
-    the network. Every form keeps the Manifest so a Plus host has the digest.
+    the network. Explicit --extensions conversions keep the Manifest with the digest
+    for Plus hosts.
     The two remote forms differ in whether the opener's browser may keep a copy, which the
     author decides: non-cacheable forbids one, cacheable permits one the opener may decline.
     Neither remote form keeps a copy here. A copy lives in a viewer's browser cache, which no
@@ -1621,6 +1631,7 @@ function parseSaveSb3FormatArguments(arguments_: string[]) {
       '--assets-as-project-assets',
       '--keep-embedded-data',
       '--skip-url-check',
+      '--use-project-format',
     ]),
     valueOptions: new Set([
       '--input',
@@ -1677,6 +1688,7 @@ function parseSaveSb3FormatArguments(arguments_: string[]) {
     keepEmbeddedData: flags.has('--keep-embedded-data'),
     remoteCompatibilityCarriers,
     skipUrlCheck: flags.has('--skip-url-check'),
+    useProjectFormat: flags.has('--use-project-format'),
     maxInputBytes,
   };
 }
@@ -1873,7 +1885,7 @@ export async function runCli(
     return result;
   }
   if (parsed.action === 'save-sb3-format') {
-    const selection = normalizeSb3SaveSelection(parsed.options.selection);
+    const explicitSelection = normalizeSb3SaveSelection(parsed.options.selection);
     const extensionURLs =
       parsed.options.extensionURLs === undefined
         ? {}
@@ -1898,6 +1910,21 @@ export async function runCli(
         {stage: 'cli'},
       );
     const {archive, project} = readSb3(await readFile(parsed.options.input));
+    const projectSave =
+      parsed.options.useProjectFormat && explicitSelection.extensions === undefined
+        ? readSb3ProjectFormat(project)
+        : undefined;
+    const projectFormat = projectSave?.format;
+    if (projectFormat === 'plus' && parsed.options.skipUrlCheck)
+      throw new Sb3BuilderError('A project-format Plus save must verify its extension URLs.', {
+        stage: 'cli',
+      });
+    const selection = projectFormat
+      ? ({
+          ...explicitSelection,
+          extensions: projectFormat === 'standard' ? 'embedded-data' : 'remote-cacheable',
+        } as const)
+      : explicitSelection;
     const converted =
       selection.extensions === undefined
         ? []
@@ -1910,6 +1937,7 @@ export async function runCli(
               fetch: dependencies.fetch,
             })
           ).converted;
+    if (projectSave) applySb3ProjectFormat(project, projectSave, converted);
     // Check what a host will load before writing an SB3 that only looks finished.
     const urlsChecked =
       selection.extensions === undefined || parsed.options.skipUrlCheck

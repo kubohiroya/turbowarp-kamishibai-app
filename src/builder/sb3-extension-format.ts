@@ -22,6 +22,7 @@ import {
   type Sb3ExtensionPayload,
   type Sb3ExtensionUrlCheckOptions,
 } from '@kubohiroya/turbowarp-sb3-save-format/writer';
+import {discoverManifest, type Manifest} from '@kubohiroya/turbowarp-extension-loader';
 
 import {
   dsl4BlockAuthoringExtensionId,
@@ -34,6 +35,72 @@ import type {Sb3SaveFormat} from './sb3-save-format.js';
 
 export {readSb3ExtensionPayloads, sb3PlusExtensionPath};
 export type {Sb3ExtensionFormatResult, Sb3ExtensionPayload, Sb3ExtensionUrlCheckOptions};
+
+type Sb3ProjectFormat = 'standard' | 'plus';
+type Sb3ProjectSave = {format: Sb3ProjectFormat; manifest: Manifest | null};
+
+/** Follow the saved choice, or infer the format using the Editor's rules for older projects. */
+export function readSb3ProjectFormat(project: Record<string, unknown>): Sb3ProjectSave {
+  const manifest = discoverManifest(project);
+  const info = project.turboWarpPlusProject;
+  if (
+    typeof info === 'object' &&
+    info !== null &&
+    'schemaVersion' in info &&
+    info.schemaVersion === 1 &&
+    'sb3Format' in info
+  ) {
+    if (info.sb3Format === 'standard' || info.sb3Format === 'plus')
+      return {format: info.sb3Format, manifest};
+    throw new Sb3BuilderError('The saved SB3 project format is unsupported.', {
+      stage: 'sb3-extension-format',
+    });
+  }
+  return {format: manifest ? 'plus' : 'standard', manifest};
+}
+
+/** Finalize the format after conversion, before checking the URLs actually written to the file. */
+export function applySb3ProjectFormat(
+  project: Record<string, unknown>,
+  {format, manifest}: Sb3ProjectSave,
+  converted: readonly string[],
+): void {
+  const urls = project.extensionURLs;
+  const declared = Array.isArray(project.extensions) ? project.extensions : [];
+  const written = new Set(converted);
+  const unresolved =
+    typeof urls === 'object' && urls !== null
+      ? declared.find((id) => typeof id === 'string' && Object.hasOwn(urls, id) && !written.has(id))
+      : undefined;
+  if (unresolved !== undefined)
+    throw new Sb3BuilderError(
+      `Extension ${unresolved} has no verified source for a ${format} project save.`,
+      {
+        stage: 'sb3-extension-format',
+      },
+    );
+  const output = discoverManifest(project);
+  if (format === 'standard') {
+    // The writer hashes the bytes it embeds. Compare those hashes before discarding the
+    // original manifest, so an altered embedded file cannot become a valid Standard carrier.
+    const outputDigests = new Map(output?.extensions.map(({id, sha256}) => [id, sha256]));
+    for (const {id, sha256} of manifest?.extensions ?? []) {
+      if (outputDigests.get(id) !== sha256)
+        throw new Sb3BuilderError(
+          `The embedded bytes for extension ${id} do not match its SHA-256 digest.`,
+          {
+            stage: 'sb3-extension-format',
+          },
+        );
+    }
+    delete project.turboWarpPlus;
+  } else {
+    project.turboWarpPlus = {
+      ...(output ?? {schemaVersion: 1, extensions: []}),
+      ...(manifest?.uri === undefined ? {} : {uri: manifest.uri}),
+    };
+  }
+}
 
 /** The options this App's callers pass; it supplies the capabilities and its own IDs itself. */
 export type Sb3ExtensionFormatCallerOptions = Omit<
