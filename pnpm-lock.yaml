@@ -77,8 +77,8 @@ importers:
         specifier: 4.22.0
         version: 4.22.0(seedrandom@3.0.5)
       '@turbowarp/scratch-storage':
-        specifier: 2.0.0
-        version: 2.0.0(webpack@4.47.0(supports-color@7.2.0))
+        specifier: 2.2.0
+        version: 2.2.0(webpack@4.47.0(supports-color@7.2.0))
       '@turbowarp/scratch-svg-renderer':
         specifier: 1.1.0
         version: 1.1.0(scratch-render-fonts@https://codeload.github.com/kubohiroya/scratch-render-fonts/tar.gz/7b6768fc6dfef6b343a06f992587b74807043961)
@@ -890,8 +890,8 @@ packages:
     resolution: {integrity: sha512-NBIiKHHxgBYkgm1npUBFcgzoUw/hMcoFHhFhcM2+C20jqnbRvZTPx3p63COuKPZnW48IZmpUe+hY8ZoBLXh6ZA==}
     hasBin: true
 
-  '@turbowarp/scratch-storage@2.0.0':
-    resolution: {integrity: sha512-Qi/wpKuf9Vd1FKYuwbh9NY4aB6nxh9V7ulQ03TFsWxZJfV1GOL8NiFRQMGFBDda00kUjWr5+f/eobbRAOqZpUg==}
+  '@turbowarp/scratch-storage@2.2.0':
+    resolution: {integrity: sha512-GLWpOhxyk4XujNeM4kDpiX6GGKWa3a3kcSZd6oODbz6CIud826zwG4wz5oQGgT1PSAwbqa30909XUp5tDpItLg==}
 
   '@turbowarp/scratch-svg-renderer@1.1.0':
     resolution: {integrity: sha512-UPSUNKfR9f73ZNgjYdxsz5yheZYO/EiKE3Wji31thRVDGzOJOROQXcFicl/1oDWkMII4FvSLylGAw6/MPpoXqg==}
@@ -4348,14 +4348,13 @@ snapshots:
       '@turbowarp/json': 0.1.2
       '@turbowarp/jszip': 3.12.0
 
-  '@turbowarp/scratch-storage@2.0.0(webpack@4.47.0(supports-color@7.2.0))':
+  '@turbowarp/scratch-storage@2.2.0(webpack@4.47.0(supports-color@7.2.0))':
     dependencies:
       '@babel/runtime': 7.21.0
       '@turbowarp/nanolog': 0.2.0
       arraybuffer-loader: 1.0.8
       base64-js: 1.3.0
       cross-fetch: 3.1.5
-      js-md5: 0.7.3
       worker-loader: 2.0.0(webpack@4.47.0(supports-color@7.2.0))
     transitivePeerDependencies:
       - encoding
