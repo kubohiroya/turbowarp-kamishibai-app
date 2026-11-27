@@ -259,7 +259,7 @@
     "@kubohiroya/turbowarp-yaml-json": "0.12.0",
     "@teachablemachine/pose": "0.8.6",
     "@tensorflow/tfjs": "4.22.0",
-    "@turbowarp/scratch-storage": "2.0.0",
+    "@turbowarp/scratch-storage": "2.2.0",
     "@turbowarp/scratch-svg-renderer": "1.1.0",
     "ajv": "8.20.0",
     "base64-js": "1.5.1",
