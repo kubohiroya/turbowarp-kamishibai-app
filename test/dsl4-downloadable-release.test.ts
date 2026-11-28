@@ -1821,6 +1821,33 @@ test('registers the standard DSL 4.0 runtime blocks as visible VM primitives', a
       ({info}: VmCategoryBlock) => info.opcode === `${runtimeExtensionId}__embeddedYaml`,
     );
     assert.equal(sourceMarker?.info.blockType, 'hat');
+    // The Plus Editor reads these editor-only declarations from the VM's block info to draw reference
+    // arrows; they must survive bundling with their channel unchanged.
+    const relationsOf = (operation: string) =>
+      (
+        category.blocks.find(
+          ({info}: VmCategoryBlock) => info.opcode === `${runtimeExtensionId}__${operation}`,
+        )?.info as {scriptRelations?: unknown} | undefined
+      )?.scriptRelations;
+    const documentRelation = [
+      {channel: 'kubohiroya.kamishibai4.embeddedYamlDocument', argument: 'DOCUMENT'},
+    ];
+    assert.deepEqual(relationsOf('embeddedYaml'), {targets: documentRelation});
+    assert.deepEqual(relationsOf('embeddedYamlRoot'), {references: documentRelation});
+    assert.deepEqual(relationsOf('embeddedYamlInclude'), {references: documentRelation});
+    assert.equal(relationsOf('embeddedYamlConfig'), undefined);
+    assert.deepEqual(relationsOf('goto'), {
+      references: [{channel: 'kubohiroya.kamishibai4.scene', argument: 'SCENE'}],
+    });
+    assert.deepEqual(relationsOf('keyInputToChangeScene'), {
+      references: [
+        {
+          channel: 'kubohiroya.kamishibai4.scene',
+          argument: 'ROUTES',
+          json: {objectPaths: [['routes'], []]},
+        },
+      ],
+    });
     const navigateSource = vm.runtime.getOpcodeFunction(
       `${bundleExtensionId}_${runtimeExtensionId}__embeddedYaml`,
     );

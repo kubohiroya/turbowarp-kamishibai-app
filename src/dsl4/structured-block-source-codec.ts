@@ -8,6 +8,7 @@ import {isDsl4ActorCoreSourceAction, isDsl4ReservedCustomActionName} from './act
 import {dsl4BlockAuthoringIconSvg} from './authoring-icon.js';
 import {dsl4AuthoringPaletteGroups, withDsl4PaletteGroups} from './block-palette-i18n.js';
 import {stringify} from 'yaml';
+import {dsl4SceneRelationTarget} from './scene-relation-declarations.js';
 import {
   appendDsl4SectionAuthoringState,
   restoreDsl4SectionBlocks,
@@ -301,6 +302,7 @@ export function createDsl4BlockAuthoringInfo({
       blockIconURI: dsl4BlockAuthoringEditorIcon,
       text: 'scene [SCENE] properties JSON [PROPERTIES]',
       arguments: {SCENE: stringArgument('opening'), PROPERTIES: stringArgument('{}')},
+      scriptRelations: dsl4SceneRelationTarget,
     },
     {
       opcode: 'useSection',
