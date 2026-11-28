@@ -1,4 +1,8 @@
 import {createTurboWarpExtensionInfo} from '@kubohiroya/turbowarp-extension-manifest';
+import {
+  dsl4SceneReferenceOperations,
+  dsl4SceneRelationReference,
+} from './scene-relation-declarations.js';
 
 import type {Dsl4ScratchHost} from './turbowarp-scratch-host.js';
 
@@ -188,7 +192,10 @@ export function createDsl4ActionContextTurboWarpSurface(options: unknown = {}) {
         color3: '#47327a',
         disableReporterMonitors: true,
         decorateBlock(definition) {
-          return definition.blockType === 'HAT' ? {isEdgeActivated: false} : {};
+          if (definition.blockType === 'HAT') return {isEdgeActivated: false};
+          return dsl4SceneReferenceOperations.includes(definition.opcode)
+            ? {scriptRelations: dsl4SceneRelationReference}
+            : {};
         },
       });
     },

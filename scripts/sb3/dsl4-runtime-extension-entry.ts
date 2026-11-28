@@ -120,7 +120,11 @@ import {
   createDsl4EmbeddedYamlRootDefinition,
 } from '../../dist/dsl4/embedded-yaml-hat.js';
 import {createDsl4EmbeddedYamlIncludeDefinition} from '../../dist/dsl4/embedded-yaml-include-views.js';
-import {kamishibaiEmbeddedYamlProviderId} from '../../dist/dsl4/embedded-yaml-identity.js';
+import {
+  dsl4EmbeddedYamlDocumentRelationReference,
+  dsl4EmbeddedYamlDocumentRelationTarget,
+  kamishibaiEmbeddedYamlProviderId,
+} from '../../dist/dsl4/embedded-yaml-identity.js';
 import {
   appShellCameraPermissionLabels,
   appShellCameraPreviewControlLabels,
@@ -138,7 +142,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.25';
+const extensionVersion = '4.0.26';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -855,14 +859,19 @@ class KamishibaiDsl4RuntimeExtension {
         {
           ...createDsl4EmbeddedYamlRootDefinition(BlockType),
           hideFromPalette: !documentViewsEnabledAtStartup,
+          scriptRelations: dsl4EmbeddedYamlDocumentRelationReference,
         },
-        createDsl4EmbeddedYamlHatDefinition(BlockType),
+        {
+          ...createDsl4EmbeddedYamlHatDefinition(BlockType),
+          scriptRelations: dsl4EmbeddedYamlDocumentRelationTarget,
+        },
         createDsl4EmbeddedYamlConfigHatDefinition(BlockType),
         {
           ...createDsl4EmbeddedYamlIncludeDefinition({
             BlockType: {COMMAND: BlockType.COMMAND ?? 'command'},
           }),
           hideFromPalette: !documentViewsEnabledAtStartup,
+          scriptRelations: dsl4EmbeddedYamlDocumentRelationReference,
         },
         ...createYamlBlockDefinitions().map((definition) => ({
           ...definition,
