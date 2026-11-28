@@ -111,8 +111,81 @@ function sceneDestination(
   };
 }
 
-function move(state: Readonly<HistoryState>, command: string) {
+/**
+ * The runtime position a history command starts from. `inProgress` marks a live action that has
+ * started but not committed, so it is not yet an action history entry.
+ */
+export interface HistoryCurrentPosition {
+  sceneId: string;
+  actionIndex: number;
+  actionPath: string | null;
+  inProgress: boolean;
+}
+
+function readCurrentPosition(value: unknown): HistoryCurrentPosition | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const current = value as Record<string, unknown>;
+  if (
+    typeof current.sceneId !== 'string' ||
+    !Number.isInteger(current.actionIndex) ||
+    Number(current.actionIndex) < 0 ||
+    (current.actionPath !== null && typeof current.actionPath !== 'string') ||
+    typeof current.inProgress !== 'boolean'
+  )
+    return null;
+  return {
+    sceneId: current.sceneId,
+    actionIndex: Number(current.actionIndex),
+    actionPath: current.actionPath,
+    inProgress: current.inProgress,
+  };
+}
+
+function restartCurrentAction(
+  state: Readonly<HistoryState>,
+  command: string,
+  current: HistoryCurrentPosition,
+) {
+  const visit = state.sceneVisits[state.sceneVisitCursor];
+  if (!visit || visit.sceneId !== current.sceneId) return null;
+  // The in-progress action has no entry yet, so the cursor stays after every committed entry and
+  // a further previousAction steps to the last committed action.
+  const nextState = deepFreeze({
+    ...state,
+    mode: 'history',
+    actionCursor: state.actionEntries.length,
+    currentVisitId: Number(visit.visitId),
+  }) as Readonly<HistoryState>;
+  return success(nextState, true, {
+    visitId: Number(visit.visitId),
+    sceneId: current.sceneId,
+    actionPath: current.actionPath,
+    actionIndex: current.actionIndex,
+    reason: command,
+  });
+}
+
+function isAtSceneStart(
+  state: Readonly<HistoryState>,
+  current: HistoryCurrentPosition | null,
+): boolean {
+  // Live execution has always started the current scene, so only a history position can be at it.
+  if (state.mode !== 'history') return false;
+  if (current) return current.actionIndex === 0;
+  const visit = state.sceneVisits[state.sceneVisitCursor];
+  return !!visit && state.actionCursor === Number(visit.firstActionHistoryIndex);
+}
+
+function move(
+  state: Readonly<HistoryState>,
+  command: string,
+  current: HistoryCurrentPosition | null,
+) {
   if (command === 'history.previousAction') {
+    if (state.mode === 'live' && current?.inProgress) {
+      const restarted = restartCurrentAction(state, command, current);
+      if (restarted) return restarted;
+    }
     if (state.actionCursor <= 0) return success(state, false);
     const nextActionCursor = state.actionCursor - 1;
     const entry = state.actionEntries[nextActionCursor];
@@ -141,7 +214,8 @@ function move(state: Readonly<HistoryState>, command: string) {
     });
   }
 
-  const offset = command === 'history.previousScene' ? -1 : 1;
+  const offset =
+    command === 'history.previousScene' ? (isAtSceneStart(state, current) ? -1 : 0) : 1;
   const nextSceneVisitCursor = state.sceneVisitCursor + offset;
   if (nextSceneVisitCursor < 0 || nextSceneVisitCursor >= state.sceneVisits.length) {
     return success(state, false);
@@ -203,7 +277,8 @@ export function createDsl4HistoryReducer({
         true,
       );
     }
-    if (historyCommands.has(event.type)) return move(state, event.type);
+    if (historyCommands.has(event.type))
+      return move(state, event.type, readCurrentPosition(event.current));
     if (event.type !== 'scene.enter' && event.type !== 'action.commit') {
       return failure(state, 'K4-HISTORY-EVENT-001', `Unsupported history event: ${event.type}`);
     }

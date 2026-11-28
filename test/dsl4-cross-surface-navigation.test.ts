@@ -302,7 +302,7 @@ async function exerciseSurface(
   assert.equal(presentationState, `wait-${contract.expected.scoreBeforeRewind}`);
 
   const rewoundScenes: unknown[] = [];
-  for (const code of ['ArrowUp', 'ArrowUp', 'ArrowDown']) {
+  for (const code of ['ArrowUp', 'ArrowUp', 'ArrowUp', 'ArrowDown']) {
     const navigation = keyEvent(code);
     assert.equal(session.handleKeyDown(navigation), true);
     await session.whenInputIdle();

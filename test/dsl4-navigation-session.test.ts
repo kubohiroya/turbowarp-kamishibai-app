@@ -565,7 +565,8 @@ scenes:
 
   const historyThenNext = await runOrder(['ArrowLeft', 'Space']);
   assert.equal(historyThenNext.status, 'running', JSON.stringify(historyThenNext));
-  assert.equal(historyThenNext.actionPath, '/scenes/opening/actions/1');
+  // ArrowLeft restarts the in-progress third action, so Space resumes that same action.
+  assert.equal(historyThenNext.actionPath, '/scenes/opening/actions/2');
 
   const nextThenHistory = await runOrder(['Space', 'ArrowLeft']);
   assert.equal(nextThenHistory.status, 'paused');
@@ -747,6 +748,7 @@ scenes:
   assert.equal(presentationState, 'wait-4');
 
   const historyKeys: [string, string][] = [
+    ['ArrowUp', 'ending'],
     ['ArrowUp', 'middle'],
     ['ArrowUp', 'opening'],
     ['ArrowDown', 'middle'],

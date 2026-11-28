@@ -174,7 +174,15 @@ test('moves between scene visits chronologically, including repeated scene IDs',
     state = apply(reducer, state, event).state;
   }
 
-  const previous = apply(reducer, state, {type: 'history.previousScene'});
+  const restarted = apply(reducer, state, {type: 'history.previousScene'});
+  assert.deepEqual(
+    [
+      requireDefined(restarted.destination, 'the reduce destination').sceneId,
+      requireDefined(restarted.destination, 'the reduce destination').visitId,
+    ],
+    ['zeta', 3],
+  );
+  const previous = apply(reducer, restarted.state, {type: 'history.previousScene'});
   assert.deepEqual(
     [
       requireDefined(previous.destination, 'the reduce destination').sceneId,
@@ -216,7 +224,12 @@ test('resume truncates the selected destination and future before appending a ne
     state = apply(reducer, state, event).state;
   }
 
-  const moved = apply(reducer, state, {type: 'history.previousScene'});
+  const sceneStart = apply(reducer, state, {type: 'history.previousScene'});
+  assert.equal(
+    requireDefined(sceneStart.destination, 'the reduce destination').sceneId,
+    'oldEnding',
+  );
+  const moved = apply(reducer, sceneStart.state, {type: 'history.previousScene'});
   assert.equal(requireDefined(moved.destination, 'the reduce destination').sceneId, 'middle');
   assert.equal(moved.state.sceneVisits.length, 3);
   assert.equal(moved.state.actionEntries.length, 3);
@@ -251,7 +264,9 @@ test('handles empty and single-action scene boundaries as deterministic no-ops',
     state = apply(reducer, state, event).state;
   }
 
-  const empty = apply(reducer, state, {type: 'history.previousScene'});
+  const singleStart = apply(reducer, state, {type: 'history.previousScene'});
+  assert.equal(requireDefined(singleStart.destination, 'the reduce destination').sceneId, 'single');
+  const empty = apply(reducer, singleStart.state, {type: 'history.previousScene'});
   assert.equal(requireDefined(empty.destination, 'the reduce destination').sceneId, 'empty');
   assert.equal(requireDefined(empty.destination, 'the reduce destination').actionPath, null);
   assert.equal(requireDefined(empty.destination, 'the reduce destination').actionIndex, 0);
@@ -339,4 +354,119 @@ test('rejects inconsistent restored history and accepts reordered JSON keys', ()
     {...state, lastSequence: 1},
   ])
     assert.throws(() => reducer.restore(bad));
+});
+
+test('previousAction restarts the in-progress live action before stepping to committed actions', () => {
+  const reducer = createDsl4HistoryReducer({maxActionEntries: 10, maxSceneVisits: 10});
+  let state = reducer.initialState();
+  for (const event of [scene('opening', 1), action('opening', 0, 2), action('opening', 1, 3)]) {
+    state = apply(reducer, state, event).state;
+  }
+  const current = {
+    sceneId: 'opening',
+    actionIndex: 2,
+    actionPath: '/scenes/opening/actions/2',
+    inProgress: true,
+  };
+
+  const restarted = apply(reducer, state, {type: 'history.previousAction', current});
+  const restartedDestination = requireDefined(restarted.destination, 'the reduce destination');
+  assert.equal(restartedDestination.actionIndex, 2);
+  assert.equal(restartedDestination.actionPath, '/scenes/opening/actions/2');
+  assert.equal(restarted.state.mode, 'history');
+  assert.equal(restarted.state.actionCursor, 2);
+  assert.strictEqual(restarted.state.actionEntries, state.actionEntries);
+
+  const previous = apply(reducer, restarted.state, {
+    type: 'history.previousAction',
+    current: {...current, inProgress: false},
+  });
+  assert.equal(requireDefined(previous.destination, 'the reduce destination').actionIndex, 1);
+
+  // Resuming from the restarted action keeps every committed action before it.
+  const resumed = apply(reducer, restarted.state, {type: 'resume'});
+  assert.equal(resumed.state.actionEntries.length, 2);
+  assert.equal(resumed.state.sceneVisits.length, 1);
+});
+
+test('previousAction without an in-progress action steps to the last committed action', () => {
+  const reducer = createDsl4HistoryReducer({maxActionEntries: 10, maxSceneVisits: 10});
+  let state = reducer.initialState();
+  for (const event of [scene('opening', 1), action('opening', 0, 2)]) {
+    state = apply(reducer, state, event).state;
+  }
+  const moved = apply(reducer, state, {
+    type: 'history.previousAction',
+    current: {
+      sceneId: 'opening',
+      actionIndex: 0,
+      actionPath: '/scenes/opening/actions/0',
+      inProgress: false,
+    },
+  });
+  assert.equal(requireDefined(moved.destination, 'the reduce destination').actionIndex, 0);
+  assert.equal(moved.state.actionCursor, 0);
+});
+
+test('previousScene returns to the current scene start before the previous scene', () => {
+  const reducer = createDsl4HistoryReducer({maxActionEntries: 10, maxSceneVisits: 10});
+  let state = reducer.initialState();
+  for (const event of [
+    scene('opening', 1),
+    action('opening', 0, 2),
+    scene('middle', 3),
+    action('middle', 0, 4),
+    action('middle', 1, 5),
+  ]) {
+    state = apply(reducer, state, event).state;
+  }
+
+  const sceneStart = apply(reducer, state, {
+    type: 'history.previousScene',
+    current: {sceneId: 'middle', actionIndex: 2, actionPath: null, inProgress: true},
+  });
+  const sceneStartDestination = requireDefined(sceneStart.destination, 'the reduce destination');
+  assert.deepEqual(
+    [sceneStartDestination.sceneId, sceneStartDestination.actionIndex],
+    ['middle', 0],
+  );
+  assert.equal(sceneStart.state.actionCursor, 1);
+
+  // A history position partway into a scene also returns to that scene start first.
+  const midScene = apply(reducer, state, {type: 'history.previousAction'});
+  const midSceneStart = apply(reducer, midScene.state, {
+    type: 'history.previousScene',
+    current: {
+      sceneId: 'middle',
+      actionIndex: 1,
+      actionPath: '/scenes/middle/actions/1',
+      inProgress: false,
+    },
+  });
+  assert.equal(
+    requireDefined(midSceneStart.destination, 'the reduce destination').sceneId,
+    'middle',
+  );
+
+  const previous = apply(reducer, sceneStart.state, {
+    type: 'history.previousScene',
+    current: {
+      sceneId: 'middle',
+      actionIndex: 0,
+      actionPath: '/scenes/middle/actions/0',
+      inProgress: false,
+    },
+  });
+  assert.equal(requireDefined(previous.destination, 'the reduce destination').sceneId, 'opening');
+
+  const boundary = apply(reducer, previous.state, {
+    type: 'history.previousScene',
+    current: {
+      sceneId: 'opening',
+      actionIndex: 0,
+      actionPath: '/scenes/opening/actions/0',
+      inProgress: false,
+    },
+  });
+  assert.equal(boundary.changed, false);
 });
