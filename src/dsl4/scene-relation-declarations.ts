@@ -18,3 +18,31 @@ export const dsl4SceneReferenceOperations: readonly string[] = Object.freeze([
   'goto',
   'gotoFromCurrentAction',
 ]);
+/**
+ * The input routes name a scene per input, as `{"Space": "next"}` or `{"routes": {...}}`; each string
+ * value is one reference.
+ */
+export const dsl4SceneRoutesRelationReference = Object.freeze({
+  references: Object.freeze([
+    Object.freeze({
+      channel: dsl4SceneRelationChannel,
+      argument: 'ROUTES',
+      json: Object.freeze({
+        objectPaths: Object.freeze([Object.freeze(['routes']), Object.freeze([])]),
+      }),
+    }),
+  ]),
+});
+/** Block operations whose ROUTES argument maps each input to the scene it moves to. */
+export const dsl4SceneRoutesOperations: readonly string[] = Object.freeze([
+  'keyInputToChangeScene',
+  'touchInputToChangeScene',
+  'poseInputToChangeScene',
+  'imageInputToChangeScene',
+]);
+/** The relation declaration for one block operation, if it moves to scenes. */
+export function dsl4SceneRelationFor(operation: string) {
+  if (dsl4SceneReferenceOperations.includes(operation)) return dsl4SceneRelationReference;
+  if (dsl4SceneRoutesOperations.includes(operation)) return dsl4SceneRoutesRelationReference;
+  return undefined;
+}

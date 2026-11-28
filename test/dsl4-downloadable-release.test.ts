@@ -1809,6 +1809,15 @@ test('registers the standard DSL 4.0 runtime blocks as visible VM primitives', a
     assert.deepEqual(relationsOf('goto'), {
       references: [{channel: 'kubohiroya.kamishibai4.scene', argument: 'SCENE'}],
     });
+    assert.deepEqual(relationsOf('keyInputToChangeScene'), {
+      references: [
+        {
+          channel: 'kubohiroya.kamishibai4.scene',
+          argument: 'ROUTES',
+          json: {objectPaths: [['routes'], []]},
+        },
+      ],
+    });
     const navigateSource = vm.runtime.getOpcodeFunction(
       `${bundleExtensionId}_${runtimeExtensionId}__embeddedYaml`,
     );

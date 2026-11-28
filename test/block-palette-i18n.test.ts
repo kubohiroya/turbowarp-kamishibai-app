@@ -215,7 +215,18 @@ describe('script relation declarations', () => {
       (blocks as {opcode: string; scriptRelations?: unknown}[])
         .filter((block) => block.scriptRelations !== undefined)
         .map(({opcode, scriptRelations}) => [opcode, scriptRelations]);
-    expect(declared(runtimeBlocks())).toEqual([['goto', {references: [scene]}]]);
+    const routes = {
+      channel: 'kubohiroya.kamishibai4.scene',
+      argument: 'ROUTES',
+      json: {objectPaths: [['routes'], []]},
+    };
+    expect(declared(runtimeBlocks())).toEqual([
+      ['goto', {references: [scene]}],
+      ['keyInputToChangeScene', {references: [routes]}],
+      ['touchInputToChangeScene', {references: [routes]}],
+      ['poseInputToChangeScene', {references: [routes]}],
+      ['imageInputToChangeScene', {references: [routes]}],
+    ]);
     const info = createDsl4BlockAuthoringInfo({
       sourceSections: true,
       narrativeControlEnabled: true,

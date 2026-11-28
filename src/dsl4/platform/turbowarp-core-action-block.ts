@@ -1,8 +1,5 @@
 import {createTurboWarpBlockDefinitions} from '@kubohiroya/turbowarp-extension-manifest';
-import {
-  dsl4SceneReferenceOperations,
-  dsl4SceneRelationReference,
-} from '../scene-relation-declarations.js';
+import {dsl4SceneRelationFor} from '../scene-relation-declarations.js';
 
 type TurboWarpScratchBlockBoundary = Parameters<typeof createTurboWarpBlockDefinitions>[0];
 import Ajv2020 from 'ajv/dist/2020.js';
@@ -107,10 +104,10 @@ export function createDsl4TurboWarpCoreActionBlockSurface(
       })),
     {
       hideFromPalette: !visible,
-      decorateBlock: (definition) =>
-        dsl4SceneReferenceOperations.includes(definition.opcode)
-          ? {scriptRelations: dsl4SceneRelationReference}
-          : {},
+      decorateBlock: (definition) => {
+        const scriptRelations = dsl4SceneRelationFor(definition.opcode);
+        return scriptRelations ? {scriptRelations} : {};
+      },
     },
   );
   return deepFreeze({
