@@ -4,8 +4,7 @@
 
 `author-block-dsl`は、検証したYAMLを実際の命令ブロックへ変換する。シーンごとのC字型宣言の内側へ、
 core action manifestで定義した命令ブロックを順番に接続する。元のYAML全文は保持しない。
-publicationのシナリオ遷移`gotoSegment`もruntime/bundleの両形式で往復できる。
-任意の章選択や履歴移動のUIは提供しない。[publication設計](dsl-4-standard-publication.md)を参照。
+台本の分割はincludeで行い、ファイルをまたぐ移動も`goto`で表す（[segment・publicationの廃止](dsl-4-segment-retirement.md)）。
 
 ```sh
 turbowarp-kamishibai author-block-dsl --input story.k4.yml --base base.sb3 --output blocks.sb3
@@ -197,8 +196,8 @@ samplesの配布更新は[samples #184](https://github.com/kubohiroya/turbowarp-
 各モジュールを生成した後に再読取・再合成し、両側のcanonical StoryDocumentの意味を比較する。
 ソース位置と元のファイル名は変換で変わるため、合成後YAMLを共通frontendで再解析して比較する。
 
-CLIで再生用SB3を作るときは、exportしたZIPを展開し、`build-dsl4 --source <主台本>`と
-`--enable-source-includes`・graphの上限を指定する。既存の低水準build APIはブロックSB3の直接読取にも対応する。
+CLIで再生用SB3を作るときは、exportしたZIPを展開し、`build-dsl4 --source <主台本>`を指定する。
+主台本が`include`を宣言していれば合成され、graphの上限は必要なときだけ指定する。既存の低水準build APIはブロックSB3の直接読取にも対応する。
 通常ランタイムのfeature flagの既定値や公開済み配布物は変更しない。
 ロールバックは本変更のrevertと以前のCLIによる単一台本の再生成。元の分割YAMLと編集SB3は退避して保持する。
 

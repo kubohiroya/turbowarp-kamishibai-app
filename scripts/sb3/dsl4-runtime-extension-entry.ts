@@ -27,15 +27,11 @@ import {
   createDsl4ComputePreferences,
   createDsl4ComputeSettings,
 } from '../../dist/dsl4/platform/compute-settings.js';
-import {createDsl4PublicationDistributionSb3} from '../../dist/dsl4/platform/publication-distribution.js';
 import {createDsl4PlaybackPreferences} from '../../dist/dsl4/platform/playback-preferences.js';
 import {createDsl4AudioMixer} from '../../dist/dsl4/platform/audio-mixer.js';
 import {createDsl4PlaybackSettings} from '../../dist/dsl4/platform/playback-settings.js';
 import type {Dsl4PlaybackSettingsContext} from '../../dist/dsl4/platform/playback-settings.js';
 import type {Dsl4PlaybackFeatures} from '../../dist/dsl4/playback-features.js';
-import {downloadDsl4BrowserDistributionSb3} from '../../dist/dsl4/platform/browser-distribution-build.js';
-import {readDsl4ProjectPublication} from '../../dist/dsl4/platform/publication-project.js';
-import {createDsl4PublicationVmStageFactory} from '../../dist/dsl4/platform/publication-vm-stage.js';
 import type {Dsl4CameraControlsController} from '../../dist/dsl4/platform/camera-preview-controls.js';
 import {
   connectDsl4TitleCameraControls,
@@ -139,7 +135,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.24';
+const extensionVersion = '4.0.25';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -279,7 +275,7 @@ interface RuntimeEntryRuntimeInvoker {
  */
 interface RuntimeEntryRuntimeHost extends RuntimeEntryRuntimeInvoker {
   getState?(): RuntimeEntryStateSnapshot;
-  /** Probed: publication hosts cannot pause at an action boundary. */
+  /** Probed: a host may not support pausing at an action boundary. */
   quiesce?(request: {candidateId: number}): Promise<unknown>;
   resumeQuiesce?(candidateId: number): unknown;
   getPlaybackFeatures?(): Dsl4PlaybackFeatures;
@@ -1267,10 +1263,6 @@ class KamishibaiDsl4RuntimeExtension {
     return this.invokeCoreActionBlock('goto', args);
   }
 
-  gotoSegment(args: ScratchBlockArguments) {
-    return this.invokeCoreActionBlock('gotoSegment', args);
-  }
-
   branch(args: ScratchBlockArguments) {
     return this.invokeCoreActionBlock('branch', args);
   }
@@ -2135,21 +2127,6 @@ class KamishibaiDsl4RuntimeExtension {
       await this.startAuthoringMenu(project, {showTitle});
       return;
     }
-    const thisFrontend = this.frontend;
-    const publicationFiles =
-      readDsl4ProjectPublication(project) === null
-        ? null
-        : await Scratch.vm.saveProjectSb3DontZip();
-    const publicationStageFactory =
-      publicationFiles === null
-        ? undefined
-        : await createDsl4PublicationVmStageFactory({
-            project,
-            vm: Scratch.vm,
-            document: globalThis.document,
-            mount: resolveRuntimeMount(Scratch) as HTMLElement,
-            projectFiles: publicationFiles,
-          });
     const loadRemoteAsset = createDsl4BrowserRemoteAssetLoader({
       maxBytes: limits.maxTotalAssetBytes,
     });
@@ -2221,23 +2198,6 @@ class KamishibaiDsl4RuntimeExtension {
         runtimeHostOptions: {
           runtimeVersion: extensionVersion,
           ...(editorDebug ? {debugExecution: editorDebug.coordinator} : {}),
-          ...(publicationStageFactory
-            ? {
-                createPublicationStage: publicationStageFactory,
-                async downloadPublication(saveOptions?: {distributionProfile?: 'compiled'}) {
-                  const built = await createDsl4PublicationDistributionSb3({
-                    project,
-                    projectFiles: publicationFiles,
-                    sourceFrontend: thisFrontend,
-                    ...limits,
-                    ...(saveOptions?.distributionProfile
-                      ? {distributionProfile: saveOptions.distributionProfile}
-                      : {}),
-                  });
-                  return downloadDsl4BrowserDistributionSb3({...built, globalObject: globalThis});
-                },
-              }
-            : {}),
           project,
           sourceFrontend: this.frontend,
           ...limits,

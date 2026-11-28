@@ -88,10 +88,8 @@ const assetEnabledFlags = Object.freeze({
   ...enabledFlags,
   dsl4WebPreviewAssetLiveReload: true,
 });
-const includedAssetEnabledFlags = Object.freeze({
-  ...assetEnabledFlags,
-  dsl4SourceIncludes: true,
-});
+// Include needs no flag; the included-source tests use the asset live reload flags as they are.
+const includedAssetEnabledFlags = assetEnabledFlags;
 
 function sri(value: string) {
   return `sha256-${createHash('sha256').update(value).digest('base64')}`;
@@ -337,7 +335,6 @@ test('requires the runtime and App Shell flags and remains development-only', ()
     module: 'src/builder/dsl4-web-preview-shell.js',
     featureFlags: [
       'dsl4Runtime',
-      'dsl4SourceIncludes',
       'dsl4AppShell',
       'dsl4WebPreviewAdapter',
       'dsl4BrowserDistributionBuild',
@@ -381,7 +378,12 @@ test('stabilizes included assets before allowing a Source Graph candidate to sta
   );
   const root = {kind: 'directory'};
   await requireDefined(source.options.onProjectRoot, 'the project root observer')(root);
-  const result = sourceResult(sri('included-source'));
+  const plain = sourceResult(sri('included-source'));
+  // A source that declared `include` comes back composed, carrying the origin of each StoryPath.
+  const result = Object.freeze({
+    ...plain,
+    storyDocument: {...plain.storyDocument, sourceOrigins: {}},
+  });
   await requireDefined(source.options.beforeSourceStage, 'the stage gate')(result);
 
   assert.deepEqual(

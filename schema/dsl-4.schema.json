@@ -3044,12 +3044,6 @@
       "required": ["goto"],
       "properties": {"goto": {"$ref": "#/$defs/sceneReferenceArgs"}}
     },
-    "gotoSegmentAction": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["gotoSegment"],
-      "properties": {"gotoSegment": {"$ref": "#/$defs/id"}}
-    },
     "branchAction": {
       "type": "object",
       "additionalProperties": false,
@@ -3254,7 +3248,6 @@
         {"$ref": "#/$defs/broadcastMessageAndWaitAction"},
         {"$ref": "#/$defs/transitionAction"},
         {"$ref": "#/$defs/gotoAction"},
-        {"$ref": "#/$defs/gotoSegmentAction"},
         {"$ref": "#/$defs/branchAction"},
         {"$ref": "#/$defs/setVariableAction"},
         {"$ref": "#/$defs/changeVariableAction"},

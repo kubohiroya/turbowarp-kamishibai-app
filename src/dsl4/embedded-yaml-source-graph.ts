@@ -336,11 +336,7 @@ async function derive(
   )
     fail('K4-SOURCE-DOCUMENTS-COMPONENT', 'A source runtime component is required.');
   const parsed = createDsl4SourceGraphFrontend(frontend).parse(graph, {
-    featureFlags: {
-      ...dsl4StandardProductionFeatureFlags,
-      dsl4Runtime: true,
-      dsl4SourceIncludes: true,
-    },
+    featureFlags: dsl4StandardProductionFeatureFlags,
     sourceId: component.source.sourceId,
     maxComposedSourceBytes: embeddedYamlSourceGraphLimits.maxTotalSourceBytes,
     project: options.project,

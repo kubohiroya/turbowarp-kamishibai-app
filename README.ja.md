@@ -24,7 +24,7 @@ TurboWarp紙芝居は、カメラの前で取ったポーズをきっかけに�
 
 ## どの版を使うか
 
-|                      | 3.2.3                                | 4.0.24                                 |
+|                      | 3.2.3                                | 4.0.25                                 |
 | -------------------- | ------------------------------------ | -------------------------------------- |
 | 状態                 | 既存3.1／3.2作品向け安定版           | 4.0未公開候補                          |
 | 向いている用途       | 体験会、安定運用、既存の3.1／3.2作品 | YAML台本、ブラウザ制作、CLI／API       |
@@ -32,7 +32,7 @@ TurboWarp紙芝居は、カメラの前で取ったポーズをきっかけに�
 | 入手先               | [ダウンロードページ][downloads]      | [ダウンロードページ][downloads]（SB3） |
 | 変更時に確認する文書 | [公開ドキュメント][docs]             | [4.0公開状況][current-release]         |
 
-4.0.24はYAML制作フローと4.0 APIの凍結済み未公開候補です。公開確認までは、ダウンロードページにある公開済みの版を使用してください。既存の3.1／3.2作品には引き続き3.2.3を使えます。公開済みの3.1／3.2作品は、4.0へ移行しなくても引き続き利用できます。
+4.0.25はYAML制作フローと4.0 APIの凍結済み未公開候補です。公開確認までは、ダウンロードページにある公開済みの版を使用してください。既存の3.1／3.2作品には引き続き3.2.3を使えます。公開済みの3.1／3.2作品は、4.0へ移行しなくても引き続き利用できます。
 
 ## まず体験する
 
@@ -48,7 +48,7 @@ TurboWarp紙芝居は、カメラの前で取ったポーズをきっかけに�
 
 ### YAML projectには4.0を使う
 
-4.0.24候補では、「組み込みYAMLの起点」「組み込みYAMLを取り込む」から対応する「組み込みYAML」ハットへの参照と、「シーンへ移る」から同じ名前の「シーン」ブロックへの参照を宣言し、TurboWarp Plus Editorが参照の矢印として描けるようにしました。4.0.24のステージのスクリプトの整理、4.0.22の作品の形式に沿ったSB3保存、4.0.21の台詞・字幕の式、人物アニメーション、舞台演出も引き継ぎます。
+4.0.25候補では、「組み込みYAMLの起点」「組み込みYAMLを取り込む」から対応する「組み込みYAML」ハットへの参照と、「シーンへ移る」・入力で移る行き先から同じ名前の「シーン」ブロックへの参照を宣言し、TurboWarp Plus Editorが参照の矢印として描けるようにしました。4.0.24の`include`の正式化と台本の区切りの撤去、4.0.23のステージのスクリプトの整理、4.0.21の台詞・字幕の式、人物アニメーション、舞台演出も引き継ぎます。
 
 ```yaml
 kamishibai: '4.0'
@@ -69,12 +69,12 @@ scenes:
 
 ## CLI quick start
 
-rc.64では認識の計算方式画面の初期言語を修正し、TurboWarpの表示言語、未指定ならブラウザ言語を使用します。タイトル・説明・操作ボタン・読み上げ用の名前は英語・日本語に対応し、アプリ内の言語切り替えにも追従します。Teachable Machine 4.0.2と計算方式選択はrc.63で追加しました。以前のrc.58ではpreview終了時の自己abort処理を修正しました。rc.51からrc.55でsealed保存した作品は引き続き利用できないため、元の台本からsourceまたはcompiled配布として再生成してください。以下のnpm例は4.0.24がnpmに公開された後に実行し、事前に[公開状況][current-release]を確認してください。
+rc.64では認識の計算方式画面の初期言語を修正し、TurboWarpの表示言語、未指定ならブラウザ言語を使用します。タイトル・説明・操作ボタン・読み上げ用の名前は英語・日本語に対応し、アプリ内の言語切り替えにも追従します。Teachable Machine 4.0.2と計算方式選択はrc.63で追加しました。以前のrc.58ではpreview終了時の自己abort処理を修正しました。rc.51からrc.55でsealed保存した作品は引き続き利用できないため、元の台本からsourceまたはcompiled配布として再生成してください。以下のnpm例は4.0.25がnpmに公開された後に実行し、事前に[公開状況][current-release]を確認してください。
 
-[`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.24)のCLIは、CI、再現可能なbuild、大規模project、配布profileの管理に向いています。Node.js 24.0.0以上とpnpm 11を使用し、検証するversionを固定して導入します。CLIコマンド名は`turbowarp-kamishibai`です。`tm-kamishibai`は非推奨の互換aliasとして残ります。
+[`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.25)のCLIは、CI、再現可能なbuild、大規模project、配布profileの管理に向いています。Node.js 24.0.0以上とpnpm 11を使用し、検証するversionを固定して導入します。CLIコマンド名は`turbowarp-kamishibai`です。`tm-kamishibai`は非推奨の互換aliasとして残ります。
 
 ```bash
-pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.24
+pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.25
 pnpm exec turbowarp-kamishibai --help
 pnpm exec turbowarp-kamishibai validate-dsl4 --input opening.k4.yml --format pretty
 pnpm exec turbowarp-kamishibai preview-dsl4 --watch --base kamishibai-4-base.sb3 --project-root .
@@ -185,5 +185,5 @@ pnpm verify:quick
 [rc81]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.81.md
 [rc82]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.82.md
 [rc88]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.88.md
-[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.24
-[stable4]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.24.md
+[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.25
+[stable4]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.25.md

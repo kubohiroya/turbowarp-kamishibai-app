@@ -267,7 +267,7 @@ export function createDsl4PlatformAssetSession(options: {
   cameraPreviewControlsEnabled?: boolean;
   cameraPreviewMirroringControlEnabled?: boolean;
   cameraMenuControlEnabled?: boolean;
-  /** Shared video leases across segments of the same publication. */
+  /** A video asset adapter supplied by the host instead of one owned by this session. */
   videoAssetAdapter?: ReturnType<typeof createDsl4VideoAssetAdapter>;
   /** Shared Object URL leases: equal images, and equal videos, each keep one URL. */
   objectUrlOwner?: Dsl4ObjectUrlOwner;

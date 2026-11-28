@@ -399,23 +399,24 @@ export function createDsl4LocalPreviewHost(options: {
   const sourceFrontend = validateFrontend(options.sourceFrontend);
   const maxSourceBytes = safeInteger(options.maxSourceBytes, 'maxSourceBytes', 1);
   const featureFlags = resolveDsl4LocalPreviewFeatureFlags(options.featureFlags);
-  const graphOptions = featureFlags.dsl4SourceIncludes
-    ? {
-        maxSourceFiles: safeInteger(options.maxSourceFiles, 'maxSourceFiles', 1),
-        maxTotalSourceBytes: safeInteger(
-          options.maxTotalSourceBytes,
-          'maxTotalSourceBytes',
-          maxSourceBytes,
-        ),
-        maxIncludeDepth: safeInteger(options.maxIncludeDepth, 'maxIncludeDepth', 1),
-        maxAssetFileBytes: safeInteger(options.maxAssetFileBytes, 'maxAssetFileBytes', 1),
-        maxAssetFiles: safeInteger(options.maxAssetFiles, 'maxAssetFiles', 1),
-        maxTotalAssetBytes: safeInteger(options.maxTotalAssetBytes, 'maxTotalAssetBytes', 1),
-      }
-    : {};
+  // Include processing is always on; limits the caller leaves out take the preview watcher's defaults.
+  const limitOptions = options as Readonly<Record<string, unknown>>;
+  const optionalLimit = (name: string, minimum: number) =>
+    limitOptions[name] === undefined
+      ? {}
+      : {[name]: safeInteger(limitOptions[name], name, minimum)};
+  const graphOptions: Record<string, number> = {
+    ...optionalLimit('maxSourceFiles', 1),
+    ...optionalLimit('maxTotalSourceBytes', maxSourceBytes),
+    ...optionalLimit('maxIncludeDepth', 1),
+    ...optionalLimit('maxAssetFileBytes', 1),
+    ...optionalLimit('maxAssetFiles', 1),
+    ...optionalLimit('maxTotalAssetBytes', 1),
+  };
   if (
-    featureFlags.dsl4SourceIncludes &&
-    Number(graphOptions.maxAssetFileBytes) > Number(graphOptions.maxTotalAssetBytes)
+    graphOptions.maxAssetFileBytes !== undefined &&
+    graphOptions.maxTotalAssetBytes !== undefined &&
+    graphOptions.maxAssetFileBytes > graphOptions.maxTotalAssetBytes
   ) {
     throw new TypeError('maxAssetFileBytes must be less than or equal to maxTotalAssetBytes');
   }

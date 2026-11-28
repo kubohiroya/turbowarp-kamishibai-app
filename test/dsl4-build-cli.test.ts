@@ -267,17 +267,17 @@ test('parses build-dsl4 defaults and rejects incomplete or invalid input', () =>
     ),
     'build-dsl4',
   );
-  assert.deepEqual(includes.featureFlags, {
-    dsl4Runtime: true,
-    dsl4SourceIncludes: true,
-  });
+  // Include needs no opt-in; the retired flag is accepted and the limits are passed through.
+  assert.equal(includes.featureFlags, undefined);
   assert.equal(includes.maxSourceFiles, 8);
   assert.equal(includes.maxTotalSourceBytes, limits.maxSourceBytes);
   assert.equal(includes.maxIncludeDepth, 4);
-  assert.throws(
-    () => parseCliArguments([...cliArguments(fixture), '--enable-source-includes']),
-    /Missing required option: --max-source-files/u,
+  const bareIncludeFlag = parsedOptions(
+    parseCliArguments([...cliArguments(fixture), '--enable-source-includes']),
+    'build-dsl4',
   );
+  assert.equal(Object.hasOwn(bareIncludeFlag, 'maxSourceFiles'), false);
+  assert.equal(bareIncludeFlag.featureFlags, undefined);
   assert.throws(
     () =>
       parseCliArguments(

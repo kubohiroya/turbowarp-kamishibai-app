@@ -37,17 +37,7 @@ function validateLifecycle(lifecycle: unknown) {
   return lifecycle as Dsl4AssetPreloadLifecycle;
 }
 
-export interface Dsl4SceneAssetCoordinator {
-  prepareStartup(generation: number): Promise<Readiness>;
-  beginScene(sceneId: string, generation: number): void;
-  waitForScene(sceneId: string): Promise<Readiness>;
-  commitScene(sceneId: string, reason: string): Promise<void | Readonly<{cleanupError: unknown}>>;
-  cancel(reason: string): void;
-  release(reason: string): Promise<unknown>;
-}
-
 export interface Dsl4AssetPreloadLifecycle {
-  readonly sceneCoordinator?: Dsl4SceneAssetCoordinator;
   prepare(
     payload: Readonly<Record<string, unknown>>,
     context: Readonly<{signal: AbortSignal; generation: number; sceneId: string | null}>,

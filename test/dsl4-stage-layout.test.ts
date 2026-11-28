@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'vitest';
-import {fitDsl4PublicationStage} from '../src/dsl4/platform/publication-stage-layout.js';
+import {fitDsl4Stage} from '../src/dsl4/browser-stage-layout.js';
 import {createFakeDocument} from './helpers/fake-dom.ts';
 
 function fixture() {
@@ -37,7 +37,7 @@ function fixture() {
     },
   };
   mount.setBoundingClientRect({width: 1280, height: 922.5});
-  const release = fitDsl4PublicationStage({
+  const release = fitDsl4Stage({
     mount: mount as unknown as HTMLElement,
     element: element as unknown as HTMLElement,
     canvas: canvas as unknown as HTMLCanvasElement,
@@ -56,7 +56,7 @@ function fixture() {
   };
 }
 
-test('fits the chapter below reserved controls and centers a four-to-three pointer rectangle', () => {
+test('fits the stage below reserved controls and centers a four-to-three pointer rectangle', () => {
   const f = fixture();
   assert.equal(f.element.style.width, '1230px');
   assert.equal(f.element.style.height, '922.5px');

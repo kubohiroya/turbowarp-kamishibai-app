@@ -152,7 +152,7 @@ pnpm exec turbowarp-kamishibai audit-dsl4-assets \
   --format pretty
 ```
 
-source includeを使うprojectでは、`--enable-source-includes`と次の三上限をすべて指定する。
+source includeを使うprojectは、entryが`include`を宣言していれば追加の指定なしに合成される。graphの上限を変えるときだけ次を指定する（省略時の既定値は下の値と同じ）。
 
 ```bash
   --max-source-files 64 \
@@ -218,7 +218,7 @@ pnpm exec turbowarp-kamishibai lock-dsl4-assets \
 | `K4-ASSET-REMOTE-HOST-001`      | remote hostがallowlist外                                |
 | `K4-ASSET-REMOTE-REDIRECT-001`  | HTTPS redirectまたはredirect上限が不正                  |
 | `K4-ASSET-REMOTE-SIZE-001`      | remote responseが有限byte上限を超過                     |
-| `K4-ASSET-ARCHIVE-001`          | recognitionModel archiveのtrusted extractionに失敗             |
+| `K4-ASSET-ARCHIVE-001`          | recognitionModel archiveのtrusted extractionに失敗      |
 | `K4-ASSET-VENDOR-INTEGRITY-001` | remote bytesがlockのtransport／logical identityと不一致 |
 | `K4-ASSET-VENDOR-SIZE-001`      | vendorの総download byte上限を超過                       |
 | `K4-ASSET-VENDOR-COUNT-001`     | vendorのfile／pose entry数上限を超過                    |

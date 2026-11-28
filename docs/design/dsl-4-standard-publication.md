@@ -1,5 +1,7 @@
 # DSL 4.0 Standard publication導線と所有権
 
+> **撤去済み（2026-11-28）**: segment・`gotoSegment`・`publication.json` と、ここで述べる publication の実装は削除した。台本の分割は include、移動は `goto` で行う。経緯は [segment・publication の廃止](dsl-4-segment-retirement.md) を参照。本書は当時の記録として残す。
+
 関連Issueは[#773](https://github.com/kubohiroya/turbowarp-kamishibai-app/issues/773) → [#775](https://github.com/kubohiroya/turbowarp-kamishibai-app/issues/775) → [#780](https://github.com/kubohiroya/turbowarp-kamishibai-app/issues/780)。2026-10-23、ブランチ`feat/dsl4/standard-publication`、基準main `ce0f9a80`（#979）。未公開コミット`27dc2cea`へのローカル修正を記録する。検証後のユーザー指示によりローカルmainへSquash統合する。push・PR・GitHub上のmerge・package公開は行わず、公開済みrc.43は変更しない。DSLは4.0を維持し、有効化用URLやフラグを追加しない。Safariは対象外。
 
 ## 物語の進行をシナリオが所有する

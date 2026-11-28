@@ -523,8 +523,7 @@ export function createDsl4RuntimeController({
   let failureContext: Readonly<Record<string, unknown>> | null = null;
   const trace: RuntimeEvent[] = [];
   const assetCoordinator = assetLifecycle
-    ? (assetLifecycle.sceneCoordinator ??
-      createDsl4AssetPreloadCoordinator({
+    ? createDsl4AssetPreloadCoordinator({
         storyDocument,
         lifecycle: assetLifecycle,
         onEvent: (type, details) => emit(type, details),
@@ -537,7 +536,7 @@ export function createDsl4RuntimeController({
               excludedStartupAssetIds:
                 createDsl4AssetDependencyIndex(storyDocument).posePreviewControls,
             }),
-      }))
+      })
     : null;
   let assetsReleased = true;
   let controllerDisposed = false;
@@ -1200,12 +1199,7 @@ export function createDsl4RuntimeController({
     }
     if (assetCoordinator) {
       try {
-        const result = await assetCoordinator.commitScene(sceneId, 'scene-transition');
-        if (runId === activeRunId && status === 'running' && result?.cleanupError)
-          emit('assets.cleanup.error', {
-            sceneId,
-            message: safeErrorMessage(result.cleanupError),
-          });
+        await assetCoordinator.commitScene(sceneId, 'scene-transition');
       } catch (error) {
         if (runId === activeRunId && status === 'running') fail(error);
         return false;
@@ -1527,7 +1521,6 @@ export function createDsl4RuntimeController({
     const command = isRecord(action) ? String(action.command ?? '') : '';
     const navigationCommand = [
       'goto',
-      'gotoSegment',
       'branch',
       'keyInputToChangeScene',
       'touchInputToChangeScene',
@@ -1557,9 +1550,7 @@ export function createDsl4RuntimeController({
         if (transition) nestedActionTransition = transition;
         return deepFreeze(
           transition
-            ? 'suspended' in transition
-              ? {outcome: 'suspended', reason: transition.reason}
-              : {outcome: 'transitioned', sceneId: transition.sceneId, reason: transition.reason}
+            ? {outcome: 'transitioned', sceneId: transition.sceneId, reason: transition.reason}
             : {outcome: 'completed'},
         );
       } catch (error) {
@@ -1752,12 +1743,7 @@ export function createDsl4RuntimeController({
           }
           if (readiness.prepared) {
             try {
-              const result = await assetCoordinator.commitScene(String(scene.id), 'scene-resume');
-              if (runId === activeRunId && status === 'running' && result?.cleanupError)
-                emit('assets.cleanup.error', {
-                  sceneId: String(scene.id),
-                  message: safeErrorMessage(result.cleanupError),
-                });
+              await assetCoordinator.commitScene(String(scene.id), 'scene-resume');
             } catch (error) {
               if (runId === activeRunId && status === 'running') fail(error);
               break;
@@ -1944,15 +1930,6 @@ export function createDsl4RuntimeController({
         transition = nestedActionTransition ?? transition;
         nestedActionTransition = null;
         nestedNavigationCommand = null;
-        if (transition && 'suspended' in transition) {
-          // A failed chapter transfer keeps variables and presentation at this action boundary.
-          pendingVariableWrites = [];
-          releaseStructuredAction('publication-transition-failed');
-          actionAbortController = null;
-          status = 'paused';
-          emit('runtime.pause', {reason: transition.reason});
-          break;
-        }
         try {
           releaseStructuredAction('action-complete');
         } catch (error) {
@@ -2117,13 +2094,8 @@ export function createDsl4RuntimeController({
     );
   }
 
-  function hasSegmentTransfer() {
-    return currentAction()?.command === 'gotoSegment' || nestedNavigationCommand === 'gotoSegment';
-  }
-
   function canRehearsalSkip(command: string) {
     if (status !== 'running') return false;
-    if (hasSegmentTransfer()) return false;
     if (poseAdvanceLock && poseAdvanceLock.generation !== generation) poseAdvanceLock = null;
     if (poseAdvanceLock || rehearsalSkipLock || rehearsalSceneSkip) return false;
     if (command === 'rehearsal.skipPose') {
@@ -2140,7 +2112,6 @@ export function createDsl4RuntimeController({
 
   function canAdvance(reason: string = 'navigation.nextAction') {
     if (status !== 'running') return false;
-    if (hasSegmentTransfer()) return false;
     if (poseAdvanceLock && poseAdvanceLock.generation !== generation) poseAdvanceLock = null;
     if (poseAdvanceLock) return false;
     if (!isPoseNavigationAdvance(reason)) return true;
@@ -2356,7 +2327,6 @@ export function createDsl4RuntimeController({
     reason: string = 'navigation.nextScene',
   ): Promise<Readonly<Record<string, unknown>>> {
     if (status !== 'running') return Promise.resolve(snapshot());
-    if (hasSegmentTransfer()) return Promise.resolve(snapshot());
     const nextScene = scenes[currentSceneIndex + 1];
     if (nextScene) return navigate(String(nextScene.id), {reason});
 
@@ -2392,7 +2362,6 @@ export function createDsl4RuntimeController({
       reason = 'navigation.reposition',
     }: {actionIndex?: number; reason?: string} = {},
   ): Readonly<Record<string, unknown>> {
-    if (hasSegmentTransfer()) return snapshot();
     if (status !== 'running' && status !== 'paused' && status !== 'finished') return snapshot();
     const target = resolvePosition(sceneId, actionIndex);
     if (!target) {
@@ -2460,7 +2429,6 @@ export function createDsl4RuntimeController({
     sceneId: string,
     {actionIndex = 0, reason = 'navigation'}: {actionIndex?: number; reason?: string} = {},
   ): Promise<Readonly<Record<string, unknown>>> {
-    if (hasSegmentTransfer()) return Promise.resolve(snapshot());
     if (status !== 'running') return Promise.resolve(snapshot());
     const target = resolvePosition(sceneId, actionIndex);
     if (!target) {
@@ -2811,11 +2779,8 @@ export function createDsl4RuntimeController({
       return Object.freeze({
         async commit(adopt: () => void = () => {}) {
           active();
-          let cleanupError: unknown;
-          if (assetCoordinator) {
-            const result = await assetCoordinator.commitScene(checkpoint.sceneId, 'save-restore');
-            cleanupError = result?.cleanupError;
-          }
+          if (assetCoordinator)
+            await assetCoordinator.commitScene(checkpoint.sceneId, 'save-restore');
           active();
           if (stagedIntegration) {
             previousIntegration = structuredDataIntegration;
@@ -2848,11 +2813,6 @@ export function createDsl4RuntimeController({
           signal.removeEventListener('abort', cancel);
           adopt();
           emit('runtime.restore');
-          if (cleanupError)
-            emit('assets.cleanup.error', {
-              sceneId: checkpoint.sceneId,
-              message: safeErrorMessage(cleanupError),
-            });
           return snapshot();
         },
         cancel() {

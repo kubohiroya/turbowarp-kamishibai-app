@@ -203,7 +203,6 @@ test('defaults OFF and does not inspect runtime inputs or adapters', async () =>
     dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
-    dsl4SourceIncludes: false,
     dsl4AppShell: false,
     dsl4WebPreviewAdapter: false,
     dsl4BrowserDistributionBuild: false,
@@ -419,7 +418,6 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
-    dsl4SourceIncludes: false,
     dsl4AppShell: false,
     dsl4WebPreviewAdapter: false,
     dsl4BrowserDistributionBuild: false,
@@ -447,7 +445,6 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
-    dsl4SourceIncludes: false,
     dsl4AppShell: false,
     dsl4WebPreviewAdapter: false,
     dsl4BrowserDistributionBuild: false,
@@ -474,7 +471,6 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
-    dsl4SourceIncludes: false,
     dsl4AppShell: false,
     dsl4WebPreviewAdapter: false,
     dsl4BrowserDistributionBuild: false,
@@ -501,7 +497,6 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
-    dsl4SourceIncludes: false,
     dsl4AppShell: false,
     dsl4WebPreviewAdapter: false,
     dsl4BrowserDistributionBuild: false,
@@ -528,7 +523,6 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
-    dsl4SourceIncludes: false,
     dsl4AppShell: false,
     dsl4WebPreviewAdapter: false,
     dsl4BrowserDistributionBuild: false,
@@ -561,7 +555,6 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
       dsl4PresentationEffects: false,
       dsl4BroadcastMessageAndWait: false,
       dsl4IndexedDBAssetSessionStore: false,
-      dsl4SourceIncludes: false,
       dsl4AppShell: false,
       dsl4WebPreviewAdapter: false,
       dsl4BrowserDistributionBuild: false,
@@ -685,7 +678,6 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
   assert.deepEqual(
     resolveDsl4FeatureFlags({
       dsl4Runtime: true,
-      dsl4SourceIncludes: false,
       dsl4AppShell: true,
       dsl4WebPreviewAdapter: true,
       dsl4BrowserDistributionBuild: false,
@@ -699,7 +691,6 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
       dsl4PresentationEffects: false,
       dsl4BroadcastMessageAndWait: false,
       dsl4IndexedDBAssetSessionStore: false,
-      dsl4SourceIncludes: false,
       dsl4AppShell: true,
       dsl4WebPreviewAdapter: true,
       dsl4BrowserDistributionBuild: false,
@@ -727,7 +718,6 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
   assert.deepEqual(
     resolveDsl4FeatureFlags({
       dsl4Runtime: true,
-      dsl4SourceIncludes: false,
       dsl4AppShell: true,
       dsl4WebPreviewAdapter: true,
       dsl4WebPreviewAssetLiveReload: true,
@@ -741,7 +731,6 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
   assert.equal(
     resolveDsl4FeatureFlags({
       dsl4Runtime: true,
-      dsl4SourceIncludes: false,
       dsl4AppShell: true,
       dsl4PreviewReloadOverlay: true,
     }).dsl4PreviewReloadOverlay,
@@ -793,7 +782,6 @@ test('strictly resolves one immutable startup flag snapshot', async () => {
     dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
-    dsl4SourceIncludes: false,
     dsl4AppShell: false,
     dsl4WebPreviewAdapter: false,
     dsl4BrowserDistributionBuild: false,
@@ -950,7 +938,6 @@ test('enables internal Structured Data independently without exposing a generic 
     enabledOptions(component.project, {
       featureFlags: {
         dsl4Runtime: true,
-        dsl4SourceIncludes: false,
         structuredDataIntegrationEnabled: true,
       },
       port: {
@@ -973,7 +960,6 @@ test('enables internal Structured Data independently without exposing a generic 
     dsl4PresentationEffects: false,
     dsl4BroadcastMessageAndWait: false,
     dsl4IndexedDBAssetSessionStore: false,
-    dsl4SourceIncludes: false,
     dsl4AppShell: false,
     dsl4WebPreviewAdapter: false,
     dsl4BrowserDistributionBuild: false,
@@ -1061,7 +1047,6 @@ test('creates a component-aware asset lifecycle after validation and releases it
       dsl4PresentationEffects: false,
       dsl4BroadcastMessageAndWait: false,
       dsl4IndexedDBAssetSessionStore: false,
-      dsl4SourceIncludes: false,
       dsl4AppShell: false,
       dsl4WebPreviewAdapter: false,
       dsl4BrowserDistributionBuild: false,
@@ -1210,7 +1195,6 @@ test('creates an atomic runtime environment only after component validation', as
       dsl4PresentationEffects: false,
       dsl4BroadcastMessageAndWait: false,
       dsl4IndexedDBAssetSessionStore: false,
-      dsl4SourceIncludes: false,
       dsl4AppShell: false,
       dsl4WebPreviewAdapter: false,
       dsl4BrowserDistributionBuild: false,

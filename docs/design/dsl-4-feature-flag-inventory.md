@@ -156,11 +156,16 @@ ON にしても IndexedDB への hard dependency は生まれない。`prefer` �
 矩形動画領域と ID による再生制御の契約・検証・ロールバックは [動画仕様](dsl-4-video.md) を参照。
 追跡は [#780](https://github.com/kubohiroya/turbowarp-kamishibai-app/issues/780)。Standard profile の既定 ON 化は行わない。
 
-## 5. profile ではなく呼び出し側で ON — 1 個
+## 5. 廃止した flag — `dsl4SourceIncludes`
 
-`dsl4SourceIncludes` はどの profile にも入っておらず、builder／CLI／preview の 7 箇所が `{dsl4Runtime: true, dsl4SourceIncludes: true}` と直に立てている（`src/builder/dsl4-build.ts`、`dsl4-asset-lock.ts`、`dsl4-block-source-export.ts`、`dsl4-asset-audit.ts`、`cli.ts` の 2 箇所、`src/dsl4/preview-source-graph-generation.ts`）。
+include は flag なしの正式な機能になった。build・asset audit/lock・preview（Node と browser）は、entry source が
+top-level の `include` を宣言しているときだけ Source Graph として読み、宣言していない台本は従来どおり単一 source として読む
+（`src/dsl4/source-include-detection.ts`）。単一 source の台本は成果物に入る本文も変わらない。
 
-これは **意図的にこの形のままにする。** include 解決は build 経路の capability であって、runtime の上演 capability ではない。production profile へ入れると、include を使わない上演 session にも立ってしまう。
+`resolveDsl4FeatureFlags` は外部の呼び出し側（samples の script など）のために `dsl4SourceIncludes` を当面受理するが、
+値は boolean であることだけを確かめて捨て、解決結果には含めない。CLI の `--enable-source-includes` も受理して無視する。
+graph の三上限（`--max-source-files`、`--max-total-source-bytes`、`--max-include-depth`）は任意になり、省略時は
+`dsl4SourceGraphDefaultLimits`（64 files、4 MiB、depth 32）を使う。
 
 ## 6. 解消した乖離
 

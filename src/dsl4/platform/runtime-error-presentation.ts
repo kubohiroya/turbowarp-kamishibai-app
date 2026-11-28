@@ -21,7 +21,6 @@ const actionNames: Readonly<Record<string, readonly [string, string]>> = {
   video: ['動画を再生する', 'Play video'],
   videoControl: ['動画を操作する', 'Control video'],
   transition: ['場面を切り替える', 'Transition'],
-  gotoSegment: ['別の章へ移動する', 'Go to segment'],
   setVariable: ['変数の値を設定する', 'Set variable'],
   changeVariable: ['変数の値を変える', 'Change variable'],
   toggleVariable: ['変数を切り替える', 'Toggle variable'],

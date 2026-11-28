@@ -70,7 +70,7 @@ Copyright © 2026 Hiroya Kubo.
 | 用語                           | この文書での意味                                                                                                                                                                             |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | entry source                   | `project.source.yml`（`.yaml`／`.json`互換入力可）が指す、projectの入口となる1個のDSL 4.0 YAML。許可suffixとpath規則はsource loader契約を正本とする                                          |
-| included source                | entry sourceの`include`から到達する任意source。`dsl4SourceIncludes`が起動時に有効な場合だけ読み、default経路では存在しない                                                                   |
+| included source                | entry sourceの`include`から到達する任意source。entryが`include`を宣言したときだけ読み、宣言しない台本では存在しない                                                                          |
 | source manifest                | entry sourceのmode、source ID、project-relative path、cache identityを宣言する`project.source.yml`、`project.source.yaml`、`project.source.json`                                             |
 | `sourceId`                     | 診断とsource descriptorでsourceを識別する論理ID。作者machine上の絶対pathやURLを使わない                                                                                                      |
 | cache identity                 | verified remote asset cacheを台本単位で分離するstable story ID、表示名、IndexedDB database名の組。source本文のintegrityとは別物                                                              |
@@ -128,7 +128,7 @@ Copyright © 2026 Hiroya Kubo.
 | dispose                     | ownerが保持するresourceを、途中の解放失敗があっても残りを継続しながら一度だけ解放する終了操作                        |
 | scope                       | story、scene、action等の有効範囲。scope終了時にその範囲専用のvariableやresourceを解放する                            |
 | embedded asset              | asset byte列をSB3内へ格納し、実行時にnetworkを使わずmaterializeするdelivery                                          |
-| remote pose asset           | TM directory URL、またはpathname末尾が`.zip`のarchive URLを正本として、必要時にmodel filesを取得するdelivery     |
+| remote pose asset           | TM directory URL、またはpathname末尾が`.zip`のarchive URLを正本として、必要時にmodel filesを取得するdelivery         |
 | verified remote asset       | 台本がHTTPS URL、期待SHA-256 integrity、media type、sizeを明示し、取得後のbyte列を再検証してから使用するdelivery     |
 | asset dependency index      | story開始時または各sceneで必要になるasset IDを、`StoryDocument`から事前計算した対応表                                |
 | Asset Preload Coordinator   | dependency indexに従って遷移先assetのprepareを開始し、成功時のcommitと不要resourceのreleaseを調整するcore object     |
@@ -173,7 +173,7 @@ canonical sourceまたはimmutableな`StoryDocument`を受け取るため、フ�
 flowchart TB
   subgraph AUTHORING["Authoring input"]
     YAML["DSL 4.0 YAML<br/>entry source"]
-    INCLUDES["Optional included sources<br/>dsl4SourceIncludes = true only"]
+    INCLUDES["Optional included sources<br/>only when the entry declares include"]
     MANIFEST["project.source.yaml<br/>JSON fallback"]
     LOCAL["Local / remote asset declarations"]
     BASE["Base SB3"]
@@ -258,9 +258,9 @@ flowchart TB
   EXPR --> CONTROLLER
 ```
 
-実線の`SOURCEIO → FRONTEND`がdefaultの単一source経路です。破線のSource Graph経路は
-`dsl4SourceIncludes`が起動時に有効な場合だけentry／included sourceを合成し、その結果を同じproduction
-Source Frontendへ渡します。図の中央にある`StoryDocument`が、source表層構文とruntime実行の境界です。runtimeはYAML nodeを
+実線の`SOURCEIO → FRONTEND`がincludeを宣言しない台本の単一source経路です。破線のSource Graph経路は
+entryが`include`を宣言したときだけentry／included sourceを合成し、その結果を同じproduction
+Source Frontendへ渡します。フラグやCLIの指定は要りません。図の中央にある`StoryDocument`が、source表層構文とruntime実行の境界です。runtimeはYAML nodeを
 直接参照せず、sceneを記述順のarray、actionを型付き引数、source位置をSource Mapとして持つ
 正規化済み文書だけを実行します。
 
@@ -287,10 +287,10 @@ DSL 4.0対応toolはscene keyをsortせず、parse、serialize、parseのround t
 
 | レイヤー                 | 主なmodule                                                                                                                                                                                                                                                                                                                                                                          | 責務                                                                                                                                                         |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| CLI／出力                | [`bin/turbowarp-kamishibai.mjs`](../../bin/turbowarp-kamishibai.mjs)、[`src/builder/cli.js`](../../src/builder/cli.js)、[`dsl4-build-output.js`](../../src/builder/dsl4-build-output.js)                                                                                                                                                                                                          | optionと有限上限を受け取り、入力を読み、候補SB3を再検証してatomicに置換する                                                                                  |
+| CLI／出力                | [`bin/turbowarp-kamishibai.mjs`](../../bin/turbowarp-kamishibai.mjs)、[`src/builder/cli.js`](../../src/builder/cli.js)、[`dsl4-build-output.js`](../../src/builder/dsl4-build-output.js)                                                                                                                                                                                            | optionと有限上限を受け取り、入力を読み、候補SB3を再検証してatomicに置換する                                                                                  |
 | source I/O               | [`dsl4-external-source.js`](../../src/builder/dsl4-external-source.js)                                                                                                                                                                                                                                                                                                              | entry sourceについてproject root、regular file、symlink、安定読込、byte上限を検査し、machine-local absolute pathをcoreへ漏らさない                           |
 | optional graph I/O       | [`dsl4-source-graph.js`](../../src/builder/dsl4-source-graph.js)                                                                                                                                                                                                                                                                                                                    | flag有効時だけincluded sourceを探索し、個別／総byte、file数、depth、project-root confinementを検査してpure Source Graphを作る                                |
-| Source Graph             | [`source-graph.js`](../../src/dsl4/source-graph.js)、[`source-graph-frontend.js`](../../src/dsl4/source-graph-frontend.js)                                                                                                                                                                                                                                                          | immutable graphのcycle／宣言整合性を検査してcomposed sourceを作り、診断とsource位置を元sourceへ投影する。`dsl4SourceIncludes`が有効な場合だけ使用する        |
+| Source Graph             | [`source-graph.js`](../../src/dsl4/source-graph.js)、[`source-graph-frontend.js`](../../src/dsl4/source-graph-frontend.js)                                                                                                                                                                                                                                                          | immutable graphのcycle／宣言整合性を検査してcomposed sourceを作り、診断とsource位置を元sourceへ投影する。entryが`include`を宣言した場合だけ使用する          |
 | source frontend          | [`source-frontend.js`](../../src/dsl4/source-frontend.js)、[`semantic-validator.js`](../../src/dsl4/semantic-validator.js)、[`story-document.js`](../../src/dsl4/story-document.js)                                                                                                                                                                                                 | text正規化、上限付きYAML parse、JSON Schema、semantic／resource／式の事前検査を行い、Source Map付き`StoryDocument`を生成する                                 |
 | production frontend      | [`dsl4-source-frontend.js`](../../src/builder/dsl4-source-frontend.js)                                                                                                                                                                                                                                                                                                              | pure frontendへ固定Runtime Expression compositionを注入し、buildとruntimeで同じ式文法を使う                                                                  |
 | build core               | [`dsl4-build.js`](../../src/builder/dsl4-build.js)                                                                                                                                                                                                                                                                                                                                  | source、asset snapshot、descriptorをまとめ、SB3へ格納し、memory上の生成物を共有loaderで再検証する                                                            |
@@ -330,7 +330,7 @@ sequenceDiagram
   Build->>SourceIO: stable-read entry source within project root
   SourceIO-->>Build: source descriptor + validated manifest
 
-  alt dsl4SourceIncludes = true
+  alt entry declares include
     Build->>GraphIO: load entry and included sources
     GraphIO->>GraphIO: check path, cycle, depth, count, total bytes, declarations
     GraphIO-->>Build: immutable Source Graph
@@ -672,16 +672,16 @@ rollback条件を同時にreviewしてください。
 
 図中の重複を直ちに削除対象とはせず、信頼境界のための意図的な再検証と、実装または契約の不足を分けて扱います。
 
-| 状態       | 項目                             | 実装結果                                                                                                                                                                                                                                                                                                                                       |
-| ---------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 状態       | 項目                             | 実装結果                                                                                                                                                                                                                                                                                                                                              |
+| ---------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 解消済み   | included sourceのruntime診断位置 | [PR #446](https://github.com/kubohiroya/turbowarp-kamishibai-app/pull/446)で、versionと有限上限を持つallowlist形式の`sourceOrigins`をpackaged source descriptorへ保存した。memory候補、disk候補、runtime startupの各共有loader境界で、project-relativeな元`sourceId`／rangeを同じ`storyPath`へ復元する                                                |
 | 解消済み   | entry／composed sourceのbyte上限 | [PR #447](https://github.com/kubohiroya/turbowarp-kamishibai-app/pull/447)で、`maxSourceBytes`を1 source fileごと、`maxTotalSourceBytes`をgraph全体、composed source、packaged include sourceに適用する契約へ統一した。`resolveDsl4BuildSourceLimits`で各境界の上限を導出し、境界値と超過1 byteを回帰testで固定する                                   |
 | 契約済み   | input経路のarbitration           | [PR #448](https://github.com/kubohiroya/turbowarp-kamishibai-app/pull/448)で`createDsl4InputArbitration`を導入した。active actionのexact story keyはnavigationをdeferし、それ以外のmapped keyはactive actionを一度だけcancelする。受理したactor touchに続くreleaseは一度だけ抑止し、focus／IME／modifier／repeatとhistory／poseの既存policyを維持する |
-| 文書化済み | SB3とmanifestのtransaction境界   | SB3候補はatomicに置換するが、新規cache identityのmanifest保存は別transactionである。project全体のatomic updateとは呼ばない                                                                                                                                                                                                                     |
-| 意図的     | packaged componentの複数回検証   | build coreのmemory候補、disk候補、runtime startupで共有loaderを再実行する。独立build API、disk mutation検出、runtime trust boundaryを守る防御的重複である                                                                                                                                                                                      |
-| 意図的     | feature flagの二段階正規化       | platform hostは早期OFF gate、runtime startupはcore API境界として同じflag snapshotを再検証する。片方を省略する場合は各APIの単独利用時の契約を維持する                                                                                                                                                                                           |
-| 図修正済み | sequential scene遷移             | 明示遷移だけでなくscene末尾の順次遷移も同じprepare／commit／release経路を通ることを図へ反映した                                                                                                                                                                                                                                                |
-| 図修正済み | optional Source Graphの位置付け  | default単一source経路を実線、`dsl4SourceIncludes`有効時だけ使うgraph経路を破線で分離した                                                                                                                                                                                                                                                       |
+| 文書化済み | SB3とmanifestのtransaction境界   | SB3候補はatomicに置換するが、新規cache identityのmanifest保存は別transactionである。project全体のatomic updateとは呼ばない                                                                                                                                                                                                                            |
+| 意図的     | packaged componentの複数回検証   | build coreのmemory候補、disk候補、runtime startupで共有loaderを再実行する。独立build API、disk mutation検出、runtime trust boundaryを守る防御的重複である                                                                                                                                                                                             |
+| 意図的     | feature flagの二段階正規化       | platform hostは早期OFF gate、runtime startupはcore API境界として同じflag snapshotを再検証する。片方を省略する場合は各APIの単独利用時の契約を維持する                                                                                                                                                                                                  |
+| 図修正済み | sequential scene遷移             | 明示遷移だけでなくscene末尾の順次遷移も同じprepare／commit／release経路を通ることを図へ反映した                                                                                                                                                                                                                                                       |
+| 図修正済み | optional Source Graphの位置付け  | 単一source経路を実線、entryが`include`を宣言したときだけ使うgraph経路を破線で分離した                                                                                                                                                                                                                                                                 |
 
 上表でrelease gateとしていた「要修正」「要決定」は、Issue #440のPR #446〜#448ですべて解消しました。
 今後これらの境界を変更する場合は、上表の実装結果と関連testを回帰契約としてreviewします。

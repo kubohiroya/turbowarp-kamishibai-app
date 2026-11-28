@@ -18,7 +18,7 @@ import {
 } from './dsl4-external-source.js';
 import {loadDsl4BuildSourceGraph} from './dsl4-source-graph.js';
 import {resolveDsl4ProjectSource} from './dsl4-project-source.js';
-import {resolveDsl4BuildSourceLimits} from './dsl4-source-limits.js';
+import {resolveDsl4BuildSourceLimits, resolveDsl4EntrySourceGraph} from './dsl4-source-limits.js';
 import {Sb3BuilderError} from './errors.js';
 import type {Dsl4FileSystem} from './file-system.js';
 
@@ -632,32 +632,18 @@ export async function auditDsl4AssetDistribution(options: {
   if (!options.sourceFrontend || typeof options.sourceFrontend.parse !== 'function') {
     throw new TypeError('sourceFrontend must provide parse');
   }
-  const sourceIncludesEnabled = options.sourceIncludesEnabled ?? false;
-  if (typeof sourceIncludesEnabled !== 'boolean') {
+  // `sourceIncludesEnabled` was the include opt-in. Include is decided by the entry source now, so
+  // the option is still accepted but has no effect.
+  if (
+    options.sourceIncludesEnabled !== undefined &&
+    typeof options.sourceIncludesEnabled !== 'boolean'
+  ) {
     throw new TypeError('sourceIncludesEnabled must be a boolean');
   }
-  let sourceGraphLimits;
-  if (sourceIncludesEnabled) {
-    sourceGraphLimits = {
-      maxSourceFiles: positiveLimit(options.maxSourceFiles, 'maxSourceFiles'),
-      maxIncludeDepth: positiveLimit(options.maxIncludeDepth, 'maxIncludeDepth'),
-    };
-  } else {
-    if (options.maxSourceFiles !== undefined) {
-      throw new TypeError('maxSourceFiles requires sourceIncludesEnabled');
-    }
-    if (options.maxTotalSourceBytes !== undefined) {
-      throw new TypeError('maxTotalSourceBytes requires sourceIncludesEnabled');
-    }
-    if (options.maxIncludeDepth !== undefined) {
-      throw new TypeError('maxIncludeDepth requires sourceIncludesEnabled');
-    }
-  }
-  const sourceLimits = resolveDsl4BuildSourceLimits({
-    sourceIncludesEnabled,
+  const maxSourceFileBytes = resolveDsl4BuildSourceLimits({
+    sourceIncludesEnabled: false,
     maxSourceBytes: options.maxSourceBytes,
-    maxTotalSourceBytes: options.maxTotalSourceBytes,
-  });
+  }).maxSourceFileBytes;
   const [resolvedSource, configInput, lockInput] = await Promise.all([
     resolveDsl4ProjectSource({
       projectRoot: options.projectRoot,
@@ -699,25 +685,28 @@ export async function auditDsl4AssetDistribution(options: {
     throw error;
   }
   const source = await loadDsl4ExternalSource(options.projectRoot, inputs.sourceManifest, {
-    maxSourceBytes: sourceLimits.maxSourceFileBytes,
+    maxSourceBytes: maxSourceFileBytes,
     ...(options.fileSystem === undefined ? {} : {fileSystem: options.fileSystem}),
     ...(options.readFile === undefined ? {} : {readSource: options.readFile}),
   });
+  const entry = resolveDsl4EntrySourceGraph({
+    sourceText: source.descriptor.text,
+    maxSourceBytes: options.maxSourceBytes,
+    maxTotalSourceBytes: options.maxTotalSourceBytes,
+    maxSourceFiles: options.maxSourceFiles,
+    maxIncludeDepth: options.maxIncludeDepth,
+  });
   let parsedInput: unknown;
-  if (sourceIncludesEnabled) {
+  if (entry.graph) {
     const sourceGraph = await loadDsl4BuildSourceGraph(options.projectRoot, source, {
-      limits: {
-        maxSourceBytes: sourceLimits.maxSourceFileBytes,
-        maxTotalSourceBytes: sourceLimits.maxSourceGraphBytes,
-        ...sourceGraphLimits,
-      },
+      limits: entry.graphLimits,
       ...(options.fileSystem === undefined ? {} : {fileSystem: options.fileSystem}),
       ...(options.readFile === undefined ? {} : {readSource: options.readFile}),
     });
     parsedInput = createDsl4SourceGraphFrontend(options.sourceFrontend).parse(sourceGraph, {
-      featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+      featureFlags: {dsl4Runtime: true},
       sourceId: source.descriptor.sourceId,
-      maxComposedSourceBytes: sourceLimits.maxComposedSourceBytes,
+      maxComposedSourceBytes: entry.limits.maxComposedSourceBytes,
     });
   } else {
     parsedInput = options.sourceFrontend.parse(source.descriptor.text, {

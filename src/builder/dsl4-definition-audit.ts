@@ -182,7 +182,7 @@ export async function auditDsl4ProjectDefinitions(options: Dsl4DefinitionAuditOp
           project,
         })
       : createDsl4SourceGraphFrontend(options.sourceFrontend).parse(candidateGraph, {
-          featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+          featureFlags: {dsl4Runtime: true},
           project,
           maxComposedSourceBytes: limits.maxTotalSourceBytes,
         });

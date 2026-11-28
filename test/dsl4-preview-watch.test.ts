@@ -565,7 +565,6 @@ test('publishes one recursive Source Graph and asset generation only after two m
   let assetLoads = 0;
   const setup = watcherOptions({
     manifest: {...manifest, path: 'story.k4.yml'},
-    featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
     maxSourceFiles: 8,
     maxTotalSourceBytes: 16 * 1024,
     maxIncludeDepth: 4,
@@ -575,8 +574,9 @@ test('publishes one recursive Source Graph and asset generation only after two m
     quietWindowMs: 1,
     retryIntervalMs: 10,
     stabilityTimeoutMs: 100,
+    // The entry declares `include`, which is what makes the watcher read a Source Graph.
     loadSource: async (): Promise<Record<string, unknown>> => ({
-      descriptor: descriptor(validSource, 'sha256-entry'),
+      descriptor: descriptor(`include: chapter.k4.yml\n${validSource}`, 'sha256-entry'),
     }),
     loadSourceGraph: async () => includedGraph(graphSequence.shift() ?? 'saved'),
     loadAssets: assetSnapshotLoader(async () => {

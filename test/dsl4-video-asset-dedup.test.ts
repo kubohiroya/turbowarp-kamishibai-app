@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'vitest';
 import {createDsl4VideoAssetAdapter} from '../src/dsl4/platform/video-asset-adapter.js';
-import {createDsl4PlatformAssetAdapter} from '../src/dsl4/platform/asset-adapter-router.js';
-import {createDsl4EmbeddedAssetLifecycle} from '../src/dsl4/embedded-asset-lifecycle.js';
-import {createDsl4AssetGroupLifecycle} from '../src/dsl4/asset-group-lifecycle.js';
 
 const bytes = Uint8Array.from([0x1a, 0x45, 0xdf, 0xa3]);
 const payload = (id: string, input = bytes) => ({
@@ -117,60 +114,4 @@ test('failed URL revocation remains retryable without sharing or revoking a repl
   assert.deepEqual([...live], [replacement.objectUrl]);
   adapter.release(replacement);
   assert.equal(live.size, 0);
-});
-
-test('group cleanup retry reaches URL revocation through the real lifecycle and platform router', async () => {
-  let fail = true,
-    attempts = 0;
-  const urls = new Set<string>();
-  const video = createDsl4VideoAssetAdapter({
-    createObjectURL() {
-      urls.add('blob:real');
-      return 'blob:real';
-    },
-    revokeObjectURL(url) {
-      attempts++;
-      if (fail) throw new Error('native revoke failed');
-      urls.delete(url);
-    },
-  });
-  const unused = {
-    prepare() {
-      throw new Error('unused');
-    },
-    release() {},
-  };
-  const adapter = createDsl4PlatformAssetAdapter({
-    mediaAdapter: unused,
-    poseAdapter: unused,
-    videoAdapter: video,
-  });
-  const lifecycle = createDsl4EmbeddedAssetLifecycle({
-    runtimeComponent: {
-      storyDocument: {kind: 'StoryDocument', version: '4.0'},
-      assetBundle: {
-        manifest: {
-          assets: [{id: 'A', kind: 'video', source: {type: 'file', files: [{path: 'a.webm'}]}}],
-        },
-      },
-      getAssetFile() {
-        return bytes;
-      },
-    },
-    adapter,
-    setLoading() {},
-  });
-  const manager = createDsl4AssetGroupLifecycle({
-    groups: [{id: 'g', scope: 'scene', assetIds: ['A'], dependencies: []}],
-    lifecycle,
-  });
-  const context = {signal: new AbortController().signal, generation: 0, sceneId: null};
-  await manager.prepareGroup('g', context);
-  assert((await manager.releaseGroup('g', context)).cleanupError);
-  assert.equal(urls.size, 1);
-  fail = false;
-  await manager.dispose();
-  assert.equal(attempts, 2);
-  assert.equal(urls.size, 0);
-  assert.deepEqual(manager.snapshot().pendingReleaseAssetIds, []);
 });

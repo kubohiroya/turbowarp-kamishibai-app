@@ -7,19 +7,16 @@ import {
   createDsl4EmbeddedAssetBundle,
   validateDsl4EmbeddedAssetBundle,
 } from '../src/dsl4/asset-bundle-descriptor.js';
-import {createDsl4AssetGroupLifecycle} from '../src/dsl4/asset-group-lifecycle.js';
 import {
   createDsl4EmbeddedAssetLifecycle,
   type Dsl4MaterializationRetention,
 } from '../src/dsl4/embedded-asset-lifecycle.js';
-import {createDsl4PublicationAssetLoader} from '../src/dsl4/publication-asset-loader.js';
 import {createDsl4PlatformAssetAdapter} from '../src/dsl4/platform/asset-adapter-router.js';
 import {createDsl4AssetManagerAdapter} from '../src/dsl4/platform/asset-manager-adapter.js';
 import {createDsl4ObjectUrlOwner} from '../src/dsl4/platform/object-url-owner.js';
 import {createDsl4VideoAssetAdapter} from '../src/dsl4/platform/video-asset-adapter.js';
 import {dsl4TestSourceFrontend as frontend} from './helpers/dsl4-test-frontend.ts';
 
-const webm = Uint8Array.from([0x1a, 0x45, 0xdf, 0xa3]);
 const sri = (bytes: Uint8Array) => 'sha256-' + createHash('sha256').update(bytes).digest('base64');
 const text = (value: string) => new TextEncoder().encode(value);
 
@@ -379,177 +376,4 @@ test('full release destroys retained handles and invalid budgets are rejected', 
   assert.equal(f.lifecycle.stats().idleEntries, 0);
   await assert.rejects(retentionFixture({maxIdleBytes: -1}), /non-negative/u);
   await assert.rejects(retentionFixture({maxIdleBytes: 1.5}), /non-negative/u);
-});
-
-const allKindsSource = (marker: number) => `kamishibai: '4.0'
-assets:
-  Back: {kind: backdrop, file: back.svg, loading: lazy, retention: scene}
-  HeroIdle: {kind: costume, target: Hero, file: hero.svg}
-  Bell: {kind: sound, file: bell.wav, loading: lazy, retention: scene}
-  Movie: {kind: video, file: movie.webm, loading: lazy, retention: scene}
-  RescuePose: {kind: recognitionModel, file: pose-models/RescuePose}
-actors:
-  Hero: HeroIdle
-scenes:
-  first:
-    - stage: Back
-    - sound: Bell
-    - video: {id: movie${marker}, asset: Movie, x: 0, y: 0, width: 160, height: 120}
-  second:
-    recognitionModel: RescuePose
-    actions:
-      - Hero.pose:
-          steps:
-            - pose: help
-`;
-const allKindsAssets = (marker: number): FixtureAsset[] => [
-  {id: 'Back', kind: 'backdrop', files: {'back.svg': text(`<svg id="b${marker}"/>`)}},
-  {id: 'HeroIdle', kind: 'costume', target: 'Hero', files: {'hero.svg': text('<svg id="h"/>')}},
-  {id: 'Bell', kind: 'sound', files: {'bell.wav': text(`RIFF-${marker}`)}},
-  {id: 'Movie', kind: 'video', files: {'movie.webm': Uint8Array.from([...webm, marker])}},
-  {
-    id: 'RescuePose',
-    kind: 'recognitionModel',
-    files: {
-      'metadata.json': text('{"labels":["help"]}'),
-      'model.json': text(`{"m":${marker}}`),
-    },
-  },
-];
-
-test('group release leaves no GPU skin, AudioBuffer, pose model or Object URL behind', async () => {
-  const urls = urlFunctions();
-  const owners = platformOwners(createDsl4ObjectUrlOwner(urls));
-  const lifecycle = createDsl4EmbeddedAssetLifecycle({
-    runtimeComponent: await component(allKindsSource(1), allKindsAssets(1)),
-    adapter: owners.adapter,
-    setLoading() {},
-  });
-  const groups = createDsl4AssetGroupLifecycle({
-    groups: [
-      {
-        id: 'all',
-        scope: 'scene',
-        assetIds: ['Back', 'HeroIdle', 'Bell', 'Movie', 'RescuePose'],
-        dependencies: [],
-      },
-    ],
-    lifecycle,
-  });
-  await groups.prepareGroup('all', context('first'));
-  assert.deepEqual(
-    [owners.skins.size, owners.audioBuffers.size, owners.poseModels.size, urls.live.size],
-    [2, 1, 1, 1],
-  );
-  const result = await groups.releaseGroup('all', context('first'));
-  assert.equal(result.cleanupError, null);
-  assert.deepEqual(
-    [owners.skins.size, owners.audioBuffers.size, owners.poseModels.size, urls.live.size],
-    [0, 0, 0, 0],
-  );
-  await groups.dispose();
-});
-
-async function longPublication(count: number) {
-  const urls = urlFunctions();
-  const objectUrls = createDsl4ObjectUrlOwner(urls);
-  const video = createDsl4VideoAssetAdapter({objectUrlOwner: objectUrls});
-  const live = {skins: 0, audioBuffers: 0, poseModels: 0, urls: 0};
-  const peak = {...live};
-  const sessions: ReturnType<typeof platformOwners>[] = [];
-  const sample = () => {
-    live.skins = sessions.reduce((total, owner) => total + owner.skins.size, 0);
-    live.audioBuffers = sessions.reduce((total, owner) => total + owner.audioBuffers.size, 0);
-    live.poseModels = sessions.reduce((total, owner) => total + owner.poseModels.size, 0);
-    live.urls = urls.live.size;
-    for (const key of Object.keys(live) as (keyof typeof live)[])
-      peak[key] = Math.max(peak[key], live[key]);
-  };
-  const documents = new Map<string, string>();
-  const segments = Array.from({length: count}, (_, i) => {
-    const source = allKindsSource(i);
-    documents.set(`s${i}`, source);
-    const bytes = text(source);
-    return {
-      id: `s${i}`,
-      title: `章${i}`,
-      next: i + 1 < count ? [`s${i + 1}`] : [],
-      source: {
-        entry: `segments/${i}.yaml`,
-        size: bytes.length,
-        integrity: 'sha256-' + createHash('sha256').update(bytes).digest('hex'),
-      },
-    };
-  });
-  const loader = createDsl4PublicationAssetLoader({
-    manifest: {
-      formatVersion: 1,
-      id: 'long',
-      title: '全資源の長編',
-      entrySegment: 's0',
-      entryPoints: ['s0'],
-      segments,
-    },
-    frontend,
-    videoAssetAdapter: video,
-    maxCachedDocuments: 2,
-    provider: {
-      async read(segment) {
-        return documents.get(segment.id)!;
-      },
-    },
-    async createSegmentSession(segment, _document, _signal, shared) {
-      const marker = Number(segment.id.slice(1));
-      // Each chapter owns its own composition; the video owner is shared by the publication.
-      const owners = platformOwners(objectUrls, shared.video);
-      sessions.push(owners);
-      const lifecycle = createDsl4EmbeddedAssetLifecycle({
-        runtimeComponent: await component(allKindsSource(marker), allKindsAssets(marker)),
-        adapter: owners.adapter,
-        setLoading() {},
-      });
-      return {
-        value: null,
-        lifecycle: {
-          async prepare(payload, ctx) {
-            await lifecycle.prepare(payload, ctx);
-            sample();
-          },
-          async releaseAssets(payload) {
-            await lifecycle.releaseAssets(payload);
-            sample();
-          },
-        },
-        async dispose() {
-          await lifecycle.release({reason: 'session-dispose'});
-          sample();
-        },
-      };
-    },
-  });
-  for (let i = 0; i < count; i++) {
-    const result = await loader.transition(`s${i}`);
-    assert.equal(result.cleanupError, null);
-    const current = loader.getCurrent()!.prepared.value;
-    await current.enterScene('second', context('second'));
-    await current.enterScene('first', context('first'));
-  }
-  await loader.dispose();
-  sample();
-  return {peak, live};
-}
-
-test('long publications keep materialized resources bounded by two chapters, not by length', async () => {
-  const short = await longPublication(4);
-  const long = await longPublication(48);
-  assert.deepEqual(long.peak, short.peak, 'peak residency does not grow with segment count');
-  assert.deepEqual(
-    Object.values(long.peak).map((value) => value > 0),
-    [true, true, true, true],
-    'every resource kind was materialized',
-  );
-  // At most the current chapter and the prepared candidate coexist.
-  assert(long.peak.skins <= 4 && long.peak.audioBuffers <= 2 && long.peak.poseModels <= 2);
-  assert(long.peak.urls <= 2);
-  assert.deepEqual(long.live, {skins: 0, audioBuffers: 0, poseModels: 0, urls: 0});
 });

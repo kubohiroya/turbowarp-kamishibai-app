@@ -1,4 +1,4 @@
-// The compiled profile is shared with the browser publication build, so it lives in the core.
+// The compiled profile is shared with the browser distribution build, so it lives in the core.
 export {
   convertDsl4ProjectToCompiledProfile,
   dsl4DistributionProfiles,

@@ -110,9 +110,10 @@ test('parses bounded lock-dsl4-assets options and rejects unbounded input', () =
   const badRedirects = lockArguments();
   badRedirects[badRedirects.indexOf('--max-redirects') + 1] = '-1';
   assert.throws(() => parseCliArguments(badRedirects), /integer >= 0/u);
-  assert.throws(
-    () => parseCliArguments(lockArguments(['--max-source-files', '8'])),
-    /requires --enable-source-includes/u,
+  assert.equal(
+    parsedOptions(parseCliArguments(lockArguments(['--max-source-files', '8'])), 'lock-dsl4-assets')
+      .maxSourceFiles,
+    8,
   );
 });
 

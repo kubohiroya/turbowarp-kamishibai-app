@@ -88,6 +88,8 @@ story自体の意味の検証（schema・semantic・式）はビルド時にfron
 
 ## 複数章のpublication（`compiled-project.ts`）
 
+> **撤去済み（2026-11-28）**: publication は削除した（[segment・publication の廃止](dsl-4-segment-retirement.md)）。この節と、検証節の publication に関する項目は当時の記録として残す。
+
 `createDsl4PublicationDistributionSb3({distributionProfile: 'compiled'})`は、保存するSB3だけをcompiledにする。
 開いているprojectはYAMLを保持したまま変わらない。省略すると現在のprofileを保つ。
 

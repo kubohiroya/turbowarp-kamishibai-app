@@ -163,11 +163,7 @@ async function story(
     },
   });
   const result = createDsl4SourceGraphFrontend(frontend).parse(graph, {
-    featureFlags: {
-      ...dsl4StandardProductionFeatureFlags,
-      dsl4Runtime: true,
-      dsl4SourceIncludes: true,
-    },
+    featureFlags: dsl4StandardProductionFeatureFlags,
     project,
     sourceId,
     maxComposedSourceBytes: 4 * 1024 * 1024,

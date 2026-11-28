@@ -1252,7 +1252,7 @@ test('rejects invalid input before factories and cleans an incomplete factory ch
   assert.deepEqual(invalidLog, [['media.create'], ['media.release-all']]);
 });
 
-test('publication video ownership can span platform sessions without revoking a live shared URL', async () => {
+test('a supplied video adapter can span platform sessions without revoking a live shared URL', async () => {
   const {createDsl4VideoAssetAdapter} = await import('../src/dsl4/platform/video-asset-adapter.js');
   const bytes = Uint8Array.from([0x1a, 0x45, 0xdf, 0xa3]);
   let created = 0;

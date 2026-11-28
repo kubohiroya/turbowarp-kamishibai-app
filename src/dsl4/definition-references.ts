@@ -264,7 +264,7 @@ export function collectDsl4DefinitionReferences(story: Record<string, unknown>, 
             );
           if (command === 'branch')
             add('branches', typeof value === 'string' ? value : args.branch, [...at, command]);
-          if (command === 'broadcastMessageAndWait' || command === 'gotoSegment')
+          if (command === 'broadcastMessageAndWait')
             uncertain.push({
               path: [...at, command],
               namespaces: allNamespaces,

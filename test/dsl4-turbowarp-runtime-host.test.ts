@@ -2691,7 +2691,7 @@ test('chapters sharing an Object URL owner keep shared control images until the 
       revoked.push(url);
     },
   };
-  // One owner per publication, as the publication host creates it for every chapter host.
+  // One owner shared by two hosts, as a host that supplies its own video adapter would.
   const objectUrlOwner = createDsl4ObjectUrlOwner(urlFunctions);
   async function chapter() {
     const fixture = platformFixture([]);
@@ -2740,9 +2740,9 @@ test('chapters sharing an Object URL owner keep shared control images until the 
   assert.deepEqual(revoked, [], 'the current chapter still holds every shared control image');
   assert.equal(second.document.body.children.length, 1);
   assert.deepEqual(objectUrlOwner.snapshot(), {urls: 3, leases: 3});
-  second.host.stop('publication-end');
+  second.host.stop('shared-owner-end');
   await second.run;
-  await second.host.dispose('publication-end');
+  await second.host.dispose('shared-owner-end');
   assert.deepEqual([...revoked].sort(), [...created].sort());
   assert.deepEqual(objectUrlOwner.snapshot(), {urls: 0, leases: 0});
 });
@@ -4724,42 +4724,6 @@ scenes:
   assert.equal(
     instances.every((instance) => instance.disposed === 1),
     true,
-  );
-});
-
-test('publication host validates controller-owned variable actions without requiring platform ports', async () => {
-  const project = await packagedProject(`kamishibai: '4.0'
-variables: {score: 0, ready: false}
-controls:
-  keymaps:
-    production:
-      Space: navigation.nextAction
-scenes:
-  first:
-    - setVariable: {name: score, value: 7}
-    - changeVariable: {name: score, by: 1}
-    - toggleVariable: ready
-`);
-  const result = await createDsl4TurboWarpRuntimeHost({
-    ...enabledOptions(project, platformFixture([])),
-    publicationSegmentId: 'chapter',
-  });
-  assert(result.ok);
-  const host = hostOf(result);
-  await host.preparePublicationScene('first');
-  await host.start();
-  const state = reported(host.getState().runtime, 'runtime');
-  assert.deepEqual(state.variables, {score: 8, ready: true, startSceneIndex: 1});
-  await host.dispose();
-});
-
-test('standalone host refuses chapter transfer without a publication owner', async () => {
-  const project = await packagedProject(
-    "kamishibai: '4.0'\ncontrols:\n  keymaps:\n    production:\n      Space: navigation.nextAction\nscenes:\n  first:\n    - gotoSegment: chapter2\n",
-  );
-  await assert.rejects(
-    createDsl4TurboWarpRuntimeHost(enabledOptions(project, platformFixture([]))),
-    /gotoSegment/,
   );
 });
 

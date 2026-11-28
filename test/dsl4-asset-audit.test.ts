@@ -315,7 +315,7 @@ test('loads bounded project snapshots and audits a real DSL source without netwo
   });
 });
 
-test('audits an included source graph only with explicit finite graph limits', async () => {
+test('audits an included source graph without an opt-in and honours explicit graph limits', async () => {
   await withProject(async (fixture) => {
     const lines = source.split('\n');
     const assetsStart = lines.indexOf('assets:');
@@ -333,15 +333,18 @@ test('audits an included source graph only with explicit finite graph limits', a
       ),
     ]);
 
-    await assert.rejects(auditDsl4AssetDistribution(auditOptions(fixture)));
+    assertAuditShape(auditReport(await auditDsl4AssetDistribution(auditOptions(fixture))));
     const audit = await auditDsl4AssetDistribution({
       ...auditOptions(fixture),
-      sourceIncludesEnabled: true,
       maxSourceFiles: 8,
       maxTotalSourceBytes: 32 * 1024,
       maxIncludeDepth: 4,
     });
     assertAuditShape(auditReport(audit));
+    await assert.rejects(
+      auditDsl4AssetDistribution({...auditOptions(fixture), maxSourceFiles: 1}),
+      /Source Graph exceeds the 1 file limit/u,
+    );
   });
 });
 

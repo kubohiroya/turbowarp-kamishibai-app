@@ -10,6 +10,7 @@ import {
   validateDsl4ExternalSourceManifestContract,
 } from './external-source-manifest.js';
 import {resolveDsl4FeatureFlags} from './feature-flags.js';
+import {dsl4SourceDeclaresIncludes} from './source-include-detection.js';
 import {
   createDsl4EmbeddedSourceDescriptor,
   Dsl4SourceDescriptorError,
@@ -541,28 +542,24 @@ export function createDsl4BrowserPreviewSourceAdapter(options: {
   if (!isRecord(options)) throw new TypeError('browser preview source options must be an object');
   const sourceFrontend = validateSourceFrontend(options.sourceFrontend);
   const maxSourceBytes = positiveInteger(options.maxSourceBytes, 'maxSourceBytes');
-  const featureFlags = resolveDsl4FeatureFlags(options.featureFlags ?? {});
-  const sourceGraphLimits = featureFlags.dsl4SourceIncludes
-    ? {
-        maxSourceFiles: positiveInteger(
-          options.maxSourceFiles ?? browserSourceGraphDefaultLimits.maxSourceFiles,
-          'maxSourceFiles',
-        ),
-        maxSourceBytes,
-        maxTotalSourceBytes: positiveInteger(
-          options.maxTotalSourceBytes ?? browserSourceGraphDefaultLimits.maxTotalSourceBytes,
-          'maxTotalSourceBytes',
-        ),
-        maxIncludeDepth: positiveInteger(
-          options.maxIncludeDepth ?? browserSourceGraphDefaultLimits.maxIncludeDepth,
-          'maxIncludeDepth',
-        ),
-      }
-    : null;
-  if (
-    sourceGraphLimits &&
-    Number(sourceGraphLimits.maxTotalSourceBytes) < Number(sourceGraphLimits.maxSourceBytes)
-  ) {
+  // Validated for the caller's sake; include processing no longer depends on a flag.
+  resolveDsl4FeatureFlags(options.featureFlags ?? {});
+  const sourceGraphLimits = {
+    maxSourceFiles: positiveInteger(
+      options.maxSourceFiles ?? browserSourceGraphDefaultLimits.maxSourceFiles,
+      'maxSourceFiles',
+    ),
+    maxSourceBytes,
+    maxTotalSourceBytes: positiveInteger(
+      options.maxTotalSourceBytes ?? browserSourceGraphDefaultLimits.maxTotalSourceBytes,
+      'maxTotalSourceBytes',
+    ),
+    maxIncludeDepth: positiveInteger(
+      options.maxIncludeDepth ?? browserSourceGraphDefaultLimits.maxIncludeDepth,
+      'maxIncludeDepth',
+    ),
+  };
+  if (Number(sourceGraphLimits.maxTotalSourceBytes) < Number(sourceGraphLimits.maxSourceBytes)) {
     throw new TypeError('maxTotalSourceBytes must be greater than or equal to maxSourceBytes');
   }
   if (typeof options.onResult !== 'function') throw new TypeError('onResult must be a function');
@@ -615,25 +612,18 @@ export function createDsl4BrowserPreviewSourceAdapter(options: {
   const validateManifest = options.validateManifest ?? validateDsl4ExternalSourceManifestContract;
   const createSourceDescriptor =
     options.createSourceDescriptor ?? createDsl4EmbeddedSourceDescriptor;
-  const createSourceGraph = featureFlags.dsl4SourceIncludes ? options.createSourceGraph : null;
-  const createSourceGraphGeneration = featureFlags.dsl4SourceIncludes
-    ? options.createSourceGraphGeneration
-    : null;
+  const createSourceGraph = options.createSourceGraph;
+  const createSourceGraphGeneration = options.createSourceGraphGeneration;
   if (typeof validateManifest !== 'function') {
     throw new TypeError('validateManifest must be a function');
   }
   if (typeof createSourceDescriptor !== 'function') {
     throw new TypeError('createSourceDescriptor must be a function');
   }
-  if (
-    featureFlags.dsl4SourceIncludes &&
-    createSourceGraph !== undefined &&
-    typeof createSourceGraph !== 'function'
-  ) {
+  if (createSourceGraph !== undefined && typeof createSourceGraph !== 'function') {
     throw new TypeError('createSourceGraph must be a function');
   }
   if (
-    featureFlags.dsl4SourceIncludes &&
     createSourceGraphGeneration !== undefined &&
     typeof createSourceGraphGeneration !== 'function'
   ) {
@@ -1018,7 +1008,7 @@ export function createDsl4BrowserPreviewSourceAdapter(options: {
   }
 
   async function readSourceGraphGeneration() {
-    if (!rootHandle || !manifest || !sourceGraphLimits) {
+    if (!rootHandle || !manifest) {
       throw new TypeError('browser preview Source Graph is not configured');
     }
     const projectRoot = rootHandle;
@@ -1063,6 +1053,15 @@ export function createDsl4BrowserPreviewSourceAdapter(options: {
       sourceId: manifest.sourceId,
       displayName: sourceDisplayName(manifest.path),
       maxComposedSourceBytes: sourceGraphLimits.maxTotalSourceBytes,
+      ...(manifest.cacheId === undefined
+        ? {}
+        : {
+            cacheIdentity: {
+              id: manifest.cacheId,
+              label: sourceDisplayName(manifest.path),
+              databaseName: manifest.cacheDatabaseName,
+            },
+          }),
       subtleCrypto,
     });
   }
@@ -1106,11 +1105,13 @@ export function createDsl4BrowserPreviewSourceAdapter(options: {
       while (!disposed && requestedGeneration === generation) {
         attempts += 1;
         try {
-          if (featureFlags.dsl4SourceIncludes) {
-            prepared = await readStableSourceGraph(requestedGeneration);
-          } else {
-            const descriptor = await readStableSource(requestedGeneration);
-            if (descriptor) prepared = {key: descriptor.integrity, descriptor};
+          // A source that declares `include` is composed with what it names; any other source is
+          // read on its own, so its preview text stays the authored text.
+          const descriptor = await readStableSource(requestedGeneration);
+          if (descriptor) {
+            prepared = dsl4SourceDeclaresIncludes(descriptor.text)
+              ? await readStableSourceGraph(requestedGeneration)
+              : {key: descriptor.integrity, descriptor};
           }
           break;
         } catch (error) {
@@ -1140,7 +1141,7 @@ export function createDsl4BrowserPreviewSourceAdapter(options: {
       }
       if (!prepared || disposed || requestedGeneration !== generation) return snapshot();
       let result;
-      if (featureFlags.dsl4SourceIncludes) {
+      if (prepared.result) {
         result = prepared.result;
       } else {
         const descriptor = prepared.descriptor;
