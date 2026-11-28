@@ -30,6 +30,7 @@ import {
 } from '../../dist/dsl4/runtime-provenance.js';
 import {dsl4RuntimeBlockIconURI} from '../../dist/dsl4/runtime-icon.js';
 import {removeDsl4EmbeddedYamlHats} from '../../dist/dsl4/embedded-yaml-hat.js';
+import {dsl4RuntimePaletteGroups} from '../../dist/dsl4/block-palette-i18n.js';
 
 const projectRoot = fileURLToPath(new URL('../../', import.meta.url));
 interface BundlePackageMetadata {
@@ -177,6 +178,54 @@ const extensionBundle = Object.freeze({
   memberColors: 'member',
   metadata: bundleMetadata,
 });
+/** The groups TurboWarp Plus shows for Scratch's own blocks. */
+const standardPaletteGroups = Object.freeze([
+  'motion',
+  'looks',
+  'sound',
+  'events',
+  'control',
+  'sensing',
+  'operators',
+  'variables',
+  'lists',
+  'myBlocks',
+]);
+
+/**
+ * Every palette group the Stage shows when the SB3 is first opened.
+ *
+ * Without a saved setting, TurboWarp Plus shows an extension's groups only once the sprite or
+ * Stage uses one of their blocks, which hid most of the Kamishibai palette in a new work. The
+ * bundle names the runtime's groups `<member>-<group>` and each other member by its own id, under
+ * the bundle's category.
+ */
+export const dsl4ReleaseVisiblePaletteGroups: readonly string[] = Object.freeze([
+  ...standardPaletteGroups,
+  ...[
+    runtimeExtensionId,
+    ...dsl4RuntimePaletteGroups.map(({id}) => `${runtimeExtensionId}-${id}`),
+    ...externalExtensionMembers.map(({id}) => id),
+  ].map((group) => `${extensionId}/${group}`),
+]);
+
+/** The SB3 entry where TurboWarp Plus Editor keeps its screen state; Scratch and TurboWarp ignore it. */
+const dsl4ReleaseScreenStateEntry = 'tw-plus/workspace.json';
+
+/**
+ * The Editor's screen state with only the block palette: every group shown on the Stage. A fixed
+ * `savedAt` keeps the SB3 reproducible.
+ */
+export function createDsl4ReleaseScreenState(): Buffer {
+  return Buffer.from(
+    JSON.stringify({
+      version: 1,
+      savedAt: 0,
+      slices: {blockPalette: {version: 1, stage: {groups: [...dsl4ReleaseVisiblePaletteGroups]}}},
+    }),
+  );
+}
+
 const poseConfidenceVariableId = 'dsl4-pose-confidence';
 const poseProgressVariableId = 'dsl4-pose-progress';
 const sourceText = `kamishibai: '4.0'
@@ -671,7 +720,11 @@ export async function createDsl4ReleaseSourceFiles() {
     createDsl4RuntimeExtensionSource(),
     loadExternalExtensionSources(),
   ]);
-  const archiveEntries = ['project.json', ...assets.map(({filename}) => filename)];
+  const archiveEntries = [
+    'project.json',
+    ...assets.map(({filename}) => filename),
+    dsl4ReleaseScreenStateEntry,
+  ];
   const files = new Map([
     ['project.source.json', Buffer.from(`${JSON.stringify(project, null, 2)}\n`)],
     [
@@ -705,6 +758,7 @@ export async function createDsl4ReleaseSourceFiles() {
         )}\n`,
       ),
     ],
+    [`.${dsl4ReleaseScreenStateEntry}`, createDsl4ReleaseScreenState()],
     [runtimeExtensionPath, runtimeExtensionSource],
   ]);
   for (const member of externalExtensionSources) files.set(member.path, member.contents);
