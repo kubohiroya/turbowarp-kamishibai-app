@@ -140,7 +140,7 @@ test('projects scene properties without actions while preserving canonical const
 for (const form of ['runtime', 'bundle'] as const) {
   test(`projects the canonical pose steps into a ${form} STEPS editor without relaxing constraints`, () => {
     const editors = createDsl4CoreActionBlockEditorDefinitions(form);
-    assert.equal(editors.length, 3);
+    assert.equal(editors.length, 4);
     const [editor] = editors;
     assert.equal(editor!.apiVersion, 1);
     assert.equal(
@@ -189,6 +189,63 @@ for (const form of ['runtime', 'bundle'] as const) {
 }
 
 for (const form of ['runtime', 'bundle'] as const) {
+  test(`projects canonical animation constraints into the ${form} animate SPEC editor`, () => {
+    const editor = createDsl4CoreActionBlockEditorDefinitions(form).find(
+      (definition) => definition.editorId === 'action-animate-spec',
+    )!;
+    const prefix =
+      form === 'bundle'
+        ? 'kubohiroyakamishibai4_kubohiroyakamishibairuntime4__'
+        : 'kubohiroyakamishibairuntime4_';
+    assert.deepEqual(editor.opcodes, [`${prefix}animate`]);
+    assert.equal(editor.argument, 'SPEC');
+    assert.equal(editor.format, 'json');
+    const projected = new Ajv({strict: false}).compile(editor.schema);
+    const canonical = new Ajv2020({strict: false});
+    canonical.addSchema(canonicalSchema);
+    const original = canonical.compile({$ref: `${canonicalSchema.$id}#/$defs/animateArgs`});
+    const cases: [unknown, boolean][] = [
+      [{to: {x: 0}, seconds: 1}, true],
+      [{to: {x: 10, y: -5, scale: 120, direction: 90, transparency: 50}, seconds: 2}, true],
+      [
+        {
+          to: {y: 20},
+          seconds: 0.5,
+          easing: 'easeInOut',
+          delaySeconds: 1,
+          repeat: 3,
+          alternate: true,
+          background: true,
+        },
+        true,
+      ],
+      [{to: {}, seconds: 1}, false],
+      [{to: {x: 0}}, false],
+      [{seconds: 1}, false],
+      [{to: {x: 0}, seconds: 61}, false],
+      [{to: {x: 0}, seconds: '1'}, false],
+      [{to: {scale: 0}, seconds: 1}, false],
+      [{to: {transparency: 101}, seconds: 1}, false],
+      [{to: {z: 1}, seconds: 1}, false],
+      [{to: {x: 0}, seconds: 1, easing: 'bounce'}, false],
+      [{to: {x: 0}, seconds: 1, repeat: 1.5}, false],
+      [{to: {x: 0}, seconds: 1, unexpected: true}, false],
+      [null, false],
+    ];
+    for (const [sample, expected] of cases) {
+      assert.equal(original(sample), expected, `canonical: ${JSON.stringify(sample)}`);
+      assert.equal(projected(sample), expected, `projected: ${JSON.stringify(sample)}`);
+    }
+    type Titled = {title?: string; properties?: Record<string, Titled>};
+    const properties = editor.schema.properties as Record<string, Titled>;
+    assert.equal(properties.seconds!.title, '秒数');
+    assert.equal(properties.to!.properties!.x!.title, 'x座標');
+    assert.ok(!JSON.stringify(editor.schema).includes('"default":'));
+    assert.ok(!JSON.stringify(editor.schema).includes('#/$defs/'));
+  });
+}
+
+for (const form of ['runtime', 'bundle'] as const) {
   for (const command of ['say', 'think'] as const) {
     test(`projects canonical speech constraints into the ${form} ${command} SPEC editor`, () => {
       const editor = createDsl4CoreActionBlockEditorDefinitions(form).find(
@@ -233,7 +290,7 @@ for (const form of ['runtime', 'bundle'] as const) {
   }
 }
 
-test('registers and releases definition, scene, pose, say and think forms together', () => {
+test('registers and releases definition, scene, pose, animate, say and think forms together', () => {
   const expected = [...definitions, ...createDsl4CoreActionBlockEditorDefinitions('bundle')];
   const recorded: unknown[] = [];
   let removed = 0;
@@ -259,10 +316,10 @@ test('registers and releases definition, scene, pose, say and think forms togeth
       },
     },
   });
-  assert.equal(recorded.length, 12);
+  assert.equal(recorded.length, 13);
   assert.deepEqual(JSON.parse(JSON.stringify(recorded)), expected);
   extension!.dispose();
-  assert.equal(removed, 12);
+  assert.equal(removed, 13);
 });
 
 test('a core-action form registration failure releases the preceding definition and scene forms', () => {

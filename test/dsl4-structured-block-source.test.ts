@@ -739,11 +739,11 @@ test('ships editor definitions for scenes and option substacks without relying o
     },
   });
   assert.equal(info?.id, dsl4BlockAuthoringExtensionId);
-  assert.equal(editors.length, 12);
+  assert.equal(editors.length, 13);
   assert.equal(editors.filter(({argument}) => argument === 'VALUE').length, 8);
   assert.equal(editors.filter(({argument}) => argument === 'PROPERTIES').length, 1);
   assert.equal(editors.filter(({argument}) => argument === 'STEPS').length, 1);
-  assert.equal(editors.filter(({argument}) => argument === 'SPEC').length, 2);
+  assert.equal(editors.filter(({argument}) => argument === 'SPEC').length, 3);
   const hats = info?.blocks.filter((block) => block.blockType === 'hat');
   assert.equal(hats?.length, 2);
   assert.equal(hats?.[0]?.opcode, 'kamishibai');
