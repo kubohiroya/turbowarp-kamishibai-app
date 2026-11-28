@@ -89,6 +89,38 @@ function historyFailure(result: unknown): {
     .diagnostic;
 }
 
+/**
+ * Commands whose effect outlives the action and is not captured in a save: BGM keeps playing,
+ * scene audio keeps its playbacks, setText leaves text drawn on an actor, loop keeps flipping
+ * costumes, and a broadcast runs project scripts that may change anything. Restoring past one would
+ * silently drop its effect, so the save needs a port that captures it.
+ *
+ * Speech, think bubbles, sounds and pose waits end with their action; a save taken during one
+ * cancels and replays it (or waits for it to finish), so nothing of theirs is left to restore.
+ */
+const dsl4UncapturedEffectCommands = new Set([
+  'bgm',
+  'audio',
+  'audioControl',
+  'setText',
+  'loop',
+  'broadcastMessageAndWait',
+]);
+
+function leavesUncapturedState(action: Readonly<Record<string, unknown>>) {
+  if (action.handler === 'custom') return true;
+  const command = String(action.command);
+  // A pose step's sound starts like BGM and keeps playing after the pose.
+  if (command === 'pose') {
+    const steps = (action.args as {steps?: unknown} | undefined)?.steps;
+    return (
+      !Array.isArray(steps) ||
+      steps.some((step) => (step as {sound?: unknown} | null)?.sound !== undefined)
+    );
+  }
+  return dsl4UncapturedEffectCommands.has(command);
+}
+
 export function createDsl4NavigationSession({
   storyDocument,
   controlProfile,
@@ -521,23 +553,7 @@ export function createDsl4NavigationSession({
       throw new TypeError('Saved history position differs from runtime');
     const unsupported = restored.actionEntries
       .map((entry) => actionsByPath.get(entry.actionPath)!)
-      .filter(
-        (action) =>
-          action.handler === 'custom' ||
-          [
-            'bgm',
-            'sound',
-            'audio',
-            'audioControl',
-            'say',
-            'think',
-            'setText',
-            'loop',
-            'broadcastMessageAndWait',
-            'pose',
-            'poseSequence',
-          ].includes(String(action.command)),
-      );
+      .filter(leavesUncapturedState);
     if (unsupported.length && typeof port.validateSaveRestoreSupport !== 'function')
       throw new TypeError('This checkpoint requires an explicit presentation restore handler');
     if (typeof port.validateSaveRestoreSupport === 'function')

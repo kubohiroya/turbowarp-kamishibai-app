@@ -68,7 +68,7 @@ disposeは新しいcheckpoint操作を閉じてprepareへabortを通知し、遅
 
 組込みは、準備済みcostume名によるactor/backdropと画像assetのbinding、actorのXY・size・direction・visible・effect、story actor同士の相対layer順、および動画を復元する。renderer IDやVM target objectを保存しない。物語と無関係なspriteとの任意のinterleaveは復元対象にしない。
 
-動的SVG text、speech bubble、音声、外部broadcast、pose、custom actionの作用は、通常のcommandを再実行して推測復元しない。その履歴を持つcheckpointは、portが`validateSaveRestoreSupport(save, actions)`と対応するcapture/prepareRestorePresentation handlerを持つ場合だけ許可する。handlerはデータ検証、commit、失敗時rollback、採用後finalizeを持ち、非JSONのownerをsaveへ混ぜない。未対応を黙って落とさない。
+action が終わった後も残り、saveに入らない作用は、通常のcommandを再実行して推測復元しない。対象は BGM（`bgm`、および `sound` を持つ `pose` の段）、場面の音声（`audio`・`audioControl`）、動的SVG text（`setText`）、コスチュームの `loop`、外部broadcast（`broadcastMessageAndWait`）、custom action。その履歴を持つcheckpointは、portが`validateSaveRestoreSupport(save, actions)`と対応するcapture/prepareRestorePresentation handlerを持つ場合だけ許可する。speech bubble（`say`・`think`）、`sound`、`sound` を持たない `pose` は action の終了とともに作用が消え、save 中の実行は取り消して再実行する（`sound` は終了を待つ）ため、残る作用がなく handler なしで許可する。handlerはデータ検証、commit、失敗時rollback、採用後finalizeを持ち、非JSONのownerをsaveへ混ぜない。未対応を黙って落とさない。
 
 ## 受け入れ基準と検証
 
