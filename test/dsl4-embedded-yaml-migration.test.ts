@@ -578,3 +578,43 @@ test('new authoring palettes hide retired kamishibai/config/include declarations
     undefined,
   );
 });
+
+test('file migration onto a current runtime moves the declarations into the one palette', async () => {
+  const {mkdtemp, writeFile, readFile, rm} = await import('node:fs/promises'),
+    {tmpdir} = await import('node:os'),
+    path = await import('node:path');
+  const {serializeSb3, readSb3} = await import('../src/builder/sb3.js'),
+    {migrateDsl4EmbeddedYamlFile} = await import('../src/builder/dsl4-embedded-yaml-migrate.js'),
+    {dsl4AuthoringBlockName, dsl4UnifiedDeclarationsRuntimeCapability} =
+      await import('../src/dsl4/block-source-shared.js');
+  const directory = await mkdtemp(path.join(tmpdir(), 'app-yaml-palette-test-'));
+  try {
+    const project = await fixture();
+    (project.extensions as string[]).push('kubohiroyakamishibaiauthoring4');
+    project.extensionURLs.kubohiroyakamishibaiauthoring4 =
+      'data:text/javascript;base64,' + Buffer.from('// retired').toString('base64');
+    const input = path.join(directory, 'old.sb3'),
+      output = path.join(directory, 'new.sb3');
+    await writeFile(input, serializeSb3({'project.json': new Uint8Array()}, project));
+    const result = await migrateDsl4EmbeddedYamlFile({
+      input,
+      output,
+      sourceFrontend: frontend,
+      runtimeExtensionSource: `// ID: kubohiroyakamishibai4\n// current embeddedYamlRoot sourceDocuments\n${dsl4UnifiedDeclarationsRuntimeCapability}\n`,
+    });
+    assert.equal(result.report.paletteUnified, true);
+    const parsed = readSb3(await readFile(output)).project as Obj;
+    assert.equal((parsed.extensions as string[]).includes('kubohiroyakamishibaiauthoring4'), false);
+    assert.equal(Object.hasOwn(parsed.extensionURLs, 'kubohiroyakamishibaiauthoring4'), false);
+    for (const target of parsed.targets)
+      for (const block of Object.values(target.blocks as Record<string, {opcode: string}>))
+        if (dsl4AuthoringBlockName(block.opcode) !== null)
+          assert.equal(
+            block.opcode.startsWith('kubohiroyakamishibaiauthoring4_'),
+            false,
+            block.opcode,
+          );
+  } finally {
+    await rm(directory, {recursive: true, force: true});
+  }
+});

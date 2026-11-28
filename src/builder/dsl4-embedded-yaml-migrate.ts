@@ -1,9 +1,15 @@
-import {createHash, randomUUID} from 'node:crypto';
-import {readFile, lstat, realpath, mkdir, writeFile, link, unlink} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {readFile, lstat, realpath} from 'node:fs/promises';
 import path from 'node:path';
 import {migrateDsl4LegacyBlockProject} from '../dsl4/embedded-yaml-migration.js';
-import {dsl4BlockAuthoringExtensionId} from '../dsl4/structured-block-source.js';
+import {unifyDsl4BlockPaletteProject} from '../dsl4/block-palette-migration.js';
+import {
+  dsl4AuthoringBlockName,
+  dsl4BlockAuthoringExtensionId,
+  dsl4UnifiedDeclarationsRuntimeCapability,
+} from '../dsl4/block-source-shared.js';
 import {createDsl4BlockAuthoringProjectExtensionSource} from './dsl4-catalog-extensions.js';
+import {assertDsl4MigrationPathFree, writeDsl4MigrationOutputs} from './dsl4-migration-output.js';
 import {
   readDsl4PlaybackRuntimeExtensionSource,
   readDsl4NarrativeRuntimeExtensionSource,
@@ -14,15 +20,6 @@ import type {Dsl4SourceFrontend} from '../dsl4/source-frontend.js';
 const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 function fail(code: string, message: string): never {
   throw Object.assign(new Error(message), {code});
-}
-async function nonexistent(filename: string) {
-  try {
-    await lstat(filename);
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return;
-    throw e;
-  }
-  fail('K4-MIGRATION-OUTPUT-EXISTS', `Refusing to overwrite an existing path: ${filename}`);
 }
 export interface MigrateEmbeddedYamlFileOptions {
   input: string;
@@ -50,8 +47,8 @@ export async function migrateDsl4EmbeddedYamlFile(options: MigrateEmbeddedYamlFi
     maximum = options.maxInputBytes ?? 512 * 1024 * 1024;
   if (!stats.isFile() || !Number.isSafeInteger(maximum) || maximum < 1 || stats.size > maximum)
     fail('K4-MIGRATION-INPUT', 'Input must be a bounded regular SB3 file.');
-  await nonexistent(output);
-  if (reportPath) await nonexistent(reportPath);
+  await assertDsl4MigrationPathFree(output);
+  if (reportPath) await assertDsl4MigrationPathFree(reportPath);
   const inputBytes = await readFile(inputPath);
   if (inputBytes.length > maximum) fail('K4-MIGRATION-INPUT', 'Input grew beyond its size limit.');
   const {archive, project: original} = readSb3(inputBytes);
@@ -60,11 +57,11 @@ export async function migrateDsl4EmbeddedYamlFile(options: MigrateEmbeddedYamlFi
     ...(options.entryFile === undefined ? {} : {entryFile: options.entryFile}),
     ...(options.documentPaths === undefined ? {} : {documentPaths: options.documentPaths}),
   });
-  const project = structuredClone(migrated.project),
-    runtimeId =
-      migrated.report.channel === 'bundled'
-        ? 'kubohiroyakamishibai4'
-        : 'kubohiroyakamishibairuntime4';
+  let project = structuredClone(migrated.project);
+  const runtimeId =
+    migrated.report.channel === 'bundled'
+      ? 'kubohiroyakamishibai4'
+      : 'kubohiroyakamishibairuntime4';
   const runtime =
     options.runtimeExtensionSource ??
     (options.narrativeControlEnabled
@@ -91,7 +88,18 @@ export async function migrateDsl4EmbeddedYamlFile(options: MigrateEmbeddedYamlFi
     fail('K4-MIGRATION-RUNTIME', 'The original project does not declare its owning runtime.');
   urls[runtimeId] =
     'data:text/javascript;base64,' + Buffer.from(runtime, 'utf8').toString('base64');
-  if (project.extensions.includes(dsl4BlockAuthoringExtensionId)) {
+  // The refreshed runtime defines the Block Script declarations itself, so blocks the project
+  // kept in the retired extension move onto its opcodes and that extension is dropped.
+  // A runtime from before the merge still draws the declarations with the retired extension, so
+  // that extension is refreshed to the current variant for the project's form instead.
+  const unified = runtime.includes(dsl4UnifiedDeclarationsRuntimeCapability)
+    ? unifyDsl4BlockPaletteProject(project)
+    : null;
+  if (unified) project = unified.project;
+  else if (
+    Array.isArray(project.extensions) &&
+    project.extensions.includes(dsl4BlockAuthoringExtensionId)
+  ) {
     const oldURL = urls[dsl4BlockAuthoringExtensionId];
     const oldSource =
       typeof oldURL === 'string' && oldURL.startsWith('data:text/javascript;base64,')
@@ -102,18 +110,21 @@ export async function migrateDsl4EmbeddedYamlFile(options: MigrateEmbeddedYamlFi
         (block) =>
           block &&
           typeof block === 'object' &&
-          (block as {opcode?: string}).opcode === dsl4BlockAuthoringExtensionId + '_useSection',
+          dsl4AuthoringBlockName((block as {opcode?: unknown}).opcode) === 'useSection',
       ),
     );
     const sourceSections =
       hasSectionBlocks || /"opcode":"useSection"[^}]*"hideFromPalette":false/u.test(oldSource);
     const form = migrated.report.channel === 'bundled' ? 'bundle' : 'runtime';
-    const source = createDsl4BlockAuthoringProjectExtensionSource(form, {
-      sourceSections,
-      narrativeControlEnabled: options.narrativeControlEnabled ?? false,
-    });
     urls[dsl4BlockAuthoringExtensionId] =
-      'data:text/javascript;base64,' + Buffer.from(source, 'utf8').toString('base64');
+      'data:text/javascript;base64,' +
+      Buffer.from(
+        createDsl4BlockAuthoringProjectExtensionSource(form, {
+          sourceSections,
+          narrativeControlEnabled: options.narrativeControlEnabled ?? false,
+        }),
+        'utf8',
+      ).toString('base64');
   }
   const bytes = serializeSb3(archive, project),
     verified = readSb3(bytes),
@@ -147,36 +158,13 @@ export async function migrateDsl4EmbeddedYamlFile(options: MigrateEmbeddedYamlFi
     outputSha256: hash(bytes),
     archiveAssetsPreserved: assetEntries.length,
     runtimeRefreshed: true,
+    paletteUnified:
+      unified !== null &&
+      (unified.report.rewrittenBlocks > 0 || unified.report.authoringExtensionChanged),
   };
-  const outputs: {path: string; bytes: Buffer}[] = [{path: output, bytes}];
+  const outputs: {path: string; bytes: Uint8Array}[] = [{path: output, bytes}];
   if (reportPath)
     outputs.push({path: reportPath, bytes: Buffer.from(JSON.stringify(report, null, 2) + '\n')});
-  const staged: {path: string; temporary: string; installed: boolean; dev: number; ino: number}[] =
-    [];
-  try {
-    for (const item of outputs) {
-      await mkdir(path.dirname(item.path), {recursive: true});
-      const parent = await realpath(path.dirname(item.path));
-      if (path.join(parent, path.basename(item.path)) === inputPath)
-        fail('K4-MIGRATION-IN-PLACE', 'Output resolves to the original input file.');
-      await nonexistent(item.path);
-      const temporary = path.join(parent, `.${path.basename(item.path)}.migration-${randomUUID()}`);
-      await writeFile(temporary, item.bytes, {flag: 'wx'});
-      const stat = await lstat(temporary);
-      staged.push({path: item.path, temporary, installed: false, dev: stat.dev, ino: stat.ino});
-    }
-    for (const item of staged) {
-      await link(item.temporary, item.path);
-      item.installed = true;
-    }
-  } catch (error) {
-    for (const item of staged.filter((s) => s.installed).reverse()) {
-      const current = await lstat(item.path).catch(() => null);
-      if (current?.ino === item.ino && current.dev === item.dev) await unlink(item.path);
-    }
-    throw error;
-  } finally {
-    for (const item of staged) await unlink(item.temporary).catch(() => {});
-  }
+  await writeDsl4MigrationOutputs(outputs, inputPath);
   return {outputPath: output, ...(reportPath ? {reportPath} : {}), report};
 }
