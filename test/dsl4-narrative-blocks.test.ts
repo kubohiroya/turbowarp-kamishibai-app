@@ -1,3 +1,4 @@
+import {canonicalDsl4AuthoringOpcode} from '../src/dsl4/block-source-shared.js';
 import narrativeSchema from '../schema/dsl-4-narrative-control.schema.json' with {type: 'json'};
 import assert from 'node:assert/strict';
 import {test} from 'vitest';
@@ -40,18 +41,31 @@ function read(blocks: ReturnType<typeof authored>) {
 
 test('three visits use real nested substacks and typed reference reporters, not a cached YAML payload', () => {
   const blocks = authored(contract.threeVisits.source);
-  assert(Object.values(blocks).some((block) => block.opcode === prefix + 'narrativeForEach'));
-  const condition = Object.values(blocks).find((block) => block.opcode === prefix + 'narrativeIf')!;
+  assert(
+    Object.values(blocks).some(
+      (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeForEach',
+    ),
+  );
+  const condition = Object.values(blocks).find(
+    (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeIf',
+  )!;
   assert(condition.inputs.SUBSTACK);
   assert(condition.inputs.SUBSTACK2);
-  assert(Object.values(blocks).some((block) => block.opcode === prefix + 'narrativeReference'));
+  assert(
+    Object.values(blocks).some(
+      (block) =>
+        canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeReference',
+    ),
+  );
   const output = read(blocks);
   assert.equal(parse(output).kamishibai, '4.0');
   assert.equal(
     serializeDsl4CanonicalDocument(frontend.parse(output)),
     serializeDsl4CanonicalDocument(frontend.parse(contract.threeVisits.source)),
   );
-  const list = Object.values(blocks).find((block) => block.opcode === prefix + 'narrativeForEach')!;
+  const list = Object.values(blocks).find(
+    (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeForEach',
+  )!;
   list.inputs.ITEMS = [1, [10, '[{"name":"三人目だけ","kind":true}]']];
   assert(read(blocks).includes('三人目だけ'));
   assert(!read(blocks).includes('長兄'));
@@ -89,8 +103,17 @@ test('repeat values round-trip as references in numeric core inputs and conditio
     },
   });
   const blocks = authored(source);
-  assert(Object.values(blocks).some((block) => block.opcode === prefix + 'narrativeVariable'));
-  assert(Object.values(blocks).some((block) => block.opcode === prefix + 'narrativeCompare'));
+  assert(
+    Object.values(blocks).some(
+      (block) =>
+        canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeVariable',
+    ),
+  );
+  assert(
+    Object.values(blocks).some(
+      (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeCompare',
+    ),
+  );
   const before = frontend.parse(source);
   const after = frontend.parse(read(blocks));
   assert(before.ok, JSON.stringify(before.diagnostics));
@@ -101,12 +124,15 @@ test('repeat values round-trip as references in numeric core inputs and conditio
 test('rejects a shared reporter, corrupted second arm, standard control and wrong version at their blocks', () => {
   for (const change of [
     (blocks: ReturnType<typeof authored>) => {
-      const block = Object.values(blocks).find((block) => block.opcode === prefix + 'narrativeIf')!;
+      const block = Object.values(blocks).find(
+        (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeIf',
+      )!;
       block.inputs.SUBSTACK2 = [2, 'missing'];
     },
     (blocks: ReturnType<typeof authored>) => {
       const block = Object.values(blocks).find(
-        (block) => block.opcode === prefix + 'narrativeForEach',
+        (block) =>
+          canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeForEach',
       )!;
       block.opcode = 'control_repeat';
     },
@@ -228,7 +254,12 @@ test('ordered condition lists round-trip without introducing deep synthetic nest
     },
   });
   const blocks = authored(source);
-  assert(Object.values(blocks).some((block) => block.opcode === prefix + 'narrativeLogicList'));
+  assert(
+    Object.values(blocks).some(
+      (block) =>
+        canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeLogicList',
+    ),
+  );
   assert.equal(
     serializeDsl4CanonicalDocument(frontend.parse(read(blocks))),
     serializeDsl4CanonicalDocument(frontend.parse(source)),
@@ -237,14 +268,19 @@ test('ordered condition lists round-trip without introducing deep synthetic nest
 
 test('shared value reporters and blank repeat counts are diagnosed at the actual block', () => {
   const blocks = authored(contract.threeVisits.source);
-  const condition = Object.values(blocks).find((block) => block.opcode === prefix + 'narrativeIf')!;
-  const loop = Object.values(blocks).find((block) => block.opcode === prefix + 'narrativeForEach')!;
+  const condition = Object.values(blocks).find(
+    (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeIf',
+  )!;
+  const loop = Object.values(blocks).find(
+    (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeForEach',
+  )!;
   loop.inputs.AS = condition.inputs.CONDITION;
   assert.throws(() => read(blocks), /cycle or shared/);
   const repeat = authored(
     stringify({kamishibai: '4.0', scenes: {opening: [{repeat: {times: 1, do: []}}]}}),
   );
-  Object.values(repeat).find((block) => block.opcode === prefix + 'narrativeRepeat')!.inputs.TIMES =
-    [1, [4, '']];
+  Object.values(repeat).find(
+    (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'narrativeRepeat',
+  )!.inputs.TIMES = [1, [4, '']];
   assert.throws(() => read(repeat), /fixed integer/);
 });

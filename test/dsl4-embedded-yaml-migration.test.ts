@@ -1,3 +1,4 @@
+import {canonicalDsl4AuthoringOpcode} from '../src/dsl4/block-source-shared.js';
 import assert from 'node:assert/strict';
 import {test} from 'vitest';
 import schema from '../schema/dsl-4.schema.json' with {type: 'json'};
@@ -226,7 +227,8 @@ test('retains standard comments on body blocks and moves one configuration-root 
     stage = project.targets[0],
     blocks = stage.blocks;
   const configId = Object.keys(blocks).find(
-    (id) => blocks[id]!.opcode === dsl4ConfigBlockSourceHatOpcode,
+    (id) =>
+      canonicalDsl4AuthoringOpcode(String(blocks[id]!.opcode)) === dsl4ConfigBlockSourceHatOpcode,
   )!;
   const bodyId = Object.keys(blocks).find((id) => String(blocks[id]!.opcode).endsWith('_wait'))!;
   const note = (blockId: string, text: string) => ({
@@ -252,7 +254,9 @@ test('retains standard comments on body blocks and moves one configuration-root 
   const ambiguous = await fixture(),
     s = ambiguous.targets[0],
     config = Object.keys(s.blocks).find(
-      (id) => s.blocks[id]!.opcode === dsl4ConfigBlockSourceHatOpcode,
+      (id) =>
+        canonicalDsl4AuthoringOpcode(String(s.blocks[id]!.opcode)) ===
+        dsl4ConfigBlockSourceHatOpcode,
     )!;
   s.blocks.main.comment = 'main-note';
   s.blocks[config]!.comment = 'config-note';
@@ -272,7 +276,7 @@ test('rejects missing includes, unsafe/empty filenames, ambiguous mappings and i
     },
     (p: Obj) => {
       const include = Object.values(p.targets[0].blocks).find(
-        (b) => b.opcode === dsl4IncludeBlocksOpcode,
+        (b) => canonicalDsl4AuthoringOpcode(String(b.opcode)) === dsl4IncludeBlocksOpcode,
       ) as Block;
       include.inputs.LABEL = [1, [10, 'missing']];
     },

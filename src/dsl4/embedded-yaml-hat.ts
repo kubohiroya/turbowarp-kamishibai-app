@@ -1,3 +1,4 @@
+import {isDsl4ConfigBlockSourceHat, isDsl4LabeledBlockSourceHat} from './block-source-shared.js';
 import {validateKamishibaiEmbeddedYamlRoot} from './embedded-yaml-root-validation.js';
 import {
   readEmbeddedYamlSourceGraphRecord,
@@ -12,10 +13,7 @@ import {
   installEmbeddedYamlMarker,
   removeEmbeddedYamlMarkers,
 } from '@kubohiroya/turbowarp-document-data/document-source';
-import {
-  dsl4ConfigBlockSourceHatOpcode,
-  dsl4LabeledBlockSourceHatOpcode,
-} from './block-source-shared.js';
+import {} from './block-source-shared.js';
 import {
   dsl4EmbeddedYamlHatOperation,
   dsl4EmbeddedYamlHatOpcode,
@@ -111,8 +109,8 @@ export function installDsl4EmbeddedYamlHat(
       Object.values(target.blocks).some(
         (block) =>
           isRecord(block) &&
-          (block.opcode === dsl4LabeledBlockSourceHatOpcode ||
-            block.opcode === dsl4ConfigBlockSourceHatOpcode ||
+          (isDsl4LabeledBlockSourceHat(block.opcode) ||
+            isDsl4ConfigBlockSourceHat(block.opcode) ||
             (typeof block.opcode === 'string' && block.opcode.endsWith('whenDsl4Source'))),
       ),
   );

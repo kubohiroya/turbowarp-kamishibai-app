@@ -1,3 +1,4 @@
+import {isDsl4ConfigBlockSourceHat, isDsl4LabeledBlockSourceHat} from './block-source-shared.js';
 import {cloneKamishibaiDocumentProject} from './embedded-yaml-project-clone.js';
 import {createYamlBlockOpcodes} from '@kubohiroya/turbowarp-yaml-json/yaml-blocks';
 import {
@@ -180,11 +181,8 @@ export function buildKamishibaiSchemaBlockView(
   const known = roles(descriptor);
   const encoded = encodeSourceDocumentReference(reference);
   for (const block of Object.values(declarations))
-    if (
-      block.opcode === dsl4LabeledBlockSourceHatOpcode ||
-      block.opcode === dsl4ConfigBlockSourceHatOpcode
-    ) {
-      block.opcode = block.opcode === dsl4LabeledBlockSourceHatOpcode ? known.story : known.config;
+    if (isDsl4LabeledBlockSourceHat(block.opcode) || isDsl4ConfigBlockSourceHat(block.opcode)) {
+      block.opcode = isDsl4LabeledBlockSourceHat(block.opcode) ? known.story : known.config;
       block.inputs = {};
       block.fields = {DOCUMENT: [encoded, null]};
     }

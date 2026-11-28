@@ -1,3 +1,4 @@
+import {dsl4AuthoringBlockName} from '../src/dsl4/block-source-shared.js';
 import {createRequire} from 'node:module';
 import assert from 'node:assert/strict';
 import {EventEmitter} from 'node:events';
@@ -538,7 +539,8 @@ test('all three previews reflect the same edited document without loading an ext
       for (const operation of ['control', 'scene'])
         assert.ok(
           preview.blockDefinitions!.some(
-            (definition) => definition.opcode === `kubohiroyakamishibaiauthoring4_${operation}`,
+            // The view writes declarations with the runtime's own opcodes.
+            (definition) => dsl4AuthoringBlockName(definition.opcode) === operation,
           ),
         );
       assert.ok(

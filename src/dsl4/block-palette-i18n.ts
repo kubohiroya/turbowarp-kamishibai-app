@@ -151,7 +151,7 @@ export function withDsl4PaletteGroups<T extends {blocks: readonly unknown[]}>(
 
 const narrativeColors = {color1: '#98683d', color2: '#805731', color3: '#684629'} as const;
 
-/** The groups of the authoring blocks (Kamishibai Block Script). */
+/** The groups of the retired Block Script extension, still written for bases that predate the merge. */
 export const dsl4AuthoringPaletteGroups: readonly Dsl4PaletteGroup[] = Object.freeze([
   {
     id: 'structure',
@@ -212,7 +212,7 @@ export const dsl4AuthoringPaletteGroups: readonly Dsl4PaletteGroup[] = Object.fr
   },
 ]);
 
-/** Japanese texts of the authoring blocks. */
+/** Japanese texts of the retired Block Script extension; the runtime reuses its block texts. */
 export const dsl4AuthoringTranslations: Dsl4BlockTranslations = Object.freeze({
   ja: {
     name: '紙芝居の台本ブロック',
@@ -249,11 +249,8 @@ export const dsl4AuthoringTranslations: Dsl4BlockTranslations = Object.freeze({
   },
 });
 
-const yamlOpcodes = [
-  'embeddedYamlRoot',
-  'embeddedYaml',
-  'embeddedYamlConfig',
-  'embeddedYamlInclude',
+/** Low-level YAML parts of an embedded document; its four document hats sit in the structure group. */
+const yamlPartOpcodes = [
   'yamlMap',
   'yamlKey',
   'yamlSequence',
@@ -266,8 +263,55 @@ const yamlOpcodes = [
   'yamlInlineComment',
 ];
 
-/** The groups of the runtime blocks (Kamishibai DSL 4.0 Runtime). */
+/**
+ * The groups of the Kamishibai blocks, in the order an author builds a story: its frame, what it
+ * declares, then what its scenes do.
+ *
+ * The runtime defines the Block Script declarations itself, so a scene and the actions inside it
+ * share one palette. Each opcode belongs to exactly one group.
+ */
 export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.freeze([
+  {
+    id: 'structure',
+    name: {en: 'Story\nstructure', ja: '台本の\n骨組み'},
+    color1: '#7b4ba8',
+    badge: {color: '#7b4ba8', glyph: 'M4 6h16M8 12h12M8 18h12'},
+    color2: '#683f8f',
+    color3: '#563375',
+    opcodes: [
+      'kamishibai',
+      'kamishibaiConfig',
+      'includeBlocks',
+      'property',
+      'scene',
+      'useSection',
+      'embeddedYamlRoot',
+      'embeddedYaml',
+      'embeddedYamlConfig',
+      'embeddedYamlInclude',
+    ],
+  },
+  {
+    id: 'definitions',
+    name: {en: 'Assets and\nactors', ja: '素材と\n登場人物'},
+    color1: '#3f8fd2',
+    badge: {
+      color: '#3f8fd2',
+      glyph: 'M12 4a4 4 0 1 1 0 8a4 4 0 1 1 0-8M4 21c0-5 3.5-7 8-7s8 2 8 7',
+    },
+    color2: '#3579b2',
+    color3: '#2b6392',
+    opcodes: ['asset', 'actor', 'control', 'textStyle', 'variable'],
+  },
+  {
+    id: 'settings',
+    name: {en: 'Story\nsettings', ja: '作品の\n設定'},
+    color1: '#5a6b80',
+    badge: {color: '#5a6b80', glyph: 'M4 7h16M4 17h16M9 4v6M15 14v6'},
+    color2: '#4c5b6d',
+    color3: '#3f4b5a',
+    opcodes: ['cover', 'loading', 'recognition', 'viewport'],
+  },
   {
     id: 'stage',
     name: {en: 'Stage', ja: '舞台'},
@@ -299,27 +343,13 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     opcodes: ['audio', 'audioControl', 'video', 'videoControl'],
   },
   {
-    id: 'flow',
-    name: {en: 'Story\nflow', ja: '進行'},
-    color1: '#e0a030',
-    badge: {color: '#e0a030', glyph: 'M3 12h15M13 6l6 6-6 6'},
-    color2: '#be8828',
-    color3: '#9c7021',
-    opcodes: ['wait', 'goto', 'branch', 'broadcastMessageAndWait'],
-  },
-  {
-    id: 'input',
-    name: {en: 'Move by\ninput', ja: '入力で\n移動'},
-    color1: '#e0753a',
-    badge: {color: '#e0753a', glyph: 'M5 3l13 9-6 1.5 3.5 7-3 1.5-3.5-7L5 18Z', filled: true},
-    color2: '#be6331',
-    color3: '#9c5128',
-    opcodes: [
-      'keyInputToChangeScene',
-      'touchInputToChangeScene',
-      'poseInputToChangeScene',
-      'imageInputToChangeScene',
-    ],
+    id: 'speech',
+    name: {en: 'Speech\nand text', ja: 'セリフと\n文字'},
+    color1: '#36a874',
+    badge: {color: '#36a874', glyph: 'M3 4h18v12H11l-6 5v-5H3Z'},
+    color2: '#2d8e62',
+    color3: '#257551',
+    opcodes: ['say', 'think', 'setText', 'sayText', 'thinkText'],
   },
   {
     id: 'actor',
@@ -343,17 +373,53 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     ],
   },
   {
-    id: 'speech',
-    name: {en: 'Speech\nand text', ja: 'セリフと\n文字'},
-    color1: '#36a874',
-    badge: {color: '#36a874', glyph: 'M3 4h18v12H11l-6 5v-5H3Z'},
-    color2: '#2d8e62',
-    color3: '#257551',
-    opcodes: ['say', 'think', 'setText', 'sayText', 'thinkText'],
+    id: 'flow',
+    name: {en: 'Story\nflow', ja: '進行'},
+    color1: '#e0a030',
+    badge: {color: '#e0a030', glyph: 'M3 12h15M13 6l6 6-6 6'},
+    color2: '#be8828',
+    color3: '#9c7021',
+    opcodes: [
+      'wait',
+      'goto',
+      'branch',
+      'broadcastMessageAndWait',
+      'narrativeIf',
+      'narrativeRepeat',
+      'narrativeForEach',
+    ],
+  },
+  {
+    id: 'values',
+    name: {en: 'Conditions\nand values', ja: '条件と値'},
+    ...narrativeColors,
+    badge: {color: '#98683d', glyph: 'M5 9h14M5 15h14'},
+    opcodes: [
+      'narrativeReference',
+      'narrativeVariable',
+      'narrativeCompare',
+      'narrativeLogic',
+      'narrativeLogicList',
+      'narrativeNot',
+    ],
+  },
+  {
+    id: 'input',
+    name: {en: 'Move by\ninput', ja: '入力で\n移動'},
+    color1: '#e0753a',
+    badge: {color: '#e0753a', glyph: 'M5 3l13 9-6 1.5 3.5 7-3 1.5-3.5-7L5 18Z', filled: true},
+    color2: '#be6331',
+    color3: '#9c5128',
+    opcodes: [
+      'keyInputToChangeScene',
+      'touchInputToChangeScene',
+      'poseInputToChangeScene',
+      'imageInputToChangeScene',
+    ],
   },
   {
     id: 'pose',
-    name: {en: 'Pose\nrecognition', ja: 'ポーズ\n認識'},
+    name: {en: 'Pose', ja: 'ポーズ'},
     color1: '#d4566a',
     badge: {
       color: '#d4566a',
@@ -361,7 +427,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     },
     color2: '#b4495a',
     color3: '#943c4a',
-    opcodes: ['pose'],
+    opcodes: ['pose', 'poseSteps', 'poseStep'],
   },
   {
     id: 'variables',
@@ -401,6 +467,15 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     ],
   },
   {
+    id: 'details',
+    name: {en: 'Details', ja: '詳しい\n指定'},
+    color1: '#6b7280',
+    badge: {color: '#6b7280', glyph: 'M5 12h.01M12 12h.01M19 12h.01'},
+    color2: '#5a606c',
+    color3: '#4a4f59',
+    opcodes: ['actionOptions', 'customAction'],
+  },
+  {
     id: 'debug',
     name: {en: 'Debugging', ja: '開発・\n診断'},
     color1: '#748091',
@@ -426,7 +501,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
   },
   {
     id: 'document',
-    name: {en: 'Embedded\nYAML', ja: '組込\nYAML'},
+    name: {en: 'YAML\nparts', ja: 'YAMLの\n部品'},
     color1: '#6b7280',
     badge: {
       color: '#6b7280',
@@ -434,15 +509,17 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     },
     color2: '#5a606c',
     color3: '#4a4f59',
-    opcodes: yamlOpcodes,
+    opcodes: yamlPartOpcodes,
   },
 ]);
 
 /** Japanese texts of the runtime blocks. */
 export const dsl4RuntimeTranslations: Dsl4BlockTranslations = Object.freeze({
   ja: {
-    name: '紙芝居 DSL 4.0 ランタイム',
+    name: '紙芝居',
     blocks: {
+      // The declarations keep the texts they had in the retired Block Script extension.
+      ...dsl4AuthoringTranslations.ja!.blocks,
       embeddedYamlRoot: '組込YAMLの起点 [VERSION] [DOCUMENT]',
       embeddedYaml: '組込YAML [DOCUMENT]',
       embeddedYamlConfig: '組込YAMLの設定 [DOCUMENT]',
@@ -517,6 +594,7 @@ export const dsl4RuntimeTranslations: Dsl4BlockTranslations = Object.freeze({
       toggleTitleLanguage: 'タイトルの言語を切り替える',
     },
     menus: {
+      ...dsl4AuthoringTranslations.ja!.menus,
       dsl4VideoSourceType: {asset: '素材', url: 'URL'},
       dsl4VideoPlane: {front: '前面', background: '背面'},
       dsl4VideoOperation: {

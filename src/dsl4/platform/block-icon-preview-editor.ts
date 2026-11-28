@@ -1126,6 +1126,14 @@ export function installDsl4BlockIconPreviews({
       tooltip?.remove();
     });
   }
+  const declarationNamespaces = [
+    {extensionId: dsl4BlockAuthoringExtensionId, prefix: `${dsl4BlockAuthoringExtensionId}_`},
+    {extensionId: 'kubohiroyakamishibairuntime4', prefix: 'kubohiroyakamishibairuntime4_'},
+    {
+      extensionId: 'kubohiroyakamishibai4',
+      prefix: 'kubohiroyakamishibai4_kubohiroyakamishibairuntime4__',
+    },
+  ];
   try {
     if (sceneActionEnabled) {
       const namespaces = [
@@ -1154,32 +1162,35 @@ export function installDsl4BlockIconPreviews({
           }),
         );
       }
-      removers.push(
-        api.registerPreview({
-          extensionId: dsl4BlockAuthoringExtensionId,
-          opcodes: [`${dsl4BlockAuthoringExtensionId}_scene`],
-          mount,
-          hover,
-        }),
-      );
+      // Scenes are runtime blocks now; projects saved earlier still carry the retired extension's.
+      for (const {extensionId, prefix} of declarationNamespaces)
+        removers.push(
+          api.registerPreview({
+            extensionId,
+            opcodes: [`${prefix}scene`],
+            mount,
+            hover,
+          }),
+        );
     }
     if (assetEnabled) {
-      removers.push(
-        api.registerPreview({
-          extensionId: dsl4BlockAuthoringExtensionId,
-          opcodes: [`${dsl4BlockAuthoringExtensionId}_asset`],
-          mount: (container, context, snapshot) =>
-            ownView(
-              mountDsl4BlockIconAssetPreview(
-                container,
-                context,
-                snapshot,
-                Scratch.vm,
-                limits?.maxTotalAssetBytes,
+      for (const {extensionId, prefix} of declarationNamespaces)
+        removers.push(
+          api.registerPreview({
+            extensionId,
+            opcodes: [`${prefix}asset`],
+            mount: (container, context, snapshot) =>
+              ownView(
+                mountDsl4BlockIconAssetPreview(
+                  container,
+                  context,
+                  snapshot,
+                  Scratch.vm,
+                  limits?.maxTotalAssetBytes,
+                ),
               ),
-            ),
-        }),
-      );
+          }),
+        );
     }
   } catch (error) {
     for (const remove of removers.reverse()) remove();

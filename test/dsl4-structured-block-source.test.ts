@@ -1,3 +1,4 @@
+import {canonicalDsl4AuthoringOpcode} from '../src/dsl4/block-source-shared.js';
 import assert from 'node:assert/strict';
 import {mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import os from 'node:os';
@@ -126,7 +127,10 @@ function blocksOf(project: Project): Blocks {
   return project.targets[0]!.blocks;
 }
 function blockWith(blocks: Blocks, opcode: string) {
-  const entry = Object.entries(blocks).find(([, block]) => block.opcode === opcode);
+  const entry = Object.entries(blocks).find(
+    ([, block]) =>
+      canonicalDsl4AuthoringOpcode(String(block.opcode)) === canonicalDsl4AuthoringOpcode(opcode),
+  );
   assert.ok(entry, `Missing block ${opcode}`);
   return entry;
 }
@@ -272,7 +276,7 @@ test('retains meaning for the comprehensive production fixture', async () => {
     'recognition',
   ]) {
     const definitions = Object.values(blocks).filter(
-      (block) => block.opcode === `${helperPrefix}${opcode}`,
+      (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === `${helperPrefix}${opcode}`,
     );
     assert.ok(definitions.length, `Missing ${opcode} definitions`);
     assert.ok(definitions.every((block) => !Object.hasOwn(block.inputs, 'PATH')));
@@ -283,7 +287,7 @@ test('retains meaning for the comprehensive production fixture', async () => {
   }
   // The remaining branch declarations retain their advanced property representation.
   const properties = Object.values(blocks).filter(
-    (block) => block.opcode === `${helperPrefix}property`,
+    (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === `${helperPrefix}property`,
   );
   assert.equal(properties.length, 1);
   assert.ok(JSON.stringify(properties[0]!.inputs.PATH).includes('branches'));
@@ -374,7 +378,7 @@ test('exports definition renaming, value edits, insertion and deletion as valida
   blocks[next]!.parent = last;
   const unusedEntry = Object.entries(blocks).find(
     ([, block]) =>
-      block.opcode === `${helperPrefix}variable` &&
+      canonicalDsl4AuthoringOpcode(String(block.opcode)) === `${helperPrefix}variable` &&
       JSON.stringify(block.inputs.NAME).includes('unused'),
   );
   assert.ok(unusedEntry);
@@ -656,7 +660,7 @@ test('authors pose steps as a C-block of pose/skin/sound step blocks and reads e
   assert.ok(!Object.values(blocks).some(({opcode}) => opcode.endsWith('_pose')));
   const [outerId, outer] = blockWith(blocks, `${helperPrefix}poseSteps`);
   const stepBlocks = Object.entries(blocks).filter(
-    ([, block]) => block.opcode === `${helperPrefix}poseStep`,
+    ([, block]) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === `${helperPrefix}poseStep`,
   );
   assert.equal(stepBlocks.length, 2);
   assert.deepEqual(outer.inputs.SUBSTACK, [2, stepBlocks[0]![0]]);
@@ -798,7 +802,8 @@ test('reads legacy properties and detects overlaps with dedicated declarations i
     legacyBlock.inputs = {PATH: [1, [10, JSON.stringify(propertyPath)]], VALUE: [1, [10, value]]};
     if (opcode === 'control') {
       for (const [otherId, other] of Object.entries(blocksOf(legacy))) {
-        if (other.opcode !== `${helperPrefix}control`) continue;
+        if (canonicalDsl4AuthoringOpcode(String(other.opcode)) !== `${helperPrefix}control`)
+          continue;
         blocksOf(legacy)[other.parent!]!.next = other.next;
         if (other.next !== null) blocksOf(legacy)[other.next]!.parent = other.parent;
         delete blocksOf(legacy)[otherId];
@@ -1417,8 +1422,10 @@ test('round-trips authored dialogue and caption with native join and story-varia
   const blocks = project.targets[0]!.blocks;
   assert.equal(Object.values(blocks).filter((block) => block.opcode === 'operator_join').length, 6);
   assert.equal(
-    Object.values(blocks).filter((block) => block.opcode === helperPrefix + 'narrativeVariable')
-      .length,
+    Object.values(blocks).filter(
+      (block) =>
+        canonicalDsl4AuthoringOpcode(String(block.opcode)) === helperPrefix + 'narrativeVariable',
+    ).length,
     3,
   );
   const firstJoin = Object.entries(blocks).find(([, block]) => block.opcode === 'operator_join')!;

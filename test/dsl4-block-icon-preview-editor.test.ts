@@ -385,7 +385,8 @@ test('installation is inert without the preview capability and registers fixed e
       };
     },
   });
-  assert.equal(previews.length, 4);
+  // Actions in both forms, and scenes and assets in the retired extension and both runtime forms.
+  assert.equal(previews.length, 8);
   assert.equal(fixed.length, 5);
   const show = fixed[0] as {bindings: {argument: string; encode(value: unknown): unknown}[]};
   const x = show.bindings.find((binding) => binding.argument === 'X')!;
@@ -403,11 +404,22 @@ test('installation is inert without the preview capability and registers fixed e
   assert.ok(
     previews[1]!.opcodes.includes('kubohiroyakamishibai4_kubohiroyakamishibairuntime4__say'),
   );
-  assert.deepEqual(previews[2]!.opcodes, ['kubohiroyakamishibaiauthoring4_scene']);
-  assert.deepEqual(previews[3]!.opcodes, ['kubohiroyakamishibaiauthoring4_asset']);
+  // Scenes, then assets, each in the retired extension, the runtime and the Standard bundle.
+  assert.deepEqual(
+    previews.slice(2).map((preview) => preview.opcodes),
+    [
+      ['kubohiroyakamishibaiauthoring4_scene'],
+      ['kubohiroyakamishibairuntime4_scene'],
+      ['kubohiroyakamishibai4_kubohiroyakamishibairuntime4__scene'],
+      ['kubohiroyakamishibaiauthoring4_asset'],
+      ['kubohiroyakamishibairuntime4_asset'],
+      ['kubohiroyakamishibai4_kubohiroyakamishibairuntime4__asset'],
+    ],
+  );
   dispose();
   dispose();
-  assert.equal(removed.size, 9);
+  // 8 previews and 5 fixed editors.
+  assert.equal(removed.size, 13);
 });
 
 test('the asset icon preview renders the current form draft and releases replaced or closed media', async () => {
@@ -455,6 +467,8 @@ test('the asset icon preview renders the current form draft and releases replace
           blockEditors: {
             apiVersion: 1,
             registerPreview(definition) {
+              // Assets register in every spelling; this test drives the retired extension's.
+              if (definition.extensionId !== 'kubohiroyakamishibaiauthoring4') return () => {};
               assert.deepEqual(definition.opcodes, [opcode]);
               assert.equal(definition.hover, undefined);
               mount = definition.mount;

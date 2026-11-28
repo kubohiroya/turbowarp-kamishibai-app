@@ -1,3 +1,4 @@
+import {canonicalDsl4AuthoringOpcode} from '../src/dsl4/block-source-shared.js';
 import assert from 'node:assert/strict';
 import {runInNewContext} from 'node:vm';
 import {strFromU8, strToU8, unzipSync, zipSync} from 'fflate';
@@ -123,7 +124,9 @@ test('omits an off action group and restores its original order when enabled', (
 });
 test('omits disabled definitions without losing their editable values', () => {
   const blocks = fixture();
-  const variable = Object.keys(blocks).find((id) => blocks[id]!.opcode === prefix + 'variable')!;
+  const variable = Object.keys(blocks).find(
+    (id) => canonicalDsl4AuthoringOpcode(String(blocks[id]!.opcode)) === prefix + 'variable',
+  )!;
   const section = wrap(blocks, variable);
   assert.equal(parse(read(blocks)).variables, undefined);
   mode(blocks, section, 'on');
@@ -179,7 +182,7 @@ test('YAML to SB3 reauthoring retains disabled sections and lets them be enabled
   const project = JSON.parse(strFromU8(unzipSync(result.bytes)['project.json']!));
   const restored = project.targets[0].blocks as Blocks;
   const [id, section] = Object.entries(restored).find(
-    ([, b]) => b.opcode === prefix + 'useSection',
+    ([, b]) => canonicalDsl4AuthoringOpcode(String(b.opcode)) === prefix + 'useSection',
   )!;
   assert(section);
   mode(restored, id, 'on');
@@ -194,7 +197,9 @@ test('rejects stale or malformed legacy definition comments rather than overwrit
   const blocks = fixture();
   wrap(
     blocks,
-    Object.keys(blocks).find((id) => blocks[id]!.opcode === prefix + 'variable')!,
+    Object.keys(blocks).find(
+      (id) => canonicalDsl4AuthoringOpcode(String(blocks[id]!.opcode)) === prefix + 'variable',
+    )!,
   );
   const yaml = read(blocks);
   assert.throws(
@@ -290,7 +295,7 @@ test('retains section choices when included modules are relabeled during graph r
   assert.equal(regenerated.nodes.length, 2);
   assert.equal(
     Object.values(restored.targets[0].blocks as Blocks).filter(
-      (b) => b.opcode === prefix + 'useSection',
+      (b) => canonicalDsl4AuthoringOpcode(String(b.opcode)) === prefix + 'useSection',
     ).length,
     1,
   );

@@ -1,3 +1,4 @@
+import {isDsl4ConfigBlockSourceHat, isDsl4LabeledBlockSourceHat} from './block-source-shared.js';
 import {validateKamishibaiEmbeddedYamlRoot} from './embedded-yaml-root-validation.js';
 import {createKamishibaiGraphDocumentProvider} from './embedded-yaml-graph-provider.js';
 import {
@@ -33,10 +34,7 @@ import {
   type RuntimeArtifactSuccess,
 } from './runtime-artifact-descriptor.js';
 import {loadDsl4RuntimeComponent} from './runtime-artifact-loader.js';
-import {
-  dsl4LabeledBlockSourceHatOpcode,
-  dsl4ConfigBlockSourceHatOpcode,
-} from './block-source-shared.js';
+import {} from './block-source-shared.js';
 import {dsl4StandardProductionFeatureFlags} from './feature-flags.js';
 import type {Dsl4SourceFrontend} from './source-frontend.js';
 import {
@@ -126,8 +124,8 @@ function locate(project: JsonObject, frontend: Dsl4SourceFrontend) {
         (block) =>
           record(block) &&
           typeof block.opcode === 'string' &&
-          (block.opcode === dsl4LabeledBlockSourceHatOpcode ||
-            block.opcode === dsl4ConfigBlockSourceHatOpcode ||
+          (isDsl4LabeledBlockSourceHat(block.opcode) ||
+            isDsl4ConfigBlockSourceHat(block.opcode) ||
             block.opcode.endsWith('whenDsl4Source')),
       ),
   );

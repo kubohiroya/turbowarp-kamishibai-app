@@ -1,3 +1,4 @@
+import {canonicalDsl4AuthoringOpcode} from '../src/dsl4/block-source-shared.js';
 import assert from 'node:assert/strict';
 import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import path from 'node:path';
@@ -92,7 +93,10 @@ function setInput(block: Blocks[string], name: string, value: string | number) {
   block.inputs[name] = [1, [typeof value === 'number' ? 4 : 10, value]];
 }
 function first(blocks: Blocks, opcode: string): [string, Blocks[string]] {
-  const found = Object.entries(blocks).find(([, block]) => block.opcode === opcode);
+  const found = Object.entries(blocks).find(
+    ([, block]) =>
+      canonicalDsl4AuthoringOpcode(String(block.opcode)) === canonicalDsl4AuthoringOpcode(opcode),
+  );
   assert.ok(found, `Missing ${opcode}`);
   return found;
 }
@@ -139,11 +143,24 @@ test('authors nested includes as separate labeled declarations deterministically
   const again = await author();
   assert.deepEqual(result.bytes, again.result.bytes);
   const blocks = project.targets[0]!.blocks;
-  assert.equal(Object.values(blocks).filter((block) => block.opcode === hatOpcode).length, 4);
-  assert.equal(Object.values(blocks).filter((block) => block.opcode === includeOpcode).length, 3);
+  assert.equal(
+    Object.values(blocks).filter(
+      (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === hatOpcode,
+    ).length,
+    4,
+  );
+  assert.equal(
+    Object.values(blocks).filter(
+      (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === includeOpcode,
+    ).length,
+    3,
+  );
   assert.deepEqual(
     Object.values(blocks)
-      .filter((block) => block.opcode === `${helperPrefix}kamishibaiConfig`)
+      .filter(
+        (block) =>
+          canonicalDsl4AuthoringOpcode(String(block.opcode)) === `${helperPrefix}kamishibaiConfig`,
+      )
       .map((block) => ((block.inputs.LABEL as unknown[])[1] as unknown[])[1])
       .sort(),
     ['', 'assets.k4.yml'],
@@ -156,11 +173,15 @@ test('authors nested includes as separate labeled declarations deterministically
   assert.equal(raw['blocks-0001.k4.yml'].kamishibai, undefined);
   assert.equal(raw['blocks-0001.k4.yml'].scenes, undefined);
   assert.equal(
-    Object.values(blocks).filter((block) => block.opcode === `${helperPrefix}control`).length,
+    Object.values(blocks).filter(
+      (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === `${helperPrefix}control`,
+    ).length,
     1,
   );
   assert.equal(
-    Object.values(blocks).filter((block) => block.opcode === `${helperPrefix}asset`).length,
+    Object.values(blocks).filter(
+      (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === `${helperPrefix}asset`,
+    ).length,
     1,
   );
 });

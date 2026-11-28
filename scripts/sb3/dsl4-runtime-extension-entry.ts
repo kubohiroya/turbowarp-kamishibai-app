@@ -80,6 +80,13 @@ import {
 } from '../../dist/dsl4/platform/session-backing-diagnostic.js';
 import {dsl4PresentationEffectsRuntimeCapability} from '../../dist/dsl4/presentation-effects-gate.js';
 import {dsl4TextInterpolationRuntimeCapability} from '../../dist/dsl4/text-interpolation.js';
+import {
+  dsl4AuthoringBlockName,
+  dsl4AuthoringBlockNames,
+  dsl4UnifiedDeclarationsRuntimeCapability,
+} from '../../dist/dsl4/block-source-shared.js';
+import {createDsl4BlockAuthoringInfo} from '../../dist/dsl4/structured-block-source-codec.js';
+import {installDsl4RuntimeDeclarationEditors} from '../../dist/builder/dsl4-runtime-declaration-editors.js';
 import {createDsl4StandardAppShell} from '../../dist/dsl4/platform/standard-app-shell.js';
 import {
   hasDsl4EmbeddedBlockStory,
@@ -644,6 +651,10 @@ class KamishibaiDsl4RuntimeExtension {
     : undefined;
   readonly presentationEffectsCapability = dsl4PresentationEffectsRuntimeCapability;
   readonly textInterpolationCapability = dsl4TextInterpolationRuntimeCapability;
+  /** Writers check this marker before giving the declarations the runtime's own opcodes. */
+  readonly unifiedDeclarationsCapability = dsl4UnifiedDeclarationsRuntimeCapability;
+  /** Whether the palette offers the "use this part" block; it follows the loaded project. */
+  sectionBlocksVisible = false;
   lastError: string;
   titleLocale: RuntimeEntryLocale;
   selectedProject: Readonly<Record<string, unknown>> | null;
@@ -757,7 +768,18 @@ class KamishibaiDsl4RuntimeExtension {
         this.ensureComputeSettings();
       });
       this.retryCameraPermissionGateAfterStack();
+      this.refreshSectionBlockVisibility();
     });
+    // Declarations are inert: their hats never start, and a clicked one does nothing. The builder
+    // and the runtime read them as the story's source.
+    for (const name of dsl4AuthoringBlockNames) {
+      const self = this as unknown as Record<string, unknown>;
+      if (self[name] === undefined) self[name] = () => {};
+    }
+    if (DSL4_AUTHORING_PROFILE)
+      installDsl4RuntimeDeclarationEditors(Scratch as never, {
+        narrativeControlEnabled: productionFeatureFlags.dsl4NarrativeControl,
+      });
     if (
       DSL4_AUTHORING_PROFILE &&
       (assetIconPreviewsEnabledAtStartup || blockIconPreviewsEnabledAtStartup) &&
@@ -806,9 +828,16 @@ class KamishibaiDsl4RuntimeExtension {
       {ArgumentType, BlockType},
       {stateVisible: productionFeatureFlags.dsl4TurboWarpStateSurface === true},
     );
+    // The Block Script declarations, defined here so a scene and its actions share one palette.
+    // Their groups come from the runtime's own list below.
+    const declarations = createDsl4BlockAuthoringInfo({
+      sourceSections: this.sectionBlocksVisible,
+      narrativeControlEnabled: productionFeatureFlags.dsl4NarrativeControl,
+      referenceViews: true,
+    });
     const info = {
       id: extensionId,
-      name: 'Kamishibai DSL 4.0 Runtime',
+      name: 'Kamishibai',
       description:
         'TurboWarp Kamishibai runtime. This source-composed extension preserves the original component notices in its source header.',
       docsURI:
@@ -839,6 +868,11 @@ class KamishibaiDsl4RuntimeExtension {
           ...definition,
           hideFromPalette: definition.hideFromPalette || !documentViewsEnabledAtStartup,
         })),
+        ...declarations.blocks.map((block) => {
+          const definition = {...(block as Record<string, unknown>)};
+          delete definition.paletteGroup;
+          return definition;
+        }),
         ...coreActionSurface.blocks,
         ...runtimeVariableSurface.blocks,
         {
@@ -912,6 +946,7 @@ class KamishibaiDsl4RuntimeExtension {
         },
       ],
       menus: {
+        ...declarations.menus,
         ...coreActionSurface.menus,
         ...runtimeVariableSurface.menus,
         ...createYamlBlockMenus(),
@@ -929,6 +964,28 @@ class KamishibaiDsl4RuntimeExtension {
       dsl4RuntimeTranslations,
       this.Scratch.translate?.language,
     );
+  }
+
+  /** Offer "use this part" when the loaded project already has sections, and refresh if that changed. */
+  refreshSectionBlockVisibility() {
+    const targets = (this.turboWarpHost.runtime as {targets?: unknown}).targets;
+    const visible =
+      Array.isArray(targets) &&
+      targets.some((target) => {
+        const blocks = (target as {blocks?: {_blocks?: Record<string, {opcode?: unknown}>}})?.blocks
+          ?._blocks;
+        return (
+          !!blocks &&
+          Object.values(blocks).some(
+            (block) => dsl4AuthoringBlockName(block?.opcode) === 'useSection',
+          )
+        );
+      });
+    if (visible === this.sectionBlocksVisible) return;
+    this.sectionBlocksVisible = visible;
+    (
+      this.Scratch.vm as {extensionManager?: {refreshBlocks?: () => unknown}} | undefined
+    )?.extensionManager?.refreshBlocks?.();
   }
 
   embeddedYamlDocumentsMenu() {
