@@ -1,6 +1,6 @@
 import {deflateSync, inflateSync, strFromU8, strToU8} from 'fflate';
 import {parse} from 'yaml';
-import {Dsl4BlockSourceError} from './block-source-shared.js';
+import {canonicalizeDsl4AuthoringBlocks, Dsl4BlockSourceError} from './block-source-shared.js';
 
 const marker = '# kamishibai-block-sections-v1: ';
 const maximumStateBytes = 8 * 1024 * 1024;
@@ -121,8 +121,11 @@ export function restoreDsl4SectionBlocks(
     const text = (shadow?.fields as Record<string, unknown> | undefined)?.TEXT;
     return Array.isArray(text) ? text[0] : undefined;
   }
+  // A state saved by an earlier writer may spell its declarations with the retired extension; the
+  // caller gives the restored graph its project's spelling.
+  const savedBlocks = canonicalizeDsl4AuthoringBlocks(state.blocks);
   return Object.fromEntries(
-    Object.entries(state.blocks).map(([id, value]) => {
+    Object.entries(savedBlocks).map(([id, value]) => {
       if (!value || typeof value !== 'object' || Array.isArray(value))
         fail('Invalid section block');
       const block = structuredClone(value) as Record<string, unknown>;

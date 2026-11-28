@@ -16,12 +16,20 @@ import type {Dsl4SectionAuthoringState} from './block-source-section-state.js';
 import {createDsl4NarrativeBlockDefinitions, dsl4NarrativeBlockInputs} from './narrative-blocks.js';
 
 import {
+  canonicalDsl4AuthoringOpcode,
+  canonicalizeDsl4AuthoringBlocks,
   dsl4BlockAuthoringExtensionId,
-  dsl4BlockSourceBundleExtensionId,
-  dsl4BlockSourceRuntimeExtensionId,
   Dsl4BlockSourceError,
   dsl4ConfigBlockSourceHatOpcode,
   dsl4LabeledBlockSourceHatOpcode,
+  dsl4RuntimeMenuIdentity,
+  dsl4RuntimeOpcodePrefix,
+  formDsl4AuthoringBlocks,
+  isDsl4ConfigBlockSourceHat,
+  isDsl4IncludeBlocks,
+  isDsl4LabeledBlockSourceHat,
+  type Dsl4BlockOpcodeForm,
+  type Dsl4DeclarationSpelling,
 } from './block-source-shared.js';
 import {dsl4CoreActionManifest} from './core-action-manifest.js';
 import {dsl4VideoControlValueFields} from './video-source.js';
@@ -176,12 +184,7 @@ function json(value: unknown): string {
   return result;
 }
 
-function menuIdentity(form: 'runtime' | 'bundle', name: string) {
-  const field = form === 'bundle' ? `${dsl4BlockSourceRuntimeExtensionId}__${name}` : name;
-  const extension =
-    form === 'bundle' ? dsl4BlockSourceBundleExtensionId : dsl4BlockSourceRuntimeExtensionId;
-  return {opcode: `${extension}_menu_${field}`, field};
-}
+const menuIdentity = dsl4RuntimeMenuIdentity;
 
 function parseJson(value: unknown, blockId?: string): unknown {
   let parsed: unknown;
@@ -234,8 +237,9 @@ function isPoseStepList(value: unknown): value is {steps: PoseStep[]} {
   );
 }
 
+/** Whether an opcode, in any spelling, is a Block Script declaration or one of its menus. */
 export function isDsl4StructuredSourceOpcode(opcode: unknown): boolean {
-  return typeof opcode === 'string' && opcode.startsWith(prefix);
+  return typeof opcode === 'string' && canonicalDsl4AuthoringOpcode(opcode).startsWith(prefix);
 }
 
 /** Pure declarations shared by authored extensions and isolated read-only previews. */
@@ -386,9 +390,10 @@ export function createDsl4StructuredBlockSourceDeclaration({
   version = source.kamishibai ?? '4.0',
   simpleSpeech = true,
   textSafeLiterals = false,
+  declarations = 'unified',
 }: {
   source: Record<string, unknown>;
-  form: 'runtime' | 'bundle';
+  form: Dsl4BlockOpcodeForm;
   hatId: string;
   label?: string;
   includeLabels?: readonly string[];
@@ -397,9 +402,11 @@ export function createDsl4StructuredBlockSourceDeclaration({
   version?: unknown;
   simpleSpeech?: boolean;
   textSafeLiterals?: boolean;
+  /** `legacy` keeps the retired extension's spelling for a base whose runtime predates the merge. */
+  declarations?: Dsl4DeclarationSpelling;
 }): Record<string, Block> {
-  if (sectionState)
-    return restoreDsl4SectionBlocks(
+  if (sectionState) {
+    const restored = restoreDsl4SectionBlocks(
       sectionState,
       hatId,
       idPrefix,
@@ -407,10 +414,10 @@ export function createDsl4StructuredBlockSourceDeclaration({
       source,
       includeLabels,
     ) as Record<string, Block>;
-  const runtimePrefix =
-    form === 'bundle'
-      ? `${dsl4BlockSourceBundleExtensionId}_${dsl4BlockSourceRuntimeExtensionId}__`
-      : `${dsl4BlockSourceRuntimeExtensionId}_`;
+    if (declarations === 'unified') formDsl4AuthoringBlocks(restored, form);
+    return restored;
+  }
+  const runtimePrefix = dsl4RuntimeOpcodePrefix(form);
   const blocks: Record<string, Block> = {};
   let serial = 0;
   function add(opcode: string, values: Record<string, unknown> = {}): string {
@@ -757,12 +764,14 @@ export function createDsl4StructuredBlockSourceDeclaration({
       previousAction = actionId;
     }
   }
+  // Declarations are built under their canonical names; give them the base project's spelling.
+  if (declarations === 'unified') formDsl4AuthoringBlocks(blocks, form);
   return blocks;
 }
 
 /** Read connected blocks only; there is no original YAML or original action cache to fall back to. */
 export function readDsl4StructuredBlockSource(
-  blocks: Record<string, unknown>,
+  savedBlocks: Record<string, unknown>,
   hatId: string,
   readInput: (input: unknown) => unknown,
   {
@@ -770,13 +779,13 @@ export function readDsl4StructuredBlockSource(
     resolveInclude,
     onSourceLocation,
     configHatIds = entry
-      ? Object.keys(blocks)
+      ? Object.keys(savedBlocks)
           .filter(
-            (id) => isRecord(blocks[id]) && blocks[id].opcode === dsl4ConfigBlockSourceHatOpcode,
+            (id) => isRecord(savedBlocks[id]) && isDsl4ConfigBlockSourceHat(savedBlocks[id].opcode),
           )
           .sort((left, right) => {
             const label = (id: string) =>
-              String(readInput((blocks[id] as Block).inputs.LABEL ?? [1, [10, '']]));
+              String(readInput((savedBlocks[id] as Block).inputs.LABEL ?? [1, [10, '']]));
             return label(left) < label(right) ? -1 : label(left) > label(right) ? 1 : 0;
           })
       : [],
@@ -787,6 +796,9 @@ export function readDsl4StructuredBlockSource(
     configHatIds?: readonly string[];
   } = {},
 ): string {
+  // A project saved before the palettes were unified spells its declarations with the retired
+  // extension; read every spelling as one.
+  const blocks = canonicalizeDsl4AuthoringBlocks(savedBlocks);
   const visited = new Set<string>([hatId]);
   const locations = new WeakMap<object, string>();
   function located<T extends object>(value: T, blockId: string): T {
@@ -799,7 +811,7 @@ export function readDsl4StructuredBlockSource(
   let hasIncludeBlocks = false;
   let hasSections = false;
   const activeBlockIds = new Set<string>([hatId]);
-  if ((blocks[hatId] as Block).opcode === dsl4LabeledBlockSourceHatOpcode && entry) {
+  if (isDsl4LabeledBlockSourceHat((blocks[hatId] as Block).opcode) && entry) {
     source.kamishibai = String(readInput((blocks[hatId] as Block).inputs.VERSION));
     paths.push(['kamishibai']);
     onSourceLocation?.(['kamishibai'], hatId);
@@ -1155,9 +1167,8 @@ export function readDsl4StructuredBlockSource(
     const blockCommand = [...specs.keys()].find(
       (name) =>
         block.opcode === name ||
-        block.opcode === `${dsl4BlockSourceRuntimeExtensionId}_${name}` ||
-        block.opcode ===
-          `${dsl4BlockSourceBundleExtensionId}_${dsl4BlockSourceRuntimeExtensionId}__${name}`,
+        block.opcode === `${dsl4RuntimeOpcodePrefix('runtime')}${name}` ||
+        block.opcode === `${dsl4RuntimeOpcodePrefix('bundle')}${name}`,
     );
     const spec = blockCommand ? specs.get(blockCommand) : undefined;
     if (!blockCommand || !spec)
@@ -1357,7 +1368,7 @@ export function readDsl4StructuredBlockSource(
       if (block.opcode === `${prefix}useSection`) {
         const selected = sectionEnabled(block);
         declarations(substack(block), id, enabled && selected, depth + 1, config);
-      } else if (block.opcode === dsl4IncludeBlocksOpcode) {
+      } else if (isDsl4IncludeBlocks(block.opcode)) {
         if (depth) fail('includeBlocks must stay outside definition sections', id);
         if (!resolveInclude) fail('includeBlocks requires a project label resolver', id);
         if (!hasIncludeBlocks) {
@@ -1433,7 +1444,7 @@ export function readDsl4StructuredBlockSource(
     const configHat = blocks[configHatId];
     if (
       !isRecord(configHat) ||
-      configHat.opcode !== dsl4ConfigBlockSourceHatOpcode ||
+      !isDsl4ConfigBlockSourceHat(configHat.opcode) ||
       configHat.topLevel !== true ||
       configHat.parent !== null ||
       configHat.shadow !== false ||

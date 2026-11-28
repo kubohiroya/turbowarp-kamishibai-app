@@ -1,3 +1,9 @@
+import {
+  dsl4AuthoringBlockName,
+  isDsl4ConfigBlockSourceHat,
+  isDsl4IncludeBlocks,
+  isDsl4LabeledBlockSourceHat,
+} from './block-source-shared.js';
 import {addSchemaLineCommentBlocks} from './embedded-yaml-schema-comments.js';
 import {createYamlBlockOpcodes} from '@kubohiroya/turbowarp-yaml-json/yaml-blocks';
 import {buildKamishibaiGraphDocumentViewCandidate} from './embedded-yaml-graph-views.js';
@@ -14,11 +20,7 @@ import {
   writeDocumentViewMetadata,
 } from '@kubohiroya/turbowarp-document-data/view-metadata';
 import {extractDsl4BlockSourcesFromProject} from './turbowarp-yaml-json-block-source.js';
-import {
-  dsl4LabeledBlockSourceHatOpcode,
-  dsl4ConfigBlockSourceHatOpcode,
-  dsl4IncludeBlocksOpcode,
-} from './structured-block-source.js';
+import {} from './structured-block-source.js';
 import {
   createKamishibaiIncludeReferenceView,
   readKamishibaiIncludeReferenceView,
@@ -50,11 +52,13 @@ const copy = <T>(value: T): T => structuredClone(value);
 function fail(code: string, message: string): never {
   throw Object.assign(new Error(message), {code});
 }
-const legacy = new Set([
-  dsl4LabeledBlockSourceHatOpcode,
-  dsl4ConfigBlockSourceHatOpcode,
-  dsl4IncludeBlocksOpcode,
-]);
+/** The block-source declarations a migration replaces, in any spelling. */
+const legacy = {
+  has: (opcode: string) =>
+    isDsl4LabeledBlockSourceHat(opcode) ||
+    isDsl4ConfigBlockSourceHat(opcode) ||
+    isDsl4IncludeBlocks(opcode),
+};
 function targets(project: RecordValue) {
   if (
     !Array.isArray(project.targets) ||
@@ -558,7 +562,7 @@ export async function migrateDsl4LegacyBlockProject(
           seen.add(id);
           const b = blocks[id];
           if (!object(b)) fail('K4-MIGRATION-GRAPH', 'A declaration body is incomplete.');
-          if (b.opcode === 'kubohiroyakamishibaiauthoring4_asset') {
+          if (dsl4AuthoringBlockName(b.opcode) === 'asset') {
             const raw = literal(blocks, b, 'VALUE');
             let asset;
             try {

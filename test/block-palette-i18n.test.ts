@@ -164,7 +164,7 @@ describe('Japanese texts', () => {
       },
     };
     const ja = localizeDsl4ExtensionInfo(info, dsl4RuntimeTranslations, 'ja-JP');
-    expect(ja.name).toBe('紙芝居 DSL 4.0 ランタイム');
+    expect(ja.name).toBe('紙芝居');
     expect(ja.blocks).toEqual([
       {opcode: 'wait', text: '[SECONDS] 秒待つ'},
       '---',
