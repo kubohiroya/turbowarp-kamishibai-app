@@ -1,6 +1,6 @@
 # DSL 4.0 ブロックパレットの統合（草案）
 
-状態: 段階1を 4.0.25（#1213）、段階2を #1214 で実装済み。段階3を実装中。2026-11-28。実装で決めたことは §10〜§12 に記録する。
+状態: 段階1を 4.0.25（#1213）、段階2を #1214、段階3を 4.0.27（#1215）で実装済み。2026-11-28。実装で決めたことは §10〜§13 に記録する。
 
 ## 1. 結論（提案）
 
@@ -133,8 +133,9 @@ playback の bundle からは tree-shake する。
   runtime の opcode で書き、旧台本拡張を同梱しない。持たない古い土台には、従来どおり旧拡張を同梱して旧 opcode で書く。
   組込 YAML のビューは現行 runtime の中で動くので、常に新しい書き方で書き、旧拡張を足さない。
 - **runtime の定義**: runtime 拡張の `getInfo()` が宣言ブロックを定義し、全プロファイル（authoring・playback）で
-  受け付ける。宣言は実行しない（クリックしても何もしない）。編集フォームと「この部分を使う」の見た目は authoring
-  プロファイルだけが登録する（`installDsl4RuntimeDeclarationEditors`）。登録は runtime 単体と bundle の両方の綴りに行う。
+  受け付ける。宣言は実行しない（クリックしても何もしない）。編集フォームと「この部分を使う」の見た目は
+  `installDsl4RuntimeDeclarationEditors` が runtime 単体と bundle の両方の綴りに登録する。4.0.25 では authoring
+  プロファイルだけが登録していたが、§13 のとおり全プロファイルで登録するよう改めた。
 - **「この部分を使う」の表示**: 旧拡張では CLI の `--block-sections true` で選んだ変種がパレット表示を決めていた。
   runtime では、読み込んだ作品に「この部分を使う」ブロックが既にあるときだけパレットに出す。古い土台へ書く場合は
   従来どおり CLI の指定に従う。
@@ -186,3 +187,15 @@ turbowarp-kamishibai migrate-block-palette --input NEW.sb3 --output OLD.sb3 --re
 - **版**: 旧台本拡張の名前は runtime にも含まれる（runtime が台本ブロックの定義と日本語の表示文を共有する）ため、
   4.0.27 を切る。
 - **段階4**: 旧 opcode の読み取りと旧台本拡張の配信を終えるのは、次のメジャー版で行う。
+
+## 13. playback runtime の編集フォーム
+
+- **問題**: 4.0.25 から台本ブロックの編集フォーム（素材などの JSON 入力、シーンの設定、ポーズの手順、セリフ、
+  narrative の条件・行の表）は runtime が登録するようになったが、登録は authoring プロファイルだけだった。旧台本
+  拡張は作品ごとに同梱され、どの runtime でもフォームを出していたので、playback runtime を積んだ作品を Editor で
+  開くとフォームが出ない後退になっていた。`migrate-block-palette` が非 narrative の旧 runtime を playback runtime に
+  差し替える場合も同じだった。
+- **対応**: `installDsl4RuntimeDeclarationEditors` を全プロファイルで呼ぶ。Editor の外（Packager・Web Player）では
+  `Scratch.gui.blockEditors` が無いので何も登録しない。
+- **大きさ**: playback runtime は約 16.5 KB（gzip で約 7 KB、約 0.8%）大きくなる。フォームの JSON Schema は、playback runtime が台本の検証のために既に持っている DSL の Schema から作るので、増えるのは主にフォームを組み立てて登録するコードである。
+  組込 YAML の編集用 Schema（`dsl-4-editor.schema.json`）は従来どおり authoring プロファイルだけが持つ。

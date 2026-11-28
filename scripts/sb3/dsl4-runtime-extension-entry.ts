@@ -780,10 +780,11 @@ class KamishibaiDsl4RuntimeExtension {
       const self = this as unknown as Record<string, unknown>;
       if (self[name] === undefined) self[name] = () => {};
     }
-    if (DSL4_AUTHORING_PROFILE)
-      installDsl4RuntimeDeclarationEditors(Scratch as never, {
-        narrativeControlEnabled: productionFeatureFlags.dsl4NarrativeControl,
-      });
+    // Every profile registers the declaration forms: a work carrying the playback runtime is still
+    // opened in an editor, and outside one the editor API is absent and nothing is registered.
+    installDsl4RuntimeDeclarationEditors(Scratch as never, {
+      narrativeControlEnabled: productionFeatureFlags.dsl4NarrativeControl,
+    });
     if (
       DSL4_AUTHORING_PROFILE &&
       (assetIconPreviewsEnabledAtStartup || blockIconPreviewsEnabledAtStartup) &&
