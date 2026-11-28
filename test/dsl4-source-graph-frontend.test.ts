@@ -16,7 +16,7 @@ const schema = JSON.parse(
 const singleSourceFrontend = createDsl4SourceFrontend(schema);
 const graphFrontend = createDsl4SourceGraphFrontend(singleSourceFrontend);
 const enabledOptions = {
-  featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+  featureFlags: {dsl4Runtime: true},
   maxComposedSourceBytes: 1024 * 1024,
 };
 
@@ -231,7 +231,7 @@ scenes:
   );
 });
 
-test('does not activate graph composition while the startup-fixed flag is off', async () => {
+test('composes without a flag and still requires a composed-source byte limit', async () => {
   const graph = await sourceGraph({
     'story.kamishibai.yaml': `
 kamishibai: '4.0'
@@ -239,18 +239,13 @@ scenes:
   opening: []
 `,
   });
-  assert.throws(() => graphFrontend.parse(graph), /requires dsl4SourceIncludes/u);
+  assert.throws(() => graphFrontend.parse(graph), /maxComposedSourceBytes/u);
   assert.throws(
     () => graphFrontend.parse(graph, {featureFlags: {dsl4Runtime: true}}),
-    /requires dsl4SourceIncludes/u,
-  );
-  assert.throws(
-    () =>
-      graphFrontend.parse(graph, {
-        featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
-      }),
     /maxComposedSourceBytes/u,
   );
+  const parsed = graphFrontend.parse(graph, {maxComposedSourceBytes: 1024});
+  assert.equal(parsed.ok, true, JSON.stringify(parsed.diagnostics));
 });
 
 test('accepts the exact composed-source byte limit and rejects one byte less', async () => {

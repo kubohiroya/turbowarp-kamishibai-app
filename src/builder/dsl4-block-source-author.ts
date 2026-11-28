@@ -413,7 +413,7 @@ export async function authorDsl4BlockSourceGraphSb3({
   const graphFrontend = createDsl4SourceGraphFrontend(sourceFrontend);
   const parseOptions = {
     project: readSb3(baseBytes).project,
-    featureFlags: {...dsl4StandardProductionFeatureFlags, dsl4SourceIncludes: true},
+    featureFlags: dsl4StandardProductionFeatureFlags,
     sourceId,
     maxComposedSourceBytes: sourceGraph.limits.maxTotalSourceBytes,
   };

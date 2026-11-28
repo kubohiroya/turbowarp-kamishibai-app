@@ -76,7 +76,6 @@ export const dsl4WebPreviewShellManifest = deepFreeze({
   module: 'src/builder/dsl4-web-preview-shell.js',
   featureFlags: [
     'dsl4Runtime',
-    'dsl4SourceIncludes',
     'dsl4AppShell',
     'dsl4WebPreviewAdapter',
     'dsl4BrowserDistributionBuild',
@@ -698,6 +697,12 @@ export function createDsl4WebPreviewShell(input: unknown = {}) {
       }
     }
 
+    /** A source that declared `include` comes back composed, with the origin of every StoryPath. */
+    function composedFromIncludes(result: WebPreviewSourceResult) {
+      const storyDocument = (result as {storyDocument?: unknown}).storyDocument;
+      return isRecord(storyDocument) && isRecord(storyDocument.sourceOrigins);
+    }
+
     function queueAssetSource(result: WebPreviewSourceResult) {
       if (!assetPipeline || !assetPipelineOptions || !selectedProjectRoot || disposed) {
         return Promise.resolve();
@@ -722,7 +727,7 @@ export function createDsl4WebPreviewShell(input: unknown = {}) {
       requireActive();
       if (
         result.ok !== true ||
-        !featureFlags.dsl4SourceIncludes ||
+        !composedFromIncludes(result) ||
         !featureFlags.dsl4WebPreviewAssetLiveReload
       ) {
         await prepareSourceResult?.(result);
@@ -1016,7 +1021,8 @@ export function createDsl4WebPreviewShell(input: unknown = {}) {
         if (details) detailsByIntegrity.set(details.integrity, details);
         if (result.ok === true) {
           latestValidSourceResult = result;
-          if (!featureFlags.dsl4SourceIncludes) queueAssetSource(latestValidSourceResult);
+          // Assets of a source composed from includes are staged before its candidate instead.
+          if (!composedFromIncludes(result)) queueAssetSource(latestValidSourceResult);
         } else if (
           typeof result.canonicalSource === 'string' &&
           Array.isArray(result.diagnostics) &&

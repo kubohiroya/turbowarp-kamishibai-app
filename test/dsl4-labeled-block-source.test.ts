@@ -126,7 +126,7 @@ async function author(input = sources) {
 }
 function composed(graph: Awaited<ReturnType<typeof inputGraph>>) {
   const result = createDsl4SourceGraphFrontend(frontend).parse(graph, {
-    featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+    featureFlags: {dsl4Runtime: true},
     maxComposedSourceBytes: 1024 * 1024,
     sourceId: 'main',
   });
@@ -531,7 +531,7 @@ test('CLI authors, exports a YAML package, reauthors, and builds the edited incl
       sourceFrontend: frontend,
       controlProfile: 'production',
       channel: 'bundled',
-      featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+      featureFlags: {dsl4Runtime: true},
       maxSourceBytes: 1024 * 1024,
       maxTotalSourceBytes: 4 * 1024 * 1024,
       maxAssetFileBytes: 1024 * 1024,

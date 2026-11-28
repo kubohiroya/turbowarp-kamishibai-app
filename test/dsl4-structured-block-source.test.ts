@@ -477,7 +477,7 @@ test('exports edits to optional properties, scene ordering and story metadata', 
   assert.equal(yaml.scenes.opening.actions[2]['Hero.moveTo'].easing, 'easeIn');
 });
 
-test('round-trips all 36 core actions using their own opcodes, including scalar/long arguments', () => {
+test('round-trips all 35 core actions using their own opcodes, including scalar/long arguments', () => {
   const actions = [
     {stage: {backdrop: 'Beach', stableId: 'stageId'}},
     {bgm: {sound: 'Music', restart: false, volume: 35}},
@@ -530,7 +530,6 @@ test('round-trips all 36 core actions using their own opcodes, including scalar/
     {videoControl: {id: 'movie', operation: 'play'}},
     {audio: {id: 'music', url: 'https://example.com/music.mp3'}},
     {audioControl: {id: 'music', operation: 'play'}},
-    {gotoSegment: 'chapter2'},
     {presentationEffect: {scope: 'stage', effect: 'zoom', seconds: 1, params: {scale: 2}}},
     {'Hero.animate': {to: {x: 15, y: 20}, seconds: 2}},
   ];
@@ -543,7 +542,7 @@ test('round-trips all 36 core actions using their own opcodes, including scalar/
     const project = {targets: [{isStage: true, name: 'Stage', blocks}]};
     const decoded = parse(extractDsl4BlockSourcesFromProject(project).sources['Stage.k4.yml']!);
     const output = decoded.scenes.opening;
-    assert.equal(output.length, 36);
+    assert.equal(output.length, 35);
     for (const {command} of dsl4TurboWarpCoreActionBlockSpecs) {
       assert.ok(
         Object.values(blocks).some(({opcode}) =>

@@ -24,9 +24,9 @@ import {createDsl4VideoActionPort} from '../../src/dsl4/platform/video-action-po
 import {createDsl4PresentationSavePort} from '../../src/dsl4/platform/presentation-save-port.ts';
 import {createDsl4NavigationSession} from '../../src/dsl4/navigation-session.ts';
 import {createDsl4SaveSlotStore} from '../../src/dsl4/save-slot-store.ts';
-import {fitDsl4PublicationStage} from '../../src/dsl4/platform/publication-stage-layout.ts';
+import {fitDsl4Stage} from '../../src/dsl4/browser-stage-layout.ts';
 import {applyDsl4Viewport} from '../../src/dsl4/viewport.ts';
-globalThis.saveViewport={Renderer,VirtualMachine,createDsl4VideoActionPort,createDsl4PresentationSavePort,createDsl4NavigationSession,createDsl4SaveSlotStore,fitDsl4PublicationStage,applyDsl4Viewport};
+globalThis.saveViewport={Renderer,VirtualMachine,createDsl4VideoActionPort,createDsl4PresentationSavePort,createDsl4NavigationSession,createDsl4SaveSlotStore,fitDsl4Stage,applyDsl4Viewport};
 `,
   );
   await writeFile(
@@ -121,7 +121,7 @@ globalThis.saveViewport={Renderer,VirtualMachine,createDsl4VideoActionPort,creat
         vm.attachRenderer(renderer);
         api.applyDsl4Viewport(vm.runtime, viewport);
         renderer.resize(viewport.width, viewport.height);
-        const releaseLayout = api.fitDsl4PublicationStage({
+        const releaseLayout = api.fitDsl4Stage({
           mount,
           element: stage,
           canvas,

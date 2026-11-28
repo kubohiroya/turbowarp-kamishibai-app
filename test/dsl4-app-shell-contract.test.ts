@@ -39,7 +39,7 @@ test('freezes the #265 Standard author and template-internal palette boundary', 
       .filter(({featureFlag}) => featureFlag === undefined)
       .map(({command}) => command),
   );
-  assert.equal(new Set(contract.standardRuntime.visibleOpcodes).size, 34);
+  assert.equal(new Set(contract.standardRuntime.visibleOpcodes).size, 33);
   assert.deepEqual(contract.standardRuntime.hiddenOpcodes, [
     'versionReporter',
     'statusReporter',

@@ -26,7 +26,8 @@ import {
   Dsl4SourceDescriptorError,
 } from '../dsl4/source-descriptor.js';
 import type {Dsl4SourceFrontend} from '../dsl4/source-frontend.js';
-import {Dsl4SourceGraphError} from '../dsl4/source-graph.js';
+import {Dsl4SourceGraphError, dsl4SourceGraphDefaultLimits} from '../dsl4/source-graph.js';
+import {dsl4SourceDeclaresIncludes} from '../dsl4/source-include-detection.js';
 import {createDsl4SourceGraphFrontend} from '../dsl4/source-graph-frontend.js';
 import {deepFreeze} from '../dsl4/story-document.js';
 import {
@@ -320,34 +321,27 @@ export async function buildDsl4RuntimeComponent(options: {
   nonEmptyString(channel, 'channel');
   const buildFeatureFlags = resolveDsl4BuildFeatureFlags(inputFeatureFlags);
   const featureFlags = embeddedSourceDocuments
-    ? Object.freeze({
-        ...buildFeatureFlags.runtimeFeatureFlags,
-        dsl4Runtime: true,
-        dsl4SourceIncludes: true,
-      })
+    ? Object.freeze({...buildFeatureFlags.runtimeFeatureFlags, dsl4Runtime: true})
     : buildFeatureFlags.runtimeFeatureFlags;
   const usesBlockSource = sourceManifest === undefined || sourceManifest === null;
   if (embeddedSourceDocuments && usesBlockSource)
     throw new TypeError(
       'Original source files are required; legacy block sources do not retain them.',
     );
-  const sourceGraphEnabled =
-    featureFlags.dsl4SourceIncludes || usesBlockSource || embeddedSourceDocuments;
-  const sourceLimits = resolveDsl4BuildSourceLimits({
-    sourceIncludesEnabled: sourceGraphEnabled,
+  // Every entry is read under the per-file limit; the graph limits apply once it names others.
+  const maxSourceFileBytes = resolveDsl4BuildSourceLimits({
+    sourceIncludesEnabled: false,
     maxSourceBytes,
-    maxTotalSourceBytes:
-      maxTotalSourceBytes ?? (embeddedSourceDocuments ? 4 * 1024 * 1024 : undefined),
-  });
+  }).maxSourceFileBytes;
 
   let blockSourceSet = null;
   const source = usesBlockSource
     ? await loadDsl4BlockSourceFromSb3(baseSb3Bytes, {
-        maxSourceBytes: sourceLimits.maxSourceFileBytes,
+        maxSourceBytes: maxSourceFileBytes,
         subtleCrypto,
       })
     : await loadDsl4ExternalSource(projectRoot, sourceManifest, {
-        maxSourceBytes: sourceLimits.maxSourceFileBytes,
+        maxSourceBytes: maxSourceFileBytes,
         subtleCrypto,
         fileSystem,
         preserveOriginalSource: embeddedSourceDocuments,
@@ -363,6 +357,22 @@ export async function buildDsl4RuntimeComponent(options: {
       }
     ).blockSourceSet;
   }
+  // A source that declares `include` is composed with what it names; any other source is built on
+  // its own, so its packaged text stays the authored text. Block sources and embedded source
+  // documents are always read as a graph.
+  const sourceGraphEnabled =
+    usesBlockSource ||
+    embeddedSourceDocuments ||
+    dsl4SourceDeclaresIncludes(source.descriptor.text);
+  const sourceLimits = resolveDsl4BuildSourceLimits({
+    sourceIncludesEnabled: sourceGraphEnabled,
+    maxSourceBytes,
+    maxTotalSourceBytes:
+      maxTotalSourceBytes ??
+      (sourceGraphEnabled
+        ? Math.max(maxSourceFileBytes, dsl4SourceGraphDefaultLimits.maxTotalSourceBytes)
+        : undefined),
+  });
   let parsed: Dsl4BuildParseResult;
   let sourceDescriptor = source.descriptor;
   let sourceDocuments: Awaited<ReturnType<typeof createEmbeddedYamlSourceGraphRecord>> | undefined;
@@ -395,7 +405,7 @@ export async function buildDsl4RuntimeComponent(options: {
     const graphFrontend = createDsl4SourceGraphFrontend(sourceFrontend);
     parsed = graphFrontend.parse(sourceGraph, {
       project: readSb3(baseSb3Bytes).project,
-      featureFlags: {...featureFlags, dsl4SourceIncludes: true},
+      featureFlags,
       sourceId: source.descriptor.sourceId,
       maxComposedSourceBytes: sourceLimits.maxComposedSourceBytes,
     }) as unknown as Dsl4BuildParseResult;

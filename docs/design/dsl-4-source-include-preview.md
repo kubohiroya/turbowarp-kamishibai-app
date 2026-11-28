@@ -2,9 +2,10 @@
 
 ## 1. 適用範囲
 
-`dsl4SourceIncludes`を起動時に明示ONにしたdevelopment previewは、entry sourceだけでなく、
-`include`から到達する全sourceを一つのimmutable generationとして扱います。flagは既定OFFであり、
-OFF時は従来どおりmanifestが指す単一sourceだけを監視します。
+development previewは、entry sourceが`include`を宣言しているとき、entry sourceだけでなく`include`から到達する
+全sourceを一つのimmutable generationとして扱います。flagやCLIの指定は要りません。宣言していないときは従来どおり
+manifestが指す単一sourceだけを読み、entry以外のfileの変更では読み直しません。watcherはproject rootを再帰的に監視し、
+entryが`include`を書き足した時点からincluded sourceの変更にも反応します。
 
 新規sourceの推奨suffixは`.k4.yml`です。entry sourceは`project.source.yml`（`.yaml`／`.json`互換入力可）のroot-level basename、
 included sourceはinclude元から解決されるproject内の相対pathで指定します。directory名やbasename本体は任意で、
@@ -35,8 +36,9 @@ File System Access APIのhandle、source本文、絶対machine pathはsession st
 
 ## 3. 上限と失敗時の動作
 
-`--enable-source-includes`を指定するCLI previewでは、Source Graph固有の三上限をすべて明示します。
-source一ファイルの上限は共通CLIデフォルトを使用し、必要なら小さい値へoverrideします。
+Source Graph固有の三上限は任意で、省略時は`dsl4SourceGraphDefaultLimits`を使います。
+source一ファイルの上限は共通CLIデフォルトを使用し、必要なら小さい値へoverrideします。`--enable-source-includes`は
+既存のscriptのために受理しますが、効果はありません。
 
 - `--max-source-files`: Source Graphのfile数上限
 - `--max-total-source-bytes`: graph全source合計とcomposed canonical sourceの上限
@@ -49,9 +51,6 @@ missingまたはunstableなsource／assetは有限回retryします。timeout後
 
 ## 4. rolloutとrollback
 
-rolloutは`dsl4Runtime: true`と`dsl4SourceIncludes: true`を同じstartup snapshotへ設定したpreviewだけが対象です。
-production artifactへwatcherやbrowser handleを追加しません。
-
-rollbackは`dsl4SourceIncludes`をOFFにしてprocessまたはWeb Preview sessionを再起動します。これによりrecursive graph watch、
-graph resolver、graph asset gateは初期化されず、従来の単一source generationへ戻ります。artifact format、manifest format、
-runtime protocolのmigrationやdata cleanupは不要です。
+include はflagなしで全previewとbuildに入りました（[segment・publicationの廃止](dsl-4-segment-retirement.md)）。
+production artifactへwatcherやbrowser handleを追加しません。includeを宣言しない台本の読み方と成果物は変わらないため、
+既存projectの移行やdata cleanupは不要です。rollbackはこの変更のrevertです。

@@ -143,7 +143,7 @@ test('builds a self-contained component with declaring-source-relative assets', 
   try {
     const built = await buildDsl4RuntimeComponent(
       buildOptions(directory, {
-        featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+        featureFlags: {dsl4Runtime: true},
       }),
     );
 
@@ -196,7 +196,7 @@ test('builds a self-contained component with declaring-source-relative assets', 
     // Recorded through a holder: a `let` assigned inside the callback keeps its initial narrowing.
     const startupCapture: {origin?: unknown} = {};
     const startup = await createDsl4RuntimeStartup({
-      featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+      featureFlags: {dsl4Runtime: true},
       project: persisted,
       sourceFrontend: frontend,
       maxSourceBytes: 16 * 1024,
@@ -244,16 +244,11 @@ test('builds a self-contained component with declaring-source-relative assets', 
   }
 });
 
-test('keeps include disabled unless the startup-fixed feature flag is enabled', async () => {
+test('composes includes without a feature flag', async () => {
   const directory = await createIncludedProject();
   try {
-    await assert.rejects(
-      buildDsl4RuntimeComponent(buildOptions(directory)),
-      (error) =>
-        error instanceof Dsl4BuildError &&
-        error.stage === 'dsl4-parse' &&
-        error.code === 'K4-SCHEMA-UNKNOWN-KEY',
-    );
+    const built = await buildDsl4RuntimeComponent(buildOptions(directory));
+    assert.ok(built.bytes.byteLength > 0);
   } finally {
     await rm(directory, {recursive: true, force: true});
   }
@@ -267,7 +262,7 @@ test('uses the graph-total budget for composed packaging and rejects one byte ov
       encoder.encode(entry).byteLength,
       encoder.encode(chapter).byteLength,
     );
-    const featureFlags = {dsl4Runtime: true, dsl4SourceIncludes: true};
+    const featureFlags = {dsl4Runtime: true};
     const prepared = await buildDsl4RuntimeComponent(
       buildOptions(directory, {
         featureFlags,
@@ -332,7 +327,7 @@ test('rejects an included source symlink which escapes the project root', async 
     await assert.rejects(
       buildDsl4RuntimeComponent(
         buildOptions(directory, {
-          featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+          featureFlags: {dsl4Runtime: true},
         }),
       ),
       (error) =>
@@ -447,7 +442,7 @@ test('embedded raw documents are off by default and cannot be invented from lega
   try {
     const ordinary = await buildDsl4RuntimeComponent(
       buildOptions(root, {
-        featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+        featureFlags: {dsl4Runtime: true},
       }),
     );
     const p = record(readSb3(ordinary.bytes).project);

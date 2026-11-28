@@ -17,7 +17,6 @@ function watcherOptions() {
     manifest,
     sourceFrontend: dsl4TestSourceFrontend,
     maxSourceBytes: 4096,
-    featureFlags: {dsl4SourceIncludes: false},
     loadSource: async () => ({descriptor: {sourceId: 'main', text: source, integrity: 'same'}}),
     onResult() {},
   };
@@ -28,7 +27,19 @@ for (const boundary of ['factory', 'registration', 'source', 'graph', 'assets'] 
     const close = vi.fn();
     const watcher = createDsl4PreviewSourceWatcher({
       ...watcherOptions(),
-      featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: ['graph', 'assets'].includes(boundary)},
+      featureFlags: {dsl4Runtime: true},
+      // Only an entry that declares `include` reaches the graph and asset boundaries.
+      ...(['graph', 'assets'].includes(boundary)
+        ? {
+            loadSource: async () => ({
+              descriptor: {
+                sourceId: 'main',
+                text: `include: chapter.k4.yml\n${source}`,
+                integrity: 'same',
+              },
+            }),
+          }
+        : {}),
       maxSourceFiles: 4,
       maxTotalSourceBytes: 16384,
       maxIncludeDepth: 2,

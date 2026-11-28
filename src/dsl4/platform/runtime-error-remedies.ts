@@ -211,8 +211,8 @@ const remedies: readonly Dsl4ErrorRemedyEntry[] = [
       'The number or size of assets exceeds the limit for one story.',
     ],
     recovery: [
-      '使っていない素材を台本から外す、画像や動画を小さく書き出す、章ごとにファイルを分けるなどで量を減らしてください。',
-      'Remove unused assets, export images and videos at a smaller size, or split the story into separate files per chapter.',
+      '使っていない素材を台本から外す、画像や動画を小さく書き出すなどで量を減らしてください。',
+      'Remove unused assets, or export images and videos at a smaller size.',
     ],
   },
   {
@@ -1561,7 +1561,7 @@ const remedies: readonly Dsl4ErrorRemedyEntry[] = [
     ],
   },
   {
-    when: /^K4-(?:ARTIFACT|COMPILED|PUBLICATION|REGISTRY|BINARY-BACKING|PLATFORM|PACKAGER|BROWSER-BUILD|CONTENT-RUN|DIAGNOSTIC-POLICY)/u,
+    when: /^K4-(?:ARTIFACT|COMPILED|REGISTRY|BINARY-BACKING|PLATFORM|PACKAGER|BROWSER-BUILD|CONTENT-RUN|DIAGNOSTIC-POLICY)/u,
     title: ['作品の成果物を読み込めませんでした', 'The built story could not be loaded'],
     explanation: [
       '書き出した成果物の中身か、その対応関係を確かめられませんでした。',

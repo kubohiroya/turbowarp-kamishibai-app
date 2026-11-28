@@ -261,7 +261,7 @@ test('preserves an existing validated asset distribution and rejects altered pro
     },
   });
   const parsed = createDsl4SourceGraphFrontend(frontend).parse(graph, {
-    featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+    featureFlags: {dsl4Runtime: true},
     maxComposedSourceBytes: 4 * 1024 * 1024,
     sourceId: 'owner-main',
   });

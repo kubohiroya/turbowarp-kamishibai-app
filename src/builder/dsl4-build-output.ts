@@ -26,6 +26,7 @@ import {
 } from './dsl4-playback-runtime-source.js';
 import {Sb3BuilderError} from './errors.js';
 import {resolveDsl4BuildSourceLimits} from './dsl4-source-limits.js';
+import {dsl4SourceGraphDefaultLimits} from '../dsl4/source-graph.js';
 import {readSb3} from './sb3.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -127,14 +128,16 @@ export async function buildDsl4RuntimeComponentFile(options: {
   if (!options.sourceFrontend || typeof options.sourceFrontend.parse !== 'function') {
     throw new TypeError('sourceFrontend must provide parse');
   }
-  const sourceIncludesEnabled =
-    isRecord(options.featureFlags) && options.featureFlags.dsl4SourceIncludes === true;
   const rootBinaryEntriesEnabled =
     isRecord(options.featureFlags) && options.featureFlags.dsl4RootBinaryEntryPackaging === true;
+  // The build decides from the entry source whether it composes included sources, so the candidate
+  // is read back under the graph limit: it is never smaller than what the build allowed.
   const sourceLimits = resolveDsl4BuildSourceLimits({
-    sourceIncludesEnabled,
+    sourceIncludesEnabled: true,
     maxSourceBytes: options.maxSourceBytes,
-    maxTotalSourceBytes: options.maxTotalSourceBytes,
+    maxTotalSourceBytes:
+      options.maxTotalSourceBytes ??
+      Math.max(Number(options.maxSourceBytes), dsl4SourceGraphDefaultLimits.maxTotalSourceBytes),
   });
 
   const [baseSb3Bytes, resolvedSource] = await Promise.all([

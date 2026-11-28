@@ -1,4 +1,4 @@
-import {fitDsl4PublicationStage} from './browser-stage-layout.js';
+import {fitDsl4Stage} from './browser-stage-layout.js';
 import {createTurboWarpRuntimeHost} from '@kubohiroya/turbowarp-runtime-adapter';
 
 import type {Dsl4PreviewDocument, Dsl4PreviewElement} from './preview-dom.js';
@@ -290,7 +290,7 @@ export function createDsl4BrowserTurboWarpStage(options: {
       nativeMount.style.position = oldPosition;
       nativeMount.style.overflow = oldOverflow;
     };
-    releaseViewportLayout = fitDsl4PublicationStage({
+    releaseViewportLayout = fitDsl4Stage({
       mount: nativeMount,
       element: stageRoot as unknown as HTMLElement,
       canvas: canvas as unknown as HTMLCanvasElement,

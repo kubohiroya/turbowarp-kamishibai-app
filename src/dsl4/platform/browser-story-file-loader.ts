@@ -1,4 +1,3 @@
-import {buildDsl4BrowserSelectedPublicationProject} from './publication-project.js';
 import {createDsl4EmbeddedAssetBundle} from '../asset-bundle-descriptor.js';
 import {createDsl4RuntimeArtifactDescriptor} from '../runtime-artifact-descriptor.js';
 import {loadDsl4RuntimeComponent} from '../runtime-artifact-loader.js';
@@ -94,7 +93,6 @@ export interface Dsl4BrowserMutableProject extends Record<string, unknown> {
   extensionStorage?: {
     kubohiroyakamishibai4?: {
       components?: Record<string, unknown>;
-      publication?: unknown;
     };
     kubohiroyakamishibairuntime4?: unknown;
   };
@@ -359,9 +357,6 @@ export async function buildDsl4BrowserSelectedStoryProject(options: {
   const inputEntries = options.entries as unknown as ReadonlyArray<
     Readonly<{path?: string; file: unknown}>
   >;
-  if (inputEntries.some((entry) => entryPath(entry).split('/').at(-1) === 'publication.json')) {
-    return buildDsl4BrowserSelectedPublicationProject(options);
-  }
   const sourceEntry = selectDsl4BrowserStorySource(inputEntries);
   const sourcePath = entryPath(sourceEntry);
   const sourceFile = requireFile(sourceEntry.file);
@@ -515,8 +510,6 @@ export async function buildDsl4BrowserSelectedStoryProject(options: {
     project.extensionStorage.kubohiroyakamishibai4 = {};
   }
   const bundleStorage = project.extensionStorage.kubohiroyakamishibai4;
-  // A newly selected standalone story replaces any publication carried by the base SB3.
-  delete bundleStorage.publication;
   if (!isRecord(bundleStorage.components)) bundleStorage.components = {};
   bundleStorage.components.kubohiroyakamishibairuntime4 = {
     source: structuredClone(sourceDescriptor),

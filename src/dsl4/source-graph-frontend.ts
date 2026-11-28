@@ -572,10 +572,7 @@ export function createDsl4SourceGraphFrontend(sourceFrontend: Dsl4SourceFrontend
         project?: unknown;
       } = {},
     ) {
-      const featureFlags = resolveDsl4FeatureFlags(inputFeatureFlags);
-      if (!featureFlags.dsl4SourceIncludes) {
-        throw new TypeError('Source Graph frontend requires dsl4SourceIncludes');
-      }
+      resolveDsl4FeatureFlags(inputFeatureFlags);
       if (!Number.isSafeInteger(maxComposedSourceBytes) || Number(maxComposedSourceBytes) < 1) {
         throw new TypeError('maxComposedSourceBytes must be a positive safe integer');
       }

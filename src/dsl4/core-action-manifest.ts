@@ -65,7 +65,6 @@ export const dsl4CoreActionManifest = Object.freeze([
     'dsl4PresentationEffects',
   ),
   defineCoreAction('goto', 'global', 'gotoAction', 'finish-only', 'navigation'),
-  defineCoreAction('gotoSegment', 'global', 'gotoSegmentAction', 'finish-only', 'port'),
   defineCoreAction('branch', 'global', 'branchAction', 'finish-only', 'branch'),
   defineCoreAction('setVariable', 'global', 'setVariableAction', 'finish-only', 'variable'),
   defineCoreAction('changeVariable', 'global', 'changeVariableAction', 'finish-only', 'variable'),

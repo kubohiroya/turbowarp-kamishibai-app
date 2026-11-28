@@ -743,7 +743,7 @@ test('publishes included browser sources only as one matching graph generation',
     'scenes:\n  saved: []\n',
   );
   const setup = createAdapter(project, {
-    featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+    featureFlags: {dsl4Runtime: true},
     maxSourceFiles: 8,
     maxTotalSourceBytes: 16 * 1024,
     maxIncludeDepth: 4,

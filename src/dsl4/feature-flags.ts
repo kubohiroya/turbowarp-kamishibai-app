@@ -8,7 +8,6 @@ const featureFlagKeys = new Set([
   'dsl4PresentationEffects',
   'dsl4BroadcastMessageAndWait',
   'dsl4IndexedDBAssetSessionStore',
-  'dsl4SourceIncludes',
   'dsl4AppShell',
   'dsl4WebPreviewAdapter',
   'dsl4BrowserDistributionBuild',
@@ -36,7 +35,6 @@ export const dsl4DefaultFeatureFlags = deepFreeze({
   dsl4PresentationEffects: false,
   dsl4BroadcastMessageAndWait: false,
   dsl4IndexedDBAssetSessionStore: false,
-  dsl4SourceIncludes: false,
   dsl4AppShell: false,
   dsl4WebPreviewAdapter: false,
   dsl4BrowserDistributionBuild: false,
@@ -111,11 +109,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /** Resolve one immutable startup feature snapshot without importing runtime dependencies. */
 export function resolveDsl4FeatureFlags(input: unknown = {}) {
   if (!isRecord(input)) throw new TypeError('DSL 4.0 feature flags must be an object');
-  const unknown = Object.keys(input).filter((key) => !featureFlagKeys.has(key));
+  // `dsl4SourceIncludes` named the include capability while it was opt-in. Include is always on now,
+  // so the key is still accepted (callers outside this package pass it) but has no effect.
+  const flags: Record<string, unknown> = {...input};
+  if (Object.hasOwn(flags, 'dsl4SourceIncludes')) {
+    if (typeof flags.dsl4SourceIncludes !== 'boolean')
+      throw new TypeError('dsl4SourceIncludes feature flag must be boolean');
+    delete flags.dsl4SourceIncludes;
+  }
+  const unknown = Object.keys(flags).filter((key) => !featureFlagKeys.has(key));
   if (unknown.length > 0) {
     throw new TypeError(`Unknown DSL 4.0 feature flag: ${unknown.sort().join(', ')}`);
   }
-  const resolved = {...dsl4DefaultFeatureFlags, ...input};
+  const resolved = {...dsl4DefaultFeatureFlags, ...flags};
   for (const [name, value] of Object.entries(resolved)) {
     if (typeof value !== 'boolean') throw new TypeError(`${name} feature flag must be boolean`);
   }
@@ -147,9 +153,6 @@ export function resolveDsl4FeatureFlags(input: unknown = {}) {
   }
   if (resolved.dsl4IndexedDBAssetSessionStore && !resolved.dsl4Runtime) {
     throw new TypeError('dsl4IndexedDBAssetSessionStore requires dsl4Runtime');
-  }
-  if (resolved.dsl4SourceIncludes && !resolved.dsl4Runtime) {
-    throw new TypeError('dsl4SourceIncludes requires dsl4Runtime');
   }
   if (resolved.dsl4WebPreviewAdapter && (!resolved.dsl4Runtime || !resolved.dsl4AppShell)) {
     throw new TypeError('dsl4WebPreviewAdapter requires dsl4Runtime and dsl4AppShell');

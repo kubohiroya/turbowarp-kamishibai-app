@@ -61,6 +61,32 @@ const dsl4CliDefaultLimitOptions = Object.freeze({
   '--max-total-asset-bytes': dsl4CliDefaultLimits.maxTotalAssetBytes,
 });
 
+/**
+ * Read the optional Source Graph limits. Include needs no opt-in: a build composes included sources
+ * whenever the entry source declares `include`, and limits left out take the graph defaults.
+ * `--enable-source-includes` is still accepted for existing scripts and has no effect.
+ */
+function readOptionalSourceGraphLimits(values: Map<string, string>, maxSourceBytes: number) {
+  const maxTotalSourceBytes = values.has('--max-total-source-bytes')
+    ? readCliInteger(values, '--max-total-source-bytes', 1)
+    : undefined;
+  if (maxTotalSourceBytes !== undefined && maxTotalSourceBytes < maxSourceBytes) {
+    throw new Sb3BuilderError(
+      '--max-total-source-bytes must be greater than or equal to --max-source-bytes.',
+      {stage: 'cli'},
+    );
+  }
+  return {
+    ...(values.has('--max-source-files')
+      ? {maxSourceFiles: readCliInteger(values, '--max-source-files', 1)}
+      : {}),
+    ...(maxTotalSourceBytes === undefined ? {} : {maxTotalSourceBytes}),
+    ...(values.has('--max-include-depth')
+      ? {maxIncludeDepth: readCliInteger(values, '--max-include-depth', 1)}
+      : {}),
+  };
+}
+
 function resolveDsl4CliDefaultLimit(
   values: Map<string, string>,
   option: keyof typeof dsl4CliDefaultLimitOptions,
@@ -236,11 +262,11 @@ Standard DSL 4.0 narrative controls (enabled by default):
   --narrative-control            Compatibility alias for the Standard narrative capability
 
 DSL 4.0 build-dsl4 options:
-  --enable-source-includes       Enable multi-file include processing
+  --enable-source-includes       Accepted for compatibility; include is always processed
   --enable-root-binary-entries  Package DSL assets as root content-addressed ZIP entries
-  --max-source-files N          Maximum files in the include graph
-  --max-total-source-bytes N    Maximum graph total and composed source bytes
-  --max-include-depth N         Maximum include graph depth
+  --max-source-files N          Maximum files in the include graph (default: 64)
+  --max-total-source-bytes N    Maximum graph total and composed source bytes (default: 4194304)
+  --max-include-depth N         Maximum include graph depth (default: 32)
   --history-navigation-available  Permit a selected history.* keymap
   --replace-existing              Replace a same-channel component in the base SB3
   --asset-config FILE             Asset distribution config (requires lock and profile)
@@ -259,10 +285,10 @@ DSL 4.0 build-dsl4 options:
 DSL 4.0 preview-dsl4 options:
   --watch                         Keep watching the selected source (required)
   --enable-presentation-effects   Accepted for compatibility; presentation effects are on
-  --enable-source-includes        Enable transactional Source Graph watching
-  --max-source-files N            Maximum files in the include graph
-  --max-total-source-bytes N      Maximum graph total and composed source bytes
-  --max-include-depth N           Maximum include graph depth
+  --enable-source-includes        Accepted for compatibility; include is always watched
+  --max-source-files N            Maximum files in the include graph (default: 64)
+  --max-total-source-bytes N      Maximum graph total and composed source bytes (default: 4194304)
+  --max-include-depth N           Maximum include graph depth (default: 32)
   --max-project-bytes N           Maximum compressed preview SB3 bytes
   --max-project-json-bytes N      Maximum expanded project.json bytes
   --allow-large-preview-artifacts Acknowledge memory risk above recommended limits
@@ -336,15 +362,15 @@ export-block-dsl options:
   --name NAME                   Work name for the root YAML and the ZIP package
                                 (defaults to the input SB3 filename stem)
   --format FORMAT               Report output: pretty (default) or json
-  --max-source-files N          Maximum files in the include graph
-  --max-total-source-bytes N    Maximum graph total and composed source bytes
-  --max-include-depth N         Maximum include graph depth
+  --max-source-files N          Maximum files in the include graph (default: 64)
+  --max-total-source-bytes N    Maximum graph total and composed source bytes (default: 4194304)
+  --max-include-depth N         Maximum include graph depth (default: 32)
 
 audit-dsl4-assets options:
-  --enable-source-includes       Enable multi-file include processing
-  --max-source-files N          Maximum files in the include graph
+  --enable-source-includes       Accepted for compatibility; include is always processed
+  --max-source-files N          Maximum files in the include graph (default: 64)
   --max-total-source-bytes N    Maximum total bytes in the include graph
-  --max-include-depth N         Maximum include graph depth
+  --max-include-depth N         Maximum include graph depth (default: 32)
   --format FORMAT               Audit output: pretty (default) or json
 
 lock-dsl4-assets options:
@@ -560,7 +586,6 @@ function parseAuditDsl4AssetArguments(arguments_: string[]): {
   maxSourceManifestBytes: number;
   maxAssetConfigBytes: number;
   maxAssetLockBytes: number;
-  sourceIncludesEnabled: boolean;
   maxSourceFiles?: number;
   maxTotalSourceBytes?: number;
   maxIncludeDepth?: number;
@@ -641,35 +666,7 @@ function parseAuditDsl4AssetArguments(arguments_: string[]): {
     throw new Sb3BuilderError('--format must be either pretty or json.', {stage: 'cli'});
   }
 
-  const sourceIncludesEnabled = flags.has('--enable-source-includes');
-  const sourceGraphOptions = [
-    '--max-source-files',
-    '--max-total-source-bytes',
-    '--max-include-depth',
-  ];
-  if (!sourceIncludesEnabled) {
-    const unexpected = sourceGraphOptions.find((option) => values.has(option));
-    if (unexpected) {
-      throw new Sb3BuilderError(`${unexpected} requires --enable-source-includes.`, {stage: 'cli'});
-    }
-  } else {
-    const missing = sourceGraphOptions.find((option) => !values.has(option));
-    if (missing) {
-      throw new Sb3BuilderError(`${missing} is required with --enable-source-includes.`, {
-        stage: 'cli',
-      });
-    }
-  }
-
-  const maxTotalSourceBytes = sourceIncludesEnabled
-    ? positiveInteger('--max-total-source-bytes')
-    : undefined;
-  if (maxTotalSourceBytes !== undefined && maxTotalSourceBytes < maxSourceBytes) {
-    throw new Sb3BuilderError(
-      '--max-total-source-bytes must be greater than or equal to --max-source-bytes.',
-      {stage: 'cli'},
-    );
-  }
+  const sourceGraphLimits = readOptionalSourceGraphLimits(values, maxSourceBytes);
 
   return {
     projectRoot: path.resolve(values.get('--project-root') as string),
@@ -686,14 +683,7 @@ function parseAuditDsl4AssetArguments(arguments_: string[]): {
     maxSourceManifestBytes,
     maxAssetConfigBytes,
     maxAssetLockBytes,
-    sourceIncludesEnabled,
-    ...(sourceIncludesEnabled
-      ? {
-          maxSourceFiles: positiveInteger('--max-source-files'),
-          ...(maxTotalSourceBytes === undefined ? {} : {maxTotalSourceBytes}),
-          maxIncludeDepth: positiveInteger('--max-include-depth'),
-        }
-      : {}),
+    ...sourceGraphLimits,
   };
 }
 
@@ -712,7 +702,6 @@ function parseLockDsl4AssetArguments(arguments_: string[]): {
   timeoutMs: number;
   maxRedirects: number;
   allowedHosts: string[];
-  sourceIncludesEnabled: boolean;
   maxSourceFiles?: number;
   maxTotalSourceBytes?: number;
   maxIncludeDepth?: number;
@@ -806,32 +795,7 @@ function parseLockDsl4AssetArguments(arguments_: string[]): {
       stage: 'cli',
     });
   }
-  const sourceIncludesEnabled = flags.has('--enable-source-includes');
-  const sourceGraphOptions = [
-    '--max-source-files',
-    '--max-total-source-bytes',
-    '--max-include-depth',
-  ];
-  if (!sourceIncludesEnabled) {
-    const unexpected = sourceGraphOptions.find((option) => values.has(option));
-    if (unexpected)
-      throw new Sb3BuilderError(`${unexpected} requires --enable-source-includes.`, {stage: 'cli'});
-  } else {
-    const missing = sourceGraphOptions.find((option) => !values.has(option));
-    if (missing)
-      throw new Sb3BuilderError(`${missing} is required with --enable-source-includes.`, {
-        stage: 'cli',
-      });
-  }
-  const maxTotalSourceBytes = sourceIncludesEnabled
-    ? positiveInteger('--max-total-source-bytes')
-    : undefined;
-  if (maxTotalSourceBytes !== undefined && maxTotalSourceBytes < maxSourceBytes) {
-    throw new Sb3BuilderError(
-      '--max-total-source-bytes must be greater than or equal to --max-source-bytes.',
-      {stage: 'cli'},
-    );
-  }
+  const sourceGraphLimits = readOptionalSourceGraphLimits(values, maxSourceBytes);
   return {
     projectRoot: path.resolve(values.get('--project-root') as string),
     ...(values.has('--source-manifest')
@@ -849,14 +813,7 @@ function parseLockDsl4AssetArguments(arguments_: string[]): {
     timeoutMs,
     maxRedirects,
     allowedHosts,
-    sourceIncludesEnabled,
-    ...(sourceIncludesEnabled
-      ? {
-          maxSourceFiles: positiveInteger('--max-source-files'),
-          ...(maxTotalSourceBytes === undefined ? {} : {maxTotalSourceBytes}),
-          maxIncludeDepth: positiveInteger('--max-include-depth'),
-        }
-      : {}),
+    ...sourceGraphLimits,
   };
 }
 
@@ -1272,30 +1229,14 @@ function parseBuildDsl4Arguments(rest: string[]): Dsl4CliOptions {
       stage: 'cli',
     });
   }
-  if (flags.has('--enable-source-includes')) {
-    requireCliValueOptions(values, [
-      '--max-source-files',
-      '--max-total-source-bytes',
-      '--max-include-depth',
-    ]);
-  }
   const positiveInteger = (option: string) => readCliInteger(values, option, 1);
   const channel = values.get('--channel');
   if (channel !== 'bundled' && channel !== 'unbundled') {
     throw new Sb3BuilderError('--channel must be either bundled or unbundled.', {stage: 'cli'});
   }
   const maxSourceBytes = resolveDsl4CliDefaultLimit(values, '--max-source-bytes');
-  const sourceIncludesEnabled = flags.has('--enable-source-includes');
   const rootBinaryEntriesEnabled = flags.has('--enable-root-binary-entries');
-  const maxTotalSourceBytes = sourceIncludesEnabled
-    ? positiveInteger('--max-total-source-bytes')
-    : null;
-  if (maxTotalSourceBytes !== null && maxTotalSourceBytes < maxSourceBytes) {
-    throw new Sb3BuilderError(
-      '--max-total-source-bytes must be greater than or equal to --max-source-bytes.',
-      {stage: 'cli'},
-    );
-  }
+  const sourceGraphLimits = readOptionalSourceGraphLimits(values, maxSourceBytes);
   const distributionOptions = ['--asset-config', '--asset-lock', '--asset-profile'];
   const distributionSelected = distributionOptions.some((option) => values.has(option));
   if (distributionSelected) {
@@ -1340,22 +1281,10 @@ function parseBuildDsl4Arguments(rest: string[]): Dsl4CliOptions {
           maxAssetLockBytes: positiveInteger('--max-asset-lock-bytes'),
         }
       : {}),
-    ...(sourceIncludesEnabled || rootBinaryEntriesEnabled
-      ? {
-          featureFlags: {
-            dsl4Runtime: true,
-            ...(sourceIncludesEnabled ? {dsl4SourceIncludes: true} : {}),
-            ...(rootBinaryEntriesEnabled ? {dsl4RootBinaryEntryPackaging: true} : {}),
-          },
-          ...(sourceIncludesEnabled
-            ? {
-                maxSourceFiles: positiveInteger('--max-source-files'),
-                maxTotalSourceBytes: maxTotalSourceBytes as number,
-                maxIncludeDepth: positiveInteger('--max-include-depth'),
-              }
-            : {}),
-        }
+    ...(rootBinaryEntriesEnabled
+      ? {featureFlags: {dsl4Runtime: true, dsl4RootBinaryEntryPackaging: true}}
       : {}),
+    ...sourceGraphLimits,
     ...(flags.has('--embedded-source-documents') ? {embeddedSourceDocuments: true} : {}),
     ...(flags.has('--seal-asset-sources') ? {sealAssetSources: true} : {}),
     historyNavigationAvailable: flags.has('--history-navigation-available'),
@@ -1419,17 +1348,7 @@ function parsePreviewDsl4Arguments(rest: string[]): Dsl4PreviewCliOptions {
     throw new Sb3BuilderError('Missing required option: --watch', {stage: 'cli'});
   }
   requireCliValueOptions(values, requiredValueOptions);
-  const sourceIncludesEnabled = flags.has('--enable-source-includes');
   const presentationEffectsEnabled = flags.has('--enable-presentation-effects');
-  if (sourceIncludesEnabled) {
-    requireCliValueOptions(values, graphValueOptions);
-  } else {
-    for (const option of graphValueOptions) {
-      if (values.has(option)) {
-        throw new Sb3BuilderError(`${option} requires --enable-source-includes.`, {stage: 'cli'});
-      }
-    }
-  }
   const positiveInteger = (option: string) => readCliInteger(values, option, 1);
   const port = values.has('--port') ? Number(values.get('--port')) : 0;
   if (!Number.isSafeInteger(port) || port < 0 || port > 65_535) {
@@ -1447,15 +1366,7 @@ function parsePreviewDsl4Arguments(rest: string[]): Dsl4PreviewCliOptions {
     });
   }
   const maxSourceBytes = resolveDsl4CliDefaultLimit(values, '--max-source-bytes');
-  const maxTotalSourceBytes = sourceIncludesEnabled
-    ? positiveInteger('--max-total-source-bytes')
-    : null;
-  if (maxTotalSourceBytes !== null && maxTotalSourceBytes < maxSourceBytes) {
-    throw new Sb3BuilderError(
-      '--max-total-source-bytes must be greater than or equal to --max-source-bytes.',
-      {stage: 'cli'},
-    );
-  }
+  const sourceGraphLimits = readOptionalSourceGraphLimits(values, maxSourceBytes);
   const maxAssetFiles = resolveDsl4CliDefaultLimit(values, '--max-asset-files');
   const maxProjectBytes = values.has('--max-project-bytes')
     ? positiveInteger('--max-project-bytes')
@@ -1539,22 +1450,10 @@ function parsePreviewDsl4Arguments(rest: string[]): Dsl4PreviewCliOptions {
     maxProjectBytes,
     maxProjectJsonBytes,
     allowLargePreviewArtifacts,
-    ...(sourceIncludesEnabled || presentationEffectsEnabled
-      ? {
-          featureFlags: {
-            dsl4Runtime: true,
-            ...(sourceIncludesEnabled ? {dsl4SourceIncludes: true} : {}),
-            ...(presentationEffectsEnabled ? {dsl4PresentationEffects: true} : {}),
-          },
-        }
+    ...(presentationEffectsEnabled
+      ? {featureFlags: {dsl4Runtime: true, dsl4PresentationEffects: true}}
       : {}),
-    ...(sourceIncludesEnabled
-      ? {
-          maxSourceFiles: positiveInteger('--max-source-files'),
-          maxTotalSourceBytes: maxTotalSourceBytes as number,
-          maxIncludeDepth: positiveInteger('--max-include-depth'),
-        }
-      : {}),
+    ...sourceGraphLimits,
     replaceExisting: flags.has('--replace-existing'),
     port,
   };

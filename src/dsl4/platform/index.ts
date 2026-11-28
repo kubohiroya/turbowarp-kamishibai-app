@@ -8,12 +8,6 @@ export {createDsl4MediaActionPort} from './media-action-port.js';
 export {createDsl4VideoActionPort} from './video-action-port.js';
 export {createDsl4VideoAssetAdapter} from './video-asset-adapter.js';
 export {createDsl4ObjectUrlOwner, type Dsl4ObjectUrlOwner} from './object-url-owner.js';
-export {createDsl4VerifiedVideoPrefetchResolver} from './publication-video-prefetch-resolver.js';
-export {
-  assertDsl4PublicationResidentBudget,
-  dsl4PublicationResidentLimits,
-  measureDsl4PublicationResidentBytes,
-} from './publication-resident-budget.js';
 export {createDsl4PlatformAssetSession} from './platform-asset-session.js';
 export {createDsl4PoseActionPort} from './pose-action-port.js';
 export {
@@ -86,13 +80,6 @@ export {
 export {createDsl4BrowserRemoteAssetLoader} from './browser-remote-asset-loader.js';
 
 export {createDsl4AudioActionPort} from './audio-action-port.js';
-
-export {
-  buildDsl4BrowserSelectedPublicationProject,
-  readDsl4ProjectPublication,
-} from './publication-project.js';
-export {createDsl4PublicationRuntimeHost} from './publication-runtime-host.js';
-export {createDsl4PublicationVmStageFactory} from './publication-vm-stage.js';
 
 export {
   createDsl4ComputePreferences,

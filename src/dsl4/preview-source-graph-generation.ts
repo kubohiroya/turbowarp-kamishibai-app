@@ -1,3 +1,4 @@
+import {validateDsl4CacheIdentity} from './cache-identity.js';
 import {computeDsl4Sha256Integrity} from './source-descriptor.js';
 import type {Dsl4SourceFrontend} from './source-frontend.js';
 import {createDsl4SourceGraphFrontend} from './source-graph-frontend.js';
@@ -29,12 +30,15 @@ export async function createDsl4PreviewSourceGraphGeneration(
     sourceId: inputSourceId,
     displayName: inputDisplayName,
     maxComposedSourceBytes,
+    cacheIdentity: inputCacheIdentity,
     subtleCrypto = globalThis.crypto?.subtle,
   }: {
     sourceFrontend: Dsl4SourceFrontend;
     sourceId: string;
     displayName: string;
     maxComposedSourceBytes: number;
+    /** The entry source's persisted story cache, when its manifest names one. */
+    cacheIdentity?: unknown;
     subtleCrypto?: Dsl4SubtleCrypto | undefined;
   },
 ) {
@@ -49,6 +53,8 @@ export async function createDsl4PreviewSourceGraphGeneration(
   }
   const sourceId = nonEmptyString(inputSourceId, 'sourceId');
   const displayName = nonEmptyString(inputDisplayName, 'displayName');
+  const cacheIdentity =
+    inputCacheIdentity === undefined ? undefined : validateDsl4CacheIdentity(inputCacheIdentity);
   const discoveryOrder = sourceGraph.discoveryOrder;
   const nodes = sourceGraph.nodes;
   if (!Array.isArray(discoveryOrder) || !Array.isArray(nodes)) {
@@ -81,7 +87,7 @@ export async function createDsl4PreviewSourceGraphGeneration(
   );
   const graphFrontend = createDsl4SourceGraphFrontend(sourceFrontend as Dsl4SourceFrontend);
   const parsed = graphFrontend.parse(sourceGraph, {
-    featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+    featureFlags: {dsl4Runtime: true},
     sourceId,
     maxComposedSourceBytes: Number(maxComposedSourceBytes),
     // `canonicalSource` is named because the snapshot below reads it and the result republishes
@@ -99,6 +105,7 @@ export async function createDsl4PreviewSourceGraphGeneration(
       byteLength: Number(sourceGraph.totalSourceBytes),
       integrity,
       text: typeof parsed.canonicalSource === 'string' ? parsed.canonicalSource : '',
+      ...(cacheIdentity === undefined ? {} : {cacheIdentity}),
     },
   });
   return deepFreeze({

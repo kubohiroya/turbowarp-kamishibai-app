@@ -16,6 +16,9 @@ import {
 } from './dsl4-external-source.js';
 import {loadDsl4LocalAssetSnapshot} from './dsl4-local-assets.js';
 import {loadDsl4BuildSourceGraph} from './dsl4-source-graph.js';
+import {dsl4CliDefaultLimits} from './dsl4-cli-default-limits.js';
+import {dsl4SourceGraphDefaultLimits} from '../dsl4/source-graph.js';
+import {dsl4SourceDeclaresIncludes} from '../dsl4/source-include-detection.js';
 import {resolveDsl4BuildSourceLimits} from './dsl4-source-limits.js';
 import type {Dsl4FileWatcher} from './file-system.js';
 import type {Dsl4SourceFrontend} from '../dsl4/source-frontend.js';
@@ -196,11 +199,14 @@ export function createDsl4PreviewSourceWatcher({
   if (!isRecord(sourceFrontend) || typeof sourceFrontend.parse !== 'function') {
     throw new TypeError('sourceFrontend must provide parse');
   }
-  const featureFlags = resolveDsl4FeatureFlags(inputFeatureFlags);
+  // Validated for the caller's sake; include processing no longer depends on a flag.
+  resolveDsl4FeatureFlags(inputFeatureFlags);
   const sourceLimits = resolveDsl4BuildSourceLimits({
-    sourceIncludesEnabled: featureFlags.dsl4SourceIncludes,
+    sourceIncludesEnabled: true,
     maxSourceBytes,
-    maxTotalSourceBytes,
+    maxTotalSourceBytes:
+      maxTotalSourceBytes ??
+      Math.max(maxSourceBytes, dsl4SourceGraphDefaultLimits.maxTotalSourceBytes),
   });
   if (typeof onResult !== 'function') throw new TypeError('onResult must be a function');
   if (onError !== undefined && typeof onError !== 'function') {
@@ -208,28 +214,39 @@ export function createDsl4PreviewSourceWatcher({
   }
   if (typeof loadSource !== 'function') throw new TypeError('loadSource must be a function');
   if (typeof watchFactory !== 'function') throw new TypeError('watchFactory must be a function');
-  if (featureFlags.dsl4SourceIncludes && typeof loadSourceGraph !== 'function') {
+  if (typeof loadSourceGraph !== 'function') {
     throw new TypeError('loadSourceGraph must be a function');
   }
-  if (featureFlags.dsl4SourceIncludes && typeof loadAssets !== 'function') {
+  if (typeof loadAssets !== 'function') {
     throw new TypeError('loadAssets must be a function');
   }
-  const graphLimits = featureFlags.dsl4SourceIncludes
-    ? {
-        maxSourceFiles: positiveSafeInteger(maxSourceFiles, 'maxSourceFiles'),
-        maxSourceBytes: sourceLimits.maxSourceFileBytes,
-        maxTotalSourceBytes: sourceLimits.maxSourceGraphBytes,
-        maxIncludeDepth: positiveSafeInteger(maxIncludeDepth, 'maxIncludeDepth'),
-      }
-    : null;
-  const assetLimits = featureFlags.dsl4SourceIncludes
-    ? {
-        maxFileBytes: positiveSafeInteger(maxAssetFileBytes, 'maxAssetFileBytes'),
-        maxFiles: positiveSafeInteger(maxAssetFiles, 'maxAssetFiles'),
-        maxTotalBytes: positiveSafeInteger(maxTotalAssetBytes, 'maxTotalAssetBytes'),
-      }
-    : null;
-  if (assetLimits && assetLimits.maxFileBytes > assetLimits.maxTotalBytes) {
+  const graphLimits = {
+    maxSourceFiles: positiveSafeInteger(
+      maxSourceFiles ?? dsl4SourceGraphDefaultLimits.maxSourceFiles,
+      'maxSourceFiles',
+    ),
+    maxSourceBytes: sourceLimits.maxSourceFileBytes,
+    maxTotalSourceBytes: sourceLimits.maxSourceGraphBytes,
+    maxIncludeDepth: positiveSafeInteger(
+      maxIncludeDepth ?? dsl4SourceGraphDefaultLimits.maxIncludeDepth,
+      'maxIncludeDepth',
+    ),
+  };
+  const assetLimits = {
+    maxFileBytes: positiveSafeInteger(
+      maxAssetFileBytes ?? dsl4CliDefaultLimits.maxAssetFileBytes,
+      'maxAssetFileBytes',
+    ),
+    maxFiles: positiveSafeInteger(
+      maxAssetFiles ?? dsl4CliDefaultLimits.maxAssetFiles,
+      'maxAssetFiles',
+    ),
+    maxTotalBytes: positiveSafeInteger(
+      maxTotalAssetBytes ?? dsl4CliDefaultLimits.maxTotalAssetBytes,
+      'maxTotalAssetBytes',
+    ),
+  };
+  if (assetLimits.maxFileBytes > assetLimits.maxTotalBytes) {
     throw new TypeError('maxAssetFileBytes must be less than or equal to maxTotalAssetBytes');
   }
   const quiet = finiteMilliseconds(quietWindowMs, 'quietWindowMs', 0);
@@ -241,12 +258,13 @@ export function createDsl4PreviewSourceWatcher({
     throw new TypeError('manifest.path must be resolved');
   }
   const sourcePath = path.resolve(projectRoot, ...manifest.path.split('/'));
-  const sourceDirectory = path.dirname(sourcePath);
   const sourceBasename = path.basename(sourcePath);
   const textEncoder = new TextEncoder();
 
   let started = false;
   let disposed = false;
+  /** Whether the entry last read declared `include`, so every project file can change it. */
+  let composed = false;
   let status: 'idle' | 'watching' | 'waiting' | 'stabilizing' | 'failed' | 'disposed' = 'idle';
   let revision = 0;
   let published = 0;
@@ -317,9 +335,6 @@ export function createDsl4PreviewSourceWatcher({
   }
 
   async function loadIncludedGeneration() {
-    if (!graphLimits || !assetLimits) {
-      throw new TypeError('Source Graph preview limits are unavailable');
-    }
     const entrySource = await loadSource(projectRoot, manifest, {
       maxSourceBytes: sourceLimits.maxSourceFileBytes,
       subtleCrypto,
@@ -332,6 +347,9 @@ export function createDsl4PreviewSourceWatcher({
       sourceId: manifest.sourceId,
       displayName: sourceBasename,
       maxComposedSourceBytes: sourceLimits.maxComposedSourceBytes,
+      ...(isRecord(entrySource.descriptor) && entrySource.descriptor.cacheIdentity !== undefined
+        ? {cacheIdentity: entrySource.descriptor.cacheIdentity}
+        : {}),
       subtleCrypto,
     })) as unknown as {result: Dsl4PreviewGenerationResult; key: string} & Readonly<
       Record<string, unknown>
@@ -383,13 +401,6 @@ export function createDsl4PreviewSourceWatcher({
     while (!disposed && requestedRevision === revision) {
       attempts += 1;
       try {
-        if (featureFlags.dsl4SourceIncludes) {
-          const generation = await loadStableIncludedGeneration(requestedRevision);
-          if (!generation || disposed || requestedRevision !== revision) return snapshot();
-          await publish(generation.result, `generation:${generation.key}`);
-          if (!disposed && requestedRevision === revision) status = 'watching';
-          return snapshot();
-        }
         const loaded = await loadSource(projectRoot, manifest, {
           maxSourceBytes: sourceLimits.maxSourceFileBytes,
           subtleCrypto,
@@ -405,6 +416,16 @@ export function createDsl4PreviewSourceWatcher({
           descriptor.sourceId !== manifest.sourceId
         ) {
           throw new TypeError('loadSource returned an invalid source descriptor');
+        }
+        // A source that declares `include` is composed with what it names; any other source is
+        // read on its own, so its preview text stays the authored text.
+        composed = dsl4SourceDeclaresIncludes(descriptor.text);
+        if (composed) {
+          const generation = await loadStableIncludedGeneration(requestedRevision);
+          if (!generation || disposed || requestedRevision !== revision) return snapshot();
+          await publish(generation.result, `generation:${generation.key}`);
+          if (!disposed && requestedRevision === revision) status = 'watching';
+          return snapshot();
         }
         const parsed = sourceFrontend.parse(descriptor.text, {sourceId: manifest.sourceId});
         if (
@@ -486,19 +507,15 @@ export function createDsl4PreviewSourceWatcher({
     if (started || disposed) throw new TypeError('preview source watcher can only start once');
     try {
       const watcher = watchFactory(
-        featureFlags.dsl4SourceIncludes ? path.resolve(projectRoot) : sourceDirectory,
+        // The whole project is watched because an entry may start naming other sources at any time.
+        // While it names none, only the entry itself is a reason to read it again.
+        path.resolve(projectRoot),
         (eventType, filename) => {
           if (disposed) return;
           const changedName = filename === null ? null : String(filename);
-          if (
-            featureFlags.dsl4SourceIncludes ||
-            changedName === null ||
-            changedName === sourceBasename
-          ) {
-            notifyChange();
-          }
+          if (composed || changedName === null || changedName === sourceBasename) notifyChange();
         },
-        {recursive: featureFlags.dsl4SourceIncludes},
+        {recursive: true},
       );
       if (isRecord(watcher) && typeof watcher.close === 'function')
         fileWatcher = watcher as Dsl4FileWatcher;

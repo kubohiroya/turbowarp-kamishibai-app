@@ -4,7 +4,6 @@ import {
   createDsl4CompiledStoryArtifact,
   Dsl4CompiledStoryError,
 } from './compiled-story-artifact.js';
-import {validateDsl4PublicationManifest} from './publication-manifest.js';
 import {validateDsl4AssetDistributionResolution} from './asset-distribution-profile.js';
 import {
   dsl4SourceStoragePaths,
@@ -22,13 +21,7 @@ import type {Dsl4SubtleCrypto} from './subtle-crypto.js';
 export const dsl4DistributionProfiles = Object.freeze(['source', 'compiled'] as const);
 export type Dsl4DistributionProfile = (typeof dsl4DistributionProfiles)[number];
 
-/** Where a compiled publication keeps each chapter's Story IR, named by segment id, not by file. */
-export function dsl4CompiledPublicationEntry(segmentId: string) {
-  return `story/${segmentId}.json`;
-}
-
 const sourceHatOpcodes = new Set([dsl4LabeledBlockSourceHatOpcode, dsl4ConfigBlockSourceHatOpcode]);
-const maxSegmentStoryBytes = 1024 * 1024;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -155,71 +148,4 @@ export async function convertDsl4ProjectToCompiledProfile(
   removeDsl4BlockSourceDeclarations(project);
   removeDsl4EmbeddedYamlHats(project);
   return compiled;
-}
-
-async function sha256Hex(bytes: Uint8Array, subtleCrypto: Dsl4SubtleCrypto | undefined) {
-  if (!subtleCrypto) fail('K4-COMPILED-BUILD-001', 'SHA-256 digest capability is unavailable');
-  const digest = new Uint8Array(await subtleCrypto.digest('SHA-256', bytes));
-  return [...digest].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-/**
- * Turn a project carrying a `source` publication into the `compiled` profile, in place.
- *
- * Every chapter component is compiled and the YAML chapter sources are dropped. The manifest keeps
- * its chapters, titles and links, but each chapter now names its Story IR bytes
- * (`story/<segment>.json`) with their size and digest instead of the YAML file, and no URL: a
- * compiled publication carries its chapters itself. The entry project's own component and its
- * source hats are compiled too, since they hold the entry chapter's YAML.
- */
-export async function convertDsl4PublicationToCompiledProfile(
-  project: Record<string, unknown>,
-  options: CompileOptions,
-) {
-  const storage = isRecord(project.extensionStorage) ? project.extensionStorage : null;
-  const bundle =
-    storage && isRecord(storage.kubohiroyakamishibai4) ? storage.kubohiroyakamishibai4 : null;
-  const publication = bundle && isRecord(bundle.publication) ? bundle.publication : null;
-  if (!publication || (publication.formatVersion !== 1 && publication.formatVersion !== 2))
-    fail('K4-COMPILED-PUBLICATION-001', 'Project does not carry a version 1 or 2 publication');
-  if (publication.profile !== undefined)
-    fail('K4-COMPILED-PUBLICATION-001', 'Publication is already compiled');
-  const manifest = validateDsl4PublicationManifest(publication.manifest);
-  if (!isRecord(publication.components))
-    fail('K4-COMPILED-PUBLICATION-001', 'Publication has no chapter components');
-  // A freshly selected publication shares the entry chapter's component object with the project's
-  // own runtime component; compile copies so each is converted exactly once.
-  const components = structuredClone(publication.components);
-  publication.components = components;
-  const segments = [];
-  for (const segment of manifest.segments) {
-    const component = components[segment.id];
-    if (!isRecord(component))
-      fail('K4-COMPILED-PUBLICATION-001', `Publication chapter is missing: ${segment.id}`);
-    const compiled = await compileDsl4RuntimeComponentStorage(component, {
-      ...options,
-      project,
-    });
-    const bytes = new TextEncoder().encode(JSON.stringify(compiled.story));
-    if (bytes.byteLength > maxSegmentStoryBytes)
-      fail(
-        'K4-COMPILED-PUBLICATION-SIZE-001',
-        `Chapter ${segment.id} Story IR exceeds the ${maxSegmentStoryBytes} byte chapter limit`,
-      );
-    segments.push({
-      ...structuredClone(segment),
-      source: {
-        entry: dsl4CompiledPublicationEntry(segment.id),
-        integrity: `sha256-${await sha256Hex(bytes, options.subtleCrypto ?? globalThis.crypto?.subtle)}`,
-        size: bytes.byteLength,
-      },
-    });
-  }
-  publication.manifest = validateDsl4PublicationManifest({
-    ...structuredClone(manifest),
-    segments,
-  });
-  delete publication.sources;
-  publication.profile = 'compiled';
-  await convertDsl4ProjectToCompiledProfile(project, options);
 }
