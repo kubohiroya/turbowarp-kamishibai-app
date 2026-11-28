@@ -17,9 +17,9 @@ import {
 export const titleVersionPlaceholder = 'Version {{VERSION}} ({{BUILD_DATE}})';
 export const officialWebsiteFaviconPlaceholder = '{{OFFICIAL_WEBSITE_FAVICON}}';
 export const titleBuildDateEnvironmentVariable = 'KAMISHIBAI_BUILD_DATE';
-// Published release SB3s are immutable, so the Asset Manager opcodes they were built with stay
-// readable alongside the Asset Cache opcodes that replaced them.
-const assetManagerSetTextValueOpcodes = new Set([
+// Published release SB3s are immutable, so the opcodes of the `about.version` block they were built
+// with stay readable. Current builds no longer emit that block.
+const legacyVersionSetTextValueOpcodes = new Set([
   'kubohiroyaassetcache_setTextValue',
   'kubohiroyaassetmanager_setTextValue',
   'kubohiroyakamishibai4_setTextValue',
@@ -168,6 +168,43 @@ export function resolveTitleBuildMetadata({
   });
 }
 
+/**
+ * The stamped `Version … (YYYY/MM/DD)` label of a built SB3.
+ *
+ * Current builds carry it only in the Title backdrop, which is what the title shows. Releases up to
+ * 4.0.22 also stamped it into a disconnected `setTextValue about.version` block; those archives are
+ * immutable, so that block stays the authority wherever it exists.
+ */
+function readTitleVersionLabel(project: Sb3Project, titleSvg: string) {
+  const versionBlocks = project.targets
+    .flatMap((target) => Object.values(target.blocks ?? {}))
+    .filter((block) => {
+      if (!legacyVersionSetTextValueOpcodes.has(String(block.opcode))) return false;
+      return (
+        (block.inputs?.NAME as [unknown, [unknown, unknown]] | undefined)?.[1]?.[1] ===
+        'about.version'
+      );
+    });
+  assert(
+    versionBlocks.length <= 1,
+    'A legacy SB3 must set at most one runtime about.version text asset.',
+  );
+  if (versionBlocks.length === 1) {
+    const legacyLabel = (
+      versionBlocks[0]?.inputs?.VALUE as [unknown, [unknown, unknown]] | undefined
+    )?.[1]?.[1];
+    assert(typeof legacyLabel === 'string', 'The legacy about.version value must be literal text.');
+    return legacyLabel;
+  }
+  const labels = titleSvg.match(/Version [0-9A-Za-z.+-]+ \(\d{4}\/\d{2}\/\d{2}\)/gu) ?? [];
+  assert.equal(
+    labels.length,
+    1,
+    'The Title backdrop must show exactly one stamped version and build date.',
+  );
+  return String(labels[0]);
+}
+
 export function readTitleBuildMetadataFromSb3(archiveBytes: Uint8Array) {
   const archive = unzipSync(new Uint8Array(archiveBytes));
   assert(archive['project.json'], 'The SB3 archive must contain project.json.');
@@ -186,31 +223,14 @@ export function readTitleBuildMetadataFromSb3(archiveBytes: Uint8Array) {
   assert.equal(titleCostume.dataFormat, 'svg', 'The Title backdrop must be an SVG asset.');
   const titleAsset = archive[titleCostume.md5ext];
   assert(titleAsset, `The SB3 archive is missing the Title asset: ${titleCostume.md5ext}`);
-  const versionBlocks = project.targets
-    .flatMap((target) => Object.values(target.blocks ?? {}))
-    .filter((block) => {
-      if (!assetManagerSetTextValueOpcodes.has(String(block.opcode))) return false;
-      return (
-        (block.inputs?.NAME as [unknown, [unknown, unknown]] | undefined)?.[1]?.[1] ===
-        'about.version'
-      );
-    });
-  assert.equal(
-    versionBlocks.length,
-    1,
-    'The app must set exactly one runtime about.version text asset.',
-  );
-  const versionLabel = (
-    versionBlocks[0]?.inputs?.VALUE as [unknown, [unknown, unknown]] | undefined
-  )?.[1]?.[1];
-  assert(typeof versionLabel === 'string', 'The runtime about.version value must be literal text.');
+  const versionLabel = readTitleVersionLabel(project, strFromU8(titleAsset));
   const metadataMatches = [
     ...versionLabel.matchAll(/Version ([0-9A-Za-z.+-]+) \((\d{4}\/\d{2}\/\d{2})\)/gu),
   ];
   assert.equal(
     metadataMatches.length,
     1,
-    'The runtime about.version text must contain exactly one stamped version and build date.',
+    'The title version text must contain exactly one stamped version and build date.',
   );
   const [firstMatch] = metadataMatches;
   const [, version, displayDate] = firstMatch ?? [];
@@ -222,7 +242,7 @@ export function readTitleBuildMetadataFromSb3(archiveBytes: Uint8Array) {
   assert.equal(
     metadata.label,
     firstMatch?.[0],
-    'The runtime about.version text contains invalid build metadata.',
+    'The title version text contains invalid build metadata.',
   );
   return metadata;
 }

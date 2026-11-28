@@ -299,7 +299,7 @@ test('keeps the 3.2 title state transition for Standard 4.0', () => {
   assert.match(contract.titleLifecycle.reference, /\/3\.2\/.*#%E7%8A%B6%E6%85%8B/u);
   assert.deepEqual(contract.titleLifecycle.greenFlag, ['initialize', 'showTitle', 'title']);
   assert.deepEqual(contract.titleLifecycle.closeInputs, ['stage-click', 'close-button']);
-  assert.equal(contract.titleLifecycle.sharedBroadcast, 'closeTitle');
+  assert.equal(contract.titleLifecycle.sharedCommand, 'closeTitle');
   assert.equal(contract.titleLifecycle.embeddedExit, 'startStory');
   assert.deepEqual(contract.titleLifecycle.externalExit, ['showCover', 'showMenu']);
   assert.deepEqual(contract.titleLifecycle.storyExit, ['stopStory', 'showCover', 'showMenu']);
