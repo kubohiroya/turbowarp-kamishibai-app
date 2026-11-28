@@ -825,7 +825,7 @@ describe('invalidation sections in scene module views', () => {
     const section = Object.values(blocks).find((b) => b.opcode.endsWith('_useSection'))!;
     expect(section.fields.ENABLED![0]).toBe('off');
     const wait = Object.values(blocks).find(
-      (b) => b.opcode.endsWith('_wait') && literalValue(b, 'SECONDS') === 3,
+      (b) => b.opcode.endsWith('_wait') && literalValue(b, 'SECONDS') === '3',
     );
     expect(wait).toBeDefined();
     setLiteral(wait!, 'SECONDS', '4');

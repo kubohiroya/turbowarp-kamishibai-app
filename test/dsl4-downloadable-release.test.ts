@@ -1308,6 +1308,47 @@ test('keeps every bundled extension icon and documentation button on its own pal
   }
 });
 
+test('shows every palette group of the bundle on the Stage when the Editor first opens the SB3', async () => {
+  // Without a saved setting, TurboWarp Plus shows only the groups a target already uses.
+  const result = await buildRelease();
+  const state = JSON.parse(strFromU8(entryOf(unzipSync(result.archive), 'tw-plus/workspace.json')));
+  assert.equal(state.version, 1);
+  assert.equal(state.savedAt, 0);
+  const palette = state.slices.blockPalette;
+  assert.equal(palette.version, 1);
+  const shown: string[] = palette.stage.groups;
+  assert.deepEqual(shown.slice(0, 10), [
+    'motion',
+    'looks',
+    'sound',
+    'events',
+    'control',
+    'sensing',
+    'operators',
+    'variables',
+    'lists',
+    'myBlocks',
+  ]);
+
+  const restoreGlobals = installUnsandboxedScriptDom();
+  const vm = new VirtualMachine();
+  try {
+    vm.setCompatibilityMode(false);
+    vm.setTurboMode(false);
+    vm.setCompilerOptions({enabled: false});
+    vm.securityManager.canLoadExtensionFromProject = () => true;
+    vm.securityManager.getSandboxMode = () => 'unsandboxed';
+    await loadProjectQuietly(vm, result.archive);
+    const info = requireRecord(await extensionInfo(vm), 'the bundle info');
+    const declared = (info.groups as {id: string}[]).map(({id}) => `${bundleExtensionId}/${id}`);
+    assert.ok(declared.length > 20);
+    assert.deepEqual(shown.slice(10), declared);
+  } finally {
+    vm.quit();
+    restoreGlobals();
+  }
+});
+
 test('shares the bundled camera with the permission block without acquiring or stopping host tracks', async () => {
   const result = await buildRelease();
   const restoreGlobals = installUnsandboxedScriptDom();

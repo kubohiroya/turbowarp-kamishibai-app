@@ -76,10 +76,10 @@ describe('explicit schema line comments', () => {
     assert.ok(comment);
     comment.inputs.TEXT = [1, [10, ' edited action notes']];
     const wait = Object.values(b).find(
-      (v) => String(v.opcode).endsWith('__wait') && literal(v, 'SECONDS') === 1,
+      (v) => String(v.opcode).endsWith('__wait') && literal(v, 'SECONDS') === '1',
     );
     assert.ok(wait);
-    wait.inputs.SECONDS = [1, [4, 5]];
+    wait.inputs.SECONDS = [1, [4, '5']];
     const patched = sourceFromKamishibaiSchemaBlockView(
       built.project,
       built.descriptor,

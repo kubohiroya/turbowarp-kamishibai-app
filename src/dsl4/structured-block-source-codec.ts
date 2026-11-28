@@ -434,7 +434,8 @@ export function createDsl4StructuredBlockSourceDeclaration({
           name,
           [
             1,
-            [typeof value === 'number' ? 4 : 10, typeof value === 'number' ? value : String(value)],
+            // Scratch keeps every primitive's value as text; a number here breaks the editor's XML.
+            [typeof value === 'number' ? 4 : 10, String(value)],
           ],
         ]),
       ),
@@ -625,7 +626,10 @@ export function createDsl4StructuredBlockSourceDeclaration({
   }
   function attachText(parent: string, name: string, expression: Dsl4TextExpression) {
     if (typeof expression !== 'object') {
-      blocks[parent]!.inputs[name] = [1, [typeof expression === 'number' ? 4 : 10, expression]];
+      blocks[parent]!.inputs[name] = [
+        1,
+        [typeof expression === 'number' ? 4 : 10, String(expression)],
+      ];
       return;
     }
     const child =
