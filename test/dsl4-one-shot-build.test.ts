@@ -209,7 +209,7 @@ test('resolves the root packaging flag once without adding it to runtime flags',
     dsl4RootBinaryEntryPackaging: true,
   });
   assert.equal(enabled.dsl4RootBinaryEntryPackaging, true);
-  assert.equal(enabled.runtimeFeatureFlags.dsl4SourceIncludes, true);
+  assert.equal(Object.hasOwn(enabled.runtimeFeatureFlags, 'dsl4SourceIncludes'), false);
   assert.equal(Object.hasOwn(enabled.runtimeFeatureFlags, 'dsl4RootBinaryEntryPackaging'), false);
   assert.throws(() => resolveDsl4BuildFeatureFlags({dsl4RootBinaryEntryPackaging: 1}), TypeError);
   assert.throws(() => resolveDsl4BuildFeatureFlags({unknownBuildFlag: true}), TypeError);

@@ -93,7 +93,6 @@ export const dsl4TurboWarpCoreActionBlockSpecs = Object.freeze([
     ],
   ),
   block('goto', 'go to scene [SCENE]', [argument('SCENE', 'string', 'scene')]),
-  block('gotoSegment', 'go to story segment [SEGMENT]', [argument('SEGMENT', 'string', 'chapter')]),
   block('branch', 'choose branch [BRANCH]', [argument('BRANCH', 'string', 'branch')]),
   block('setVariable', 'set story variable [NAME] to [VALUE] as [TYPE]', [
     argument('NAME', 'string', 'variable'),
@@ -420,8 +419,6 @@ export function sourceValueForBlock(
       };
     case 'goto':
       return String(args.SCENE);
-    case 'gotoSegment':
-      return String(args.SEGMENT);
     case 'branch':
       return String(args.BRANCH);
     case 'setVariable': {

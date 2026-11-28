@@ -15,7 +15,7 @@ import {createDsl4SourceGraphFrontend} from '../dsl4/source-graph-frontend.js';
 import {loadDsl4ExternalSource} from './dsl4-external-source.js';
 import {resolveDsl4ProjectSource} from './dsl4-project-source.js';
 import {loadDsl4BuildSourceGraph} from './dsl4-source-graph.js';
-import {resolveDsl4BuildSourceLimits} from './dsl4-source-limits.js';
+import {resolveDsl4BuildSourceLimits, resolveDsl4EntrySourceGraph} from './dsl4-source-limits.js';
 import {loadDsl4ProjectJson} from './dsl4-asset-audit.js';
 import {installBundleTransactionally} from './atomic-output.js';
 import {Sb3BuilderError} from './errors.js';
@@ -778,14 +778,14 @@ export async function generateDsl4AssetDistributionLock(options: unknown) {
   const projectRoot = input.projectRoot;
   const assetConfig = input.assetConfig;
   const sourceFrontend = input.sourceFrontend;
-  const sourceIncludesEnabled = input.sourceIncludesEnabled ?? false;
-  if (typeof sourceIncludesEnabled !== 'boolean')
+  // `sourceIncludesEnabled` was the include opt-in. Include is decided by the entry source now, so
+  // the option is still accepted but has no effect.
+  if (input.sourceIncludesEnabled !== undefined && typeof input.sourceIncludesEnabled !== 'boolean')
     throw new TypeError('sourceIncludesEnabled must be a boolean');
-  const sourceLimits = resolveDsl4BuildSourceLimits({
-    sourceIncludesEnabled,
+  const maxSourceFileBytes = resolveDsl4BuildSourceLimits({
+    sourceIncludesEnabled: false,
     maxSourceBytes: input.maxSourceBytes,
-    maxTotalSourceBytes: input.maxTotalSourceBytes,
-  });
+  }).maxSourceFileBytes;
   const maxSourceManifestBytes = positiveLimit(
     input.maxSourceManifestBytes,
     'maxSourceManifestBytes',
@@ -832,26 +832,28 @@ export async function generateDsl4AssetDistributionLock(options: unknown) {
   const manifest = resolvedSource.manifest;
   const config = validateDsl4AssetDistributionConfig(configInput) as Dsl4AssetLockConfig;
   const source = await loadDsl4ExternalSource(projectRoot, manifest, {
-    maxSourceBytes: sourceLimits.maxSourceFileBytes,
+    maxSourceBytes: maxSourceFileBytes,
     fileSystem,
     ...(input.readFile === undefined ? {} : {readSource: input.readFile}),
   });
+  const entry = resolveDsl4EntrySourceGraph({
+    sourceText: source.descriptor.text,
+    maxSourceBytes: input.maxSourceBytes,
+    maxTotalSourceBytes: input.maxTotalSourceBytes,
+    maxSourceFiles: input.maxSourceFiles,
+    maxIncludeDepth: input.maxIncludeDepth,
+  });
   let parsed;
-  if (sourceIncludesEnabled) {
+  if (entry.graph) {
     const sourceGraph = await loadDsl4BuildSourceGraph(projectRoot, source, {
-      limits: {
-        maxSourceBytes: sourceLimits.maxSourceFileBytes,
-        maxTotalSourceBytes: sourceLimits.maxSourceGraphBytes,
-        maxSourceFiles: positiveLimit(input.maxSourceFiles, 'maxSourceFiles'),
-        maxIncludeDepth: positiveLimit(input.maxIncludeDepth, 'maxIncludeDepth'),
-      },
+      limits: entry.graphLimits,
       fileSystem,
       ...(input.readFile === undefined ? {} : {readSource: input.readFile}),
     });
     parsed = createDsl4SourceGraphFrontend(sourceFrontend).parse(sourceGraph, {
-      featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+      featureFlags: {dsl4Runtime: true},
       sourceId: source.descriptor.sourceId,
-      maxComposedSourceBytes: sourceLimits.maxComposedSourceBytes,
+      maxComposedSourceBytes: entry.limits.maxComposedSourceBytes,
     });
   } else {
     parsed = sourceFrontend.parse(source.descriptor.text, {

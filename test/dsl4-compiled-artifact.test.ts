@@ -401,7 +401,7 @@ scenes:
       sourceFrontend: frontend,
       controlProfile: 'production',
       channel: 'bundled',
-      featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+      featureFlags: {dsl4Runtime: true},
       maxSourceBytes: 1024 * 1024,
       maxTotalSourceBytes: 4 * 1024 * 1024,
       maxAssetFileBytes: 1024 * 1024,

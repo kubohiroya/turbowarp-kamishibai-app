@@ -234,7 +234,7 @@ test('exported YAML revalidates as a Source Graph and matches the block story se
   });
   const graphFrontend = createDsl4SourceGraphFrontend(frontend);
   const fromBlocks = graphFrontend.parse(graph, {
-    featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+    featureFlags: {dsl4Runtime: true},
     sourceId: graph.entryPath,
     maxComposedSourceBytes: 256 * 1024,
   });
@@ -252,7 +252,7 @@ test('exported YAML revalidates as a Source Graph and matches the block story se
     {maxSourceBytes: 64 * 1024, maxTotalSourceBytes: 256 * 1024},
   );
   const fromYaml = graphFrontend.parse(exportedGraph, {
-    featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+    featureFlags: {dsl4Runtime: true},
     sourceId: graph.entryPath,
     maxComposedSourceBytes: 256 * 1024,
   });

@@ -254,8 +254,8 @@ export type Dsl4CompiledStoryArtifact = Awaited<ReturnType<typeof createDsl4Comp
 /**
  * Check a Story IR on its own: plain JSON, no authoring members, and the StoryDocument structure.
  *
- * Synchronous, so a caller that already verified the bytes (a publication manifest digest) or that
- * cannot await (opening a publication) can still refuse a malformed story.
+ * Synchronous, so a caller that has already verified the bytes or that cannot await can still refuse
+ * a malformed story.
  */
 export function validateDsl4StoryIr(story: unknown) {
   if (!isRecord(story)) fail('K4-COMPILED-STORY-001', 'Story IR must be an object');

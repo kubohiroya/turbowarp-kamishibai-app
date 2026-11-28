@@ -1,5 +1,5 @@
-/** Keep the chapter canvas, overlays and pointer target in one fitted stage rectangle. */
-export function fitDsl4PublicationStage({
+/** Keep the stage canvas, overlays and pointer target in one fitted stage rectangle. */
+export function fitDsl4Stage({
   mount,
   element,
   canvas,

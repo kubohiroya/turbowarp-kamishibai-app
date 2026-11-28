@@ -326,10 +326,12 @@ test('accepts exact individual and graph-total byte limits and rejects one byte 
   );
 });
 
-test('keeps source includes behind an immutable default-off runtime flag', () => {
-  assert.equal(dsl4DefaultFeatureFlags.dsl4SourceIncludes, false);
-  assert.throws(() => resolveDsl4FeatureFlags({dsl4SourceIncludes: true}), /requires dsl4Runtime/u);
-  const enabled = resolveDsl4FeatureFlags({dsl4Runtime: true, dsl4SourceIncludes: true});
-  assert.equal(enabled.dsl4SourceIncludes, true);
-  assert.equal(Object.isFrozen(enabled), true);
+test('accepts the retired include flag without letting it change the resolved flags', () => {
+  assert.equal(Object.hasOwn(dsl4DefaultFeatureFlags, 'dsl4SourceIncludes'), false);
+  for (const value of [true, false]) {
+    const resolved = resolveDsl4FeatureFlags({dsl4SourceIncludes: value});
+    assert.deepEqual(resolved, dsl4DefaultFeatureFlags);
+    assert.equal(Object.isFrozen(resolved), true);
+  }
+  assert.throws(() => resolveDsl4FeatureFlags({dsl4SourceIncludes: 1}), /must be boolean/u);
 });

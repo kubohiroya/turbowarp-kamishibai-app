@@ -24,8 +24,8 @@ import type {Dsl4RuntimePort} from '../runtime-port.js';
 import type {Dsl4SourceFrontend} from '../source-frontend.js';
 import {createDsl4BrowserRemoteAssetLoader} from './browser-remote-asset-loader.js';
 import {prepareDsl4EmbeddedBlockStoryProject} from './embedded-block-story.js';
-import {createDsl4PublicationStageArchive} from './publication-stage-archive.js';
-import {fitDsl4PublicationStage} from './publication-stage-layout.js';
+import {createDsl4StageArchive} from './stage-archive.js';
+import {fitDsl4Stage} from '../browser-stage-layout.js';
 import {createDsl4TurboWarpRuntimeEnvironment} from './turbowarp-runtime-host.js';
 import {createDsl4TurboWarpTransitionPort} from './turbowarp-transition-port.js';
 import {normalizeDsl4VmProjectSnapshot} from './vm-project-snapshot.js';
@@ -177,7 +177,6 @@ const inputCommands = new Set([
   'touchInputToChangeScene',
   'poseInputToChangeScene',
   'imageInputToChangeScene',
-  'gotoSegment',
 ]);
 
 /** Accelerate only presentation reconstruction; selected move/speech use the real runtime port. */
@@ -592,7 +591,7 @@ export function createDsl4BlockIconPreviewRuntime(options: {
           }),
           createVm: options.createVm,
         };
-        const {bytes} = await createDsl4PublicationStageArchive(project, files);
+        const {bytes} = createDsl4StageArchive(project, files);
         check(signal);
         element = mount.ownerDocument.createElement('div');
         element.dataset.dsl4BlockPreviewStage = 'true';
@@ -616,7 +615,7 @@ export function createDsl4BlockIconPreviewRuntime(options: {
         check(signal);
         const runtime = stage.getRuntime();
         const canvas = stage.getCanvas() as unknown as HTMLCanvasElement;
-        releaseLayout = fitDsl4PublicationStage({
+        releaseLayout = fitDsl4Stage({
           mount,
           element,
           canvas,

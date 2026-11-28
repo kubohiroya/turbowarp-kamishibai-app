@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 
 import {resolveDsl4LocalPreviewFeatureFlags} from '../dsl4/feature-flags.js';
+import {dsl4SourceGraphDefaultLimits} from '../dsl4/source-graph.js';
 import {dsl4BrowserPreviewArtifactLimits} from '../dsl4/browser-preview-artifact-limits.js';
 import {buildDsl4RuntimeComponent} from './dsl4-build.js';
 import {dsl4LocalPreviewBrowserBootstrapMaximums} from './dsl4-local-preview-browser-bootstrap.js';
@@ -278,27 +279,27 @@ export async function runDsl4LocalPreviewCommand(
   );
   const featureFlags = resolveDsl4LocalPreviewFeatureFlags(options.featureFlags);
   const sourceLimits = resolveDsl4BuildSourceLimits({
-    sourceIncludesEnabled: featureFlags.dsl4SourceIncludes,
+    sourceIncludesEnabled: true,
     maxSourceBytes,
-    maxTotalSourceBytes: options.maxTotalSourceBytes,
+    maxTotalSourceBytes:
+      options.maxTotalSourceBytes ??
+      Math.max(maxSourceBytes, dsl4SourceGraphDefaultLimits.maxTotalSourceBytes),
   });
-  const graphOptions = featureFlags.dsl4SourceIncludes
-    ? {
-        maxSourceFiles: boundedInteger(
-          options.maxSourceFiles,
-          'maxSourceFiles',
-          1,
-          Number.MAX_SAFE_INTEGER,
-        ),
-        maxTotalSourceBytes: sourceLimits.maxSourceGraphBytes,
-        maxIncludeDepth: boundedInteger(
-          options.maxIncludeDepth,
-          'maxIncludeDepth',
-          1,
-          Number.MAX_SAFE_INTEGER,
-        ),
-      }
-    : {};
+  const graphOptions = {
+    maxSourceFiles: boundedInteger(
+      options.maxSourceFiles ?? dsl4SourceGraphDefaultLimits.maxSourceFiles,
+      'maxSourceFiles',
+      1,
+      Number.MAX_SAFE_INTEGER,
+    ),
+    maxTotalSourceBytes: sourceLimits.maxSourceGraphBytes,
+    maxIncludeDepth: boundedInteger(
+      options.maxIncludeDepth ?? dsl4SourceGraphDefaultLimits.maxIncludeDepth,
+      'maxIncludeDepth',
+      1,
+      Number.MAX_SAFE_INTEGER,
+    ),
+  };
   const maxAssetFileBytes = boundedInteger(
     options.maxAssetFileBytes,
     'maxAssetFileBytes',

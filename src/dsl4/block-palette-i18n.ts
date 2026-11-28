@@ -305,7 +305,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     badge: {color: '#e0a030', glyph: 'M3 12h15M13 6l6 6-6 6'},
     color2: '#be8828',
     color3: '#9c7021',
-    opcodes: ['wait', 'goto', 'gotoSegment', 'branch', 'broadcastMessageAndWait'],
+    opcodes: ['wait', 'goto', 'branch', 'broadcastMessageAndWait'],
   },
   {
     id: 'input',
@@ -466,7 +466,6 @@ export const dsl4RuntimeTranslations: Dsl4BlockTranslations = Object.freeze({
       presentationEffect:
         '[SCOPE] に [EFFECT] の演出を [SECONDS] 秒適用する パラメーター JSON [PARAMS]',
       goto: 'シーン [SCENE] へ移る',
-      gotoSegment: '台本の区切り [SEGMENT] へ移る',
       branch: '分岐 [BRANCH] を選ぶ',
       setVariable: '台本の変数 [NAME] を [VALUE] にする 型 [TYPE]',
       changeVariable: '台本の変数 [NAME] を [BY] ずつ変える',

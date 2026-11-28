@@ -425,20 +425,25 @@ test('parses preview-dsl4 defaults and rejects unsafe arguments', () => {
     ),
     'preview-dsl4',
   );
-  assert.equal(
-    requireRecord(includedOptions.featureFlags, 'its feature flags').dsl4SourceIncludes,
-    true,
-  );
+  // Include needs no opt-in; the retired flag is accepted and the limits are passed through.
+  assert.equal(includedOptions.featureFlags, undefined);
   assert.equal(includedOptions.maxSourceFiles, 8);
   assert.equal(includedOptions.maxTotalSourceBytes, 32768);
   assert.equal(includedOptions.maxIncludeDepth, 4);
-  assert.throws(
-    () => parseCliArguments(previewArguments(['--enable-source-includes'])),
-    /Missing required option: --max-source-files/u,
+  assert.equal(
+    Object.hasOwn(
+      parsedOptions(
+        parseCliArguments(previewArguments(['--enable-source-includes'])),
+        'preview-dsl4',
+      ),
+      'maxSourceFiles',
+    ),
+    false,
   );
-  assert.throws(
-    () => parseCliArguments(previewArguments(['--max-source-files', '8'])),
-    /requires --enable-source-includes/u,
+  assert.equal(
+    parsedOptions(parseCliArguments(previewArguments(['--max-source-files', '8'])), 'preview-dsl4')
+      .maxSourceFiles,
+    8,
   );
 
   const recommendedTotalAssetBytes = 128 * 1024 * 1024;
@@ -588,10 +593,6 @@ test('forwards explicit Source Graph limits to both the initial build and live h
   });
 
   for (const forwarded of [fixture.runtimeOptions, fixture.hostOptions]) {
-    assert.equal(
-      requireRecord(forwarded.featureFlags, 'its feature flags').dsl4SourceIncludes,
-      true,
-    );
     assert.equal(forwarded.maxSourceFiles, 8);
     assert.equal(forwarded.maxTotalSourceBytes, 32768);
     assert.equal(forwarded.maxIncludeDepth, 4);

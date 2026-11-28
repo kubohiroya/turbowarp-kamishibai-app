@@ -243,7 +243,7 @@ export async function exportDsl4BlockSourcesToYaml(options: {
 
   const parsed = createDsl4SourceGraphFrontend(options.sourceFrontend).parse(sourceGraph, {
     project,
-    featureFlags: {dsl4Runtime: true, dsl4SourceIncludes: true},
+    featureFlags: {dsl4Runtime: true},
     sourceId: sourceGraph.entryPath,
     maxComposedSourceBytes: maxTotalSourceBytes,
   }) as Readonly<{ok: boolean; diagnostics: readonly Dsl4BlockSourceExportDiagnostic[]}>;

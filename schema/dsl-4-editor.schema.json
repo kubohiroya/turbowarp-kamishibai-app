@@ -4074,18 +4074,6 @@
         }
       }
     },
-    "gotoSegmentAction": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "gotoSegment"
-      ],
-      "properties": {
-        "gotoSegment": {
-          "$ref": "#/$defs/id"
-        }
-      }
-    },
     "branchAction": {
       "type": "object",
       "additionalProperties": false,
@@ -4335,9 +4323,6 @@
         },
         {
           "$ref": "#/$defs/gotoAction"
-        },
-        {
-          "$ref": "#/$defs/gotoSegmentAction"
         },
         {
           "$ref": "#/$defs/branchAction"
@@ -11966,25 +11951,6 @@
         }
       }
     },
-    "editorAction_gotoSegmentAction": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "gotoSegment"
-      ],
-      "properties": {
-        "gotoSegment": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/editorAction_id"
-            },
-            {
-              "$ref": "#/$defs/editorScopedNarrative_reference"
-            }
-          ]
-        }
-      }
-    },
     "editorAction_branchAction": {
       "type": "object",
       "additionalProperties": false,
@@ -12262,9 +12228,6 @@
         },
         {
           "$ref": "#/$defs/editorAction_gotoAction"
-        },
-        {
-          "$ref": "#/$defs/editorAction_gotoSegmentAction"
         },
         {
           "$ref": "#/$defs/editorAction_branchAction"

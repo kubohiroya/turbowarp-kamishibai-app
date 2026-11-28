@@ -56,7 +56,8 @@ test('parses the finite audit-dsl4-assets CLI contract', () => {
   assert.equal(options.assetProfile, 'online');
   assert.equal(options.format, 'pretty');
   assert.equal(options.maxAssetLockBytes, 32768);
-  assert.equal(options.sourceIncludesEnabled, false);
+  assert.equal(Object.hasOwn(options, 'sourceIncludesEnabled'), false);
+  assert.equal(Object.hasOwn(options, 'maxSourceFiles'), false);
   const defaultSource = auditArguments();
   defaultSource.splice(defaultSource.indexOf('--max-source-bytes'), 2);
   assert.equal(
@@ -82,19 +83,32 @@ test('parses the finite audit-dsl4-assets CLI contract', () => {
     ),
     'audit-dsl4-assets',
   );
-  assert.equal(included.sourceIncludesEnabled, true);
   assert.equal(included.maxSourceFiles, 8);
   assert.equal(included.maxTotalSourceBytes, 32768);
   assert.equal(included.maxIncludeDepth, 4);
   assert.equal(included.format, 'json');
 
-  assert.throws(
-    () => parseCliArguments(auditArguments(['--max-source-files', '8'])),
-    /requires --enable-source-includes/u,
+  // Include needs no opt-in: graph limits stand alone, and the retired flag is accepted unchanged.
+  assert.equal(
+    parsedOptions(
+      parseCliArguments(auditArguments(['--max-source-files', '8'])),
+      'audit-dsl4-assets',
+    ).maxSourceFiles,
+    8,
+  );
+  assert.equal(
+    Object.hasOwn(
+      parsedOptions(
+        parseCliArguments(auditArguments(['--enable-source-includes'])),
+        'audit-dsl4-assets',
+      ),
+      'maxSourceFiles',
+    ),
+    false,
   );
   assert.throws(
-    () => parseCliArguments(auditArguments(['--enable-source-includes'])),
-    /is required with --enable-source-includes/u,
+    () => parseCliArguments(auditArguments(['--max-total-source-bytes', '1'])),
+    /greater than or equal to --max-source-bytes/u,
   );
   assert.throws(() => parseCliArguments(auditArguments(['--format', 'yaml'])), /pretty or json/u);
   const invalidLimit = auditArguments();

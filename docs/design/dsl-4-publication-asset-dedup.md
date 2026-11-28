@@ -1,5 +1,7 @@
 # DSL 4.0 publicationの章間asset共有（publication formatVersion 2）
 
+> **撤去済み（2026-11-28）**: segment・`gotoSegment`・`publication.json` と、ここで述べる publication の実装は削除した。台本の分割は include、移動は `goto` で行う。経緯は [segment・publication の廃止](dsl-4-segment-retirement.md) を参照。本書は当時の記録として残す。
+
 関連: [#1008](https://github.com/kubohiroya/turbowarp-kamishibai-app/issues/1008)。
 2026-10-24、基準main `b0b2f160`（[常駐予算](dsl-4-asset-owner-budget.md#publicationの常駐予算2026-10-24追補)、#1017）。
 作業ブランチは`feat/dsl4/publication-asset-dedup`。

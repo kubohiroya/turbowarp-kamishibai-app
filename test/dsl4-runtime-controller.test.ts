@@ -587,8 +587,7 @@ scenes:
     actions:
       - imageInputToChangeScene:
           ready: ending
-  ending:
-    - gotoSegment: chapter2
+  ending: []
 `;
 
 test('normalizes authored speech runs and keeps a plain speech string in the StoryDocument', () => {
@@ -740,10 +739,6 @@ test('dispatches every core action and keeps transition separate from scene move
     calls.push({method: 'imageInputToChangeScene', payload});
     return 'ready';
   };
-  port.gotoSegment = async (payload: PortPayload) => {
-    calls.push({method: 'gotoSegment', payload});
-    return {outcome: 'committed'};
-  };
   const evaluated: string[] = [];
   const storyDocument = parseStory(allCoreActionsStory);
   const exercisedCoreActions = [
@@ -805,7 +800,6 @@ test('dispatches every core action and keeps transition separate from scene move
       'touchInputToChangeScene',
       'poseInputToChangeScene',
       'imageInputToChangeScene',
-      'gotoSegment',
     ],
   );
   assert.deepEqual(calls.find(({method}) => method === 'video')?.payload, {
@@ -942,8 +936,8 @@ test('dispatches every core action and keeps transition separate from scene move
         requireString(storyPath, 'a trace story path').startsWith('/scenes/'),
       ),
   );
-  assert.equal(trace.filter(({type}) => type === 'action.start').length, 36);
-  assert.equal(trace.filter(({type}) => type === 'action.commit').length, 36);
+  assert.equal(trace.filter(({type}) => type === 'action.start').length, 35);
+  assert.equal(trace.filter(({type}) => type === 'action.commit').length, 35);
   assert.equal(requireDefined(trace.at(-1), 'the last trace event').type, 'runtime.finish');
   const transitions = trace
     .filter(({type}) => type === 'scene.transition')
@@ -3581,53 +3575,6 @@ scenes:
     assert.equal(state.status, 'failed');
     assert.equal(diagnosticOf(state).code, 'K4-RUNTIME-RESULT-001');
   }
-});
-
-test('scenario chapter transfer waits for the publication owner and cannot execute later source actions', async () => {
-  const storyDocument = parseStory(
-    "kamishibai: '4.0'\nvariables: {marker: 0}\nscenes:\n  first:\n    - setVariable: {name: marker, value: 7}\n    - gotoSegment: chapter2\n    - setVariable: {name: marker, value: 99}\n",
-  );
-  const request = deferred<unknown>();
-  let destination: unknown;
-  const controller = createDsl4RuntimeController({
-    storyDocument,
-    port: {
-      gotoSegment(payload: PortPayload) {
-        destination = payload.segment;
-        return request.promise;
-      },
-    },
-  });
-  const run = controller.start();
-  while (!destination) await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.equal(destination, 'chapter2');
-  assert.equal(controller.canAdvance(), false);
-  await controller.advanceScene();
-  assert.equal(controller.getState().status, 'running');
-  assert.equal(requireRecord(controller.getState().variables, 'story variables').marker, 7);
-  controller.stop('publication-segment-release');
-  request.resolve({outcome: 'committed'});
-  assert.equal((await run).status, 'stopped');
-  assert.equal(requireRecord(controller.getState().variables, 'story variables').marker, 7);
-});
-
-test('failed scenario chapter transfer holds the current variables and action without failing or running following actions', async () => {
-  const storyDocument = parseStory(
-    "kamishibai: '4.0'\nvariables: {marker: 0}\nscenes:\n  first:\n    - setVariable: {name: marker, value: 7}\n    - gotoSegment: chapter2\n    - setVariable: {name: marker, value: 99}\n",
-  );
-  const controller = createDsl4RuntimeController({
-    storyDocument,
-    port: {
-      gotoSegment() {
-        return {outcome: 'retained'};
-      },
-    },
-  });
-  const state = await controller.start();
-  assert.equal(state.status, 'paused');
-  assert.equal(state.actionIndex, 1);
-  assert.equal(requireRecord(controller.getState().variables, 'story variables').marker, 7);
-  assert(!controller.getTrace().some((event) => (event as {type: string}).type === 'runtime.fail'));
 });
 
 function backgroundModelStory() {

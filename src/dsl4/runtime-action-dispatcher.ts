@@ -34,8 +34,7 @@ function requireFunction(value: unknown, name: string) {
  * runtime controller's own `ActionContext`, so the two cannot drift apart.
  */
 type Dsl4ActionDispatchContext = ActionContext;
-export type Dsl4ActionDispatchResult =
-  {sceneId: string; reason: string} | {suspended: true; reason: string} | null;
+export type Dsl4ActionDispatchResult = {sceneId: string; reason: string} | null;
 
 export function createDsl4RuntimeActionDispatcher(options: {
   invokePort: (
@@ -119,13 +118,6 @@ export function createDsl4RuntimeActionDispatcher(options: {
     }
     if (command === 'debugger') return null;
     if (command === 'goto') return {sceneId: String(args.scene), reason: 'goto'};
-    if (command === 'gotoSegment') {
-      const result = await invokePort(command, {segment: String(args.segment)}, context);
-      if (isRecord(result) && result.outcome === 'committed') return null;
-      if (isRecord(result) && result.outcome === 'retained')
-        return {suspended: true, reason: 'publication-transition-failed'};
-      throw invalidResult('Invalid publication transition result');
-    }
     if (command === 'branch') {
       return {sceneId: await resolveBranch(String(args.branch), context), reason: 'branch'};
     }

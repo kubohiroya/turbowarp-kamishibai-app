@@ -1,3 +1,6 @@
+import {dsl4SourceGraphDefaultLimits} from '../dsl4/source-graph.js';
+import {dsl4SourceDeclaresIncludes} from '../dsl4/source-include-detection.js';
+
 function positiveSafeInteger(value: unknown, name: string): number {
   if (!Number.isSafeInteger(value) || Number(value) < 1) {
     throw new TypeError(`${name} must be a positive safe integer`);
@@ -47,5 +50,52 @@ export function resolveDsl4BuildSourceLimits({
     maxSourceGraphBytes,
     maxComposedSourceBytes: maxSourceGraphBytes,
     maxPackagedSourceBytes: maxSourceGraphBytes,
+  });
+}
+
+/**
+ * Decide, from the entry source a build already read, whether it is composed as a Source Graph, and
+ * resolve that read's limits. A source that declares `include` uses the graph limits, with defaults
+ * for the ones the caller leaves out; any other source keeps the single-source limits.
+ */
+export function resolveDsl4EntrySourceGraph({
+  sourceText,
+  maxSourceBytes,
+  maxTotalSourceBytes,
+  maxSourceFiles,
+  maxIncludeDepth,
+}: {
+  sourceText: string;
+  maxSourceBytes: unknown;
+  maxTotalSourceBytes?: unknown;
+  maxSourceFiles?: unknown;
+  maxIncludeDepth?: unknown;
+}) {
+  const graph = dsl4SourceDeclaresIncludes(sourceText);
+  const maxSourceFileBytes = positiveSafeInteger(maxSourceBytes, 'maxSourceBytes');
+  const limits = resolveDsl4BuildSourceLimits({
+    sourceIncludesEnabled: graph,
+    maxSourceBytes: maxSourceFileBytes,
+    maxTotalSourceBytes:
+      maxTotalSourceBytes ??
+      (graph
+        ? Math.max(maxSourceFileBytes, dsl4SourceGraphDefaultLimits.maxTotalSourceBytes)
+        : undefined),
+  });
+  return Object.freeze({
+    graph,
+    limits,
+    graphLimits: Object.freeze({
+      maxSourceBytes: limits.maxSourceFileBytes,
+      maxTotalSourceBytes: limits.maxSourceGraphBytes,
+      maxSourceFiles: positiveSafeInteger(
+        maxSourceFiles ?? dsl4SourceGraphDefaultLimits.maxSourceFiles,
+        'maxSourceFiles',
+      ),
+      maxIncludeDepth: positiveSafeInteger(
+        maxIncludeDepth ?? dsl4SourceGraphDefaultLimits.maxIncludeDepth,
+        'maxIncludeDepth',
+      ),
+    }),
   });
 }

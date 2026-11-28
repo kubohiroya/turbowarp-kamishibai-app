@@ -6,8 +6,6 @@ import path from 'node:path';
 import {parse, stringify} from 'yaml';
 
 import {createDsl4AssetDependencyIndex} from '../src/dsl4/asset-dependency-index.js';
-import {createDsl4RemoteAssetLifecycle} from '../src/dsl4/embedded-asset-lifecycle.js';
-import {createDsl4GroupPreloadCoordinator} from '../src/dsl4/group-preload-coordinator.js';
 import {
   createDsl4CompiledStoryArtifact,
   validateDsl4CompiledStoryArtifact,
@@ -305,81 +303,3 @@ test('source and compiled builds require a preload-capable playback, including e
     await rm(directory, {recursive: true, force: true});
   }
 });
-
-for (const enabled of [false, true]) {
-  test(`remote lifecycle ${enabled ? 'fetches an active model' : 'never fetches an off-only model'} during startup and scene transitions`, async () => {
-    const story = compile(source([{invalidate: {condition: enabled, then: [pose]}}]));
-    const requests: string[] = [];
-    const lifecycle = createDsl4RemoteAssetLifecycle({
-      runtimeComponent: {
-        storyDocument: story,
-        assetBundle: {
-          manifest: {
-            assets: [
-              {
-                id: 'Idle',
-                kind: 'costume',
-                source: {type: 'project', target: 'Hero', name: 'Idle'},
-              },
-              {
-                id: 'Model',
-                kind: 'recognitionModel',
-                source: {type: 'remote', url: 'https://example.test/pose/'},
-              },
-            ],
-          },
-        },
-        getAssetFile() {
-          throw new Error('No embedded file should be requested.');
-        },
-      },
-      adapter: {prepare: (payload) => payload, release() {}},
-      setLoading() {},
-      loadRemoteAsset(payload) {
-        const url = String(payload.url);
-        requests.push(url);
-        const text = url.endsWith('model.json')
-          ? JSON.stringify({weightsManifest: [{paths: ['weights.bin'], weights: []}]})
-          : '{}';
-        return {
-          bytes: new TextEncoder().encode(text),
-          contentType: url.endsWith('.json') ? 'application/json' : 'application/octet-stream',
-        };
-      },
-    });
-    const owner = createDsl4GroupPreloadCoordinator({
-      storyDocument: story,
-      segmentId: 'invalidation',
-      lifecycle,
-    });
-    try {
-      const startup = await owner.prepareStartup(0);
-      assert(startup.ok, 'error' in startup ? String(startup.error) : 'Startup cancelled');
-      for (const [generation, scene] of ['opening', 'disabled'].entries()) {
-        owner.beginScene(scene, generation + 1);
-        assert((await owner.waitForScene(scene)).ok);
-        await owner.commitScene(scene, 'test');
-      }
-      if (enabled) {
-        assert(
-          (await owner.waitForSceneAsset('disabled', 'Model', 3, new AbortController().signal)).ok,
-        );
-        assert.deepEqual(
-          [...new Set(requests)].sort(),
-          ['metadata.json', 'model.json', 'weights.bin'].map(
-            (file) => 'https://example.test/pose/' + file,
-          ),
-        );
-      } else {
-        assert.deepEqual(requests, []);
-        // A later real invocation can still load the retained declaration on demand.
-        assert(
-          (await owner.waitForSceneAsset('disabled', 'Model', 3, new AbortController().signal)).ok,
-        );
-        assert.equal(requests.length, 3);
-      }
-    } finally {
-      await owner.release('test');
-    }
-  });
-}

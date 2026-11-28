@@ -13,7 +13,6 @@ import {
 } from '../src/dsl4/index.js';
 import {thrown} from './helpers/thrown-error.ts';
 import {requireArray, requireDefined, requireRecord} from './helpers/require-value.ts';
-import {createDsl4AssetGroupLifecycle} from '../src/dsl4/asset-group-lifecycle.js';
 import {deferred, withDeadline} from './helpers/async-test-helpers.ts';
 
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -202,46 +201,6 @@ scenes:
 function context(controller = new AbortController(), generation = 1) {
   return Object.freeze({signal: controller.signal, generation, sceneId: 'opening'});
 }
-
-for (const partial of [false, true])
-  test(`group disposal retries the actual embedded adapter after ${partial ? 'partial' : 'failed'} release`, async () => {
-    const live = new Set<unknown>();
-    const attempts: unknown[] = [];
-    let fail = true;
-    const lifecycle = createDsl4EmbeddedAssetLifecycle({
-      runtimeComponent: await runtimeComponent(),
-      adapter: {
-        prepare() {
-          const resource = {};
-          live.add(resource);
-          return resource;
-        },
-        release(resource) {
-          attempts.push(resource);
-          if (partial) live.delete(resource);
-          if (fail) throw new Error('native cleanup failed');
-          live.delete(resource);
-        },
-      },
-      setLoading() {},
-    });
-    const manager = createDsl4AssetGroupLifecycle({
-      groups: [{id: 'scene', scope: 'scene', assetIds: ['OpeningImage'], dependencies: []}],
-      lifecycle,
-    });
-    await manager.prepareGroup('scene', context());
-    const original = lifecycle.getResource('OpeningImage');
-    assert((await manager.releaseGroup('scene', context())).cleanupError);
-    assert.deepEqual(manager.snapshot().pendingReleaseAssetIds, ['OpeningImage']);
-    assert.equal(lifecycle.getResource('OpeningImage'), null);
-    fail = false;
-    await manager.dispose();
-    assert.deepEqual(attempts, [original, original]);
-    assert.equal(live.size, 0);
-    assert.deepEqual(manager.snapshot().pendingReleaseAssetIds, []);
-    await lifecycle.release({reason: 'final'});
-    assert.equal(attempts.length, 2);
-  });
 
 test('reacquisition retries the retired embedded resource before creating its replacement', async () => {
   const live = new Set<unknown>();

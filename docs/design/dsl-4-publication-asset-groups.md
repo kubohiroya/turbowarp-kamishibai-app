@@ -1,5 +1,7 @@
 # DSL 4.0 Publication・asset group・動画解放の接続
 
+> **撤去済み（2026-11-28）**: segment・`gotoSegment`・`publication.json` と、ここで述べる publication の実装は削除した。台本の分割は include、移動は `goto` で行う。経緯は [segment・publication の廃止](dsl-4-segment-retirement.md) を参照。本書は当時の記録として残す。
+
 関連: [#773](https://github.com/kubohiroya/turbowarp-kamishibai-app/issues/773) → [#775](https://github.com/kubohiroya/turbowarp-kamishibai-app/issues/775) → [#780](https://github.com/kubohiroya/turbowarp-kamishibai-app/issues/780)。2026-10-23、基準main `81cb14cc`、作業ブランチ `feat/dsl4/video-asset-groups`。
 
 本ページはPR #979時点の記録である。後続のStandard組込み・実画面検証は[DSL 4.0 Standard publication導線と所有権](dsl-4-standard-publication.md)を参照する。

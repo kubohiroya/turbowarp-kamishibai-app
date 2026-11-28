@@ -24,7 +24,7 @@ This repository contains the runtime, DSL, CLI and JavaScript APIs, distributabl
 
 ## Choose a Version
 
-|                 | 3.2.3                                           | 4.0.23                                             |
+|                 | 3.2.3                                           | 4.0.24                                             |
 | --------------- | ----------------------------------------------- | -------------------------------------------------- |
 | Status          | Stable for existing 3.1/3.2 stories             | Unpublished 4.0 candidate                          |
 | Best for        | Workshops, stable use, existing 3.1/3.2 stories | YAML authoring, browser workflows, and the CLI/API |
@@ -32,7 +32,7 @@ This repository contains the runtime, DSL, CLI and JavaScript APIs, distributabl
 | Get it          | [Downloads][downloads]                          | [Downloads][downloads] (SB3)                       |
 | Read on updates | [Published documentation][docs]                 | [4.0 release status][current-release]              |
 
-Version 4.0.23 is a frozen, unpublished candidate for YAML authoring and the 4.0 APIs. Choose an already published version from the downloads page until publication is verified. Use 3.2.3 for existing 3.1/3.2 stories. Published 3.1 and 3.2 stories continue to work without migrating to 4.0.
+Version 4.0.24 is a frozen, unpublished candidate for YAML authoring and the 4.0 APIs. Choose an already published version from the downloads page until publication is verified. Use 3.2.3 for existing 3.1/3.2 stories. Published 3.1 and 3.2 stories continue to work without migrating to 4.0.
 
 ## Try It First
 
@@ -48,7 +48,7 @@ Use 3.2.3 when you need the stable path for an event or an existing 3.1/3.2 stor
 
 ### Use 4.0 for YAML projects
 
-The 4.0.23 candidate simplifies the generated Stage scripts: clicking the Stage closes the title directly, and the version label lives only in the Title backdrop. It retains the project-format SB3 saving from 4.0.23 and the dialogue and caption expressions, actor animation and scoped presentation effects from 4.0.21.
+The 4.0.24 candidate makes `include` a regular feature: a story that declares `include` is composed with the files it names, with no flag or CLI option, and `goto` moves between scenes across those files. Story segments, the `gotoSegment` block and `publication.json` are removed. It retains the simplified Stage scripts from 4.0.23 and the dialogue and caption expressions, actor animation and scoped presentation effects from 4.0.21.
 
 ```yaml
 kamishibai: '4.0'
@@ -69,12 +69,12 @@ For practical scripts, asset references, pose models, branches, speech bubbles, 
 
 ## CLI Quick Start
 
-rc.64 fixes the initial language of the recognition backend settings, following the TurboWarp language or the browser language when the host has no preference. The panel supports English and Japanese, including its accessible labels; the app’s language switch also updates it. Teachable Machine 4.0.2 and backend selection were added in rc.63. The earlier rc.58 fixed preview cleanup for the client’s own stream abort. Stories sealed with rc.51 through rc.55 remain unsupported; rebuild them as source or compiled distributions. Run the following package-install example only after 4.0.23 is available on npm; confirm the [release status][current-release] first.
+rc.64 fixes the initial language of the recognition backend settings, following the TurboWarp language or the browser language when the host has no preference. The panel supports English and Japanese, including its accessible labels; the app’s language switch also updates it. Teachable Machine 4.0.2 and backend selection were added in rc.63. The earlier rc.58 fixed preview cleanup for the client’s own stream abort. Stories sealed with rc.51 through rc.55 remain unsupported; rebuild them as source or compiled distributions. Run the following package-install example only after 4.0.24 is available on npm; confirm the [release status][current-release] first.
 
-The [`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.23) CLI is intended for CI, reproducible builds, larger projects, and distribution-profile management. Use Node.js 24.0.0 or later and pnpm 11, and install the exact version you have validated. The CLI command is `turbowarp-kamishibai`, and `tm-kamishibai` stays as a deprecated alias.
+The [`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.24) CLI is intended for CI, reproducible builds, larger projects, and distribution-profile management. Use Node.js 24.0.0 or later and pnpm 11, and install the exact version you have validated. The CLI command is `turbowarp-kamishibai`, and `tm-kamishibai` stays as a deprecated alias.
 
 ```bash
-pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.23
+pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.24
 pnpm exec turbowarp-kamishibai --help
 pnpm exec turbowarp-kamishibai validate-dsl4 --input opening.k4.yml --format pretty
 pnpm exec turbowarp-kamishibai preview-dsl4 --watch --base kamishibai-4-base.sb3 --project-root .
@@ -184,5 +184,5 @@ Software and assets copyrighted by this project are licensed under MPL-2.0 unles
 [rc81]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.81.md
 [rc82]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.82.md
 [rc88]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.88.md
-[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.23
-[stable4]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.23.md
+[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.24
+[stable4]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.24.md
