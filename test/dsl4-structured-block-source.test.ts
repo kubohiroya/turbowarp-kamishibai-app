@@ -215,11 +215,23 @@ test('round-trips motion and presentation effects through actual YAML-authored S
 test('rejects an old runner before writing a block script with dialogue interpolation', () => {
   const original = source.replace(
     'text: こんにちは, seconds: 1',
-    "text: {interpolate: {join: ['Score ', {variable: score}]}}, seconds: 1",
+    "text: {interpolate: {join: ['Score ', {join: [{variable: score}, 3]}]}}, seconds: 1",
   );
   assert.throws(() => authored(original), {code: 'K4-TEXT-INTERPOLATION-RUNTIME-001'});
   const project = authored(original, dsl4TextInterpolationRuntimeCapability + '\n');
   assert.deepEqual(parse(extracted(project)), parse(original));
+  // Scratch keeps a primitive's value as text, the number part included.
+  const joins = Object.values(
+    (
+      project as {
+        targets: {blocks: Record<string, {opcode: string; inputs: Record<string, unknown[]>}>}[];
+      }
+    ).targets[0]!.blocks,
+  ).filter((block) => block.opcode === 'operator_join');
+  assert.ok(joins.some((block) => (block.inputs.STRING2![1] as unknown[])[0] === 4));
+  for (const block of joins)
+    for (const input of Object.values(block.inputs))
+      if (input[0] === 1) assert.equal(typeof (input[1] as unknown[])[1], 'string');
 });
 
 test('keeps legacy animate and presentationEffect on the custom actor block', () => {

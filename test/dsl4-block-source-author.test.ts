@@ -83,6 +83,42 @@ test('writes a declaration the reader takes back as the same source, determinist
   assert.equal(strFromU8(unzipSync(new Uint8Array(first.bytes))['assets/keep.txt']!), 'keep');
 });
 
+test('stores every primitive value as text, as Scratch does, and still reads numbers back', () => {
+  // A number in a primitive made the editor log "Unexpected input recieved in replaceUnsafeChars".
+  const sourceText = [
+    "kamishibai: '4.0'",
+    'variables:',
+    '  score: 0',
+    "  label: ''",
+    'scenes:',
+    '  opening:',
+    '    - setVariable: {name: score, value: 1}',
+    "    - setVariable: {name: label, value: '2'}",
+    '    - wait: 1.5',
+    '',
+  ].join('\n');
+  const authored = authorDsl4BlockSourceSb3({
+    baseBytes: baseBytes(),
+    sourceText,
+    sourceFrontend: frontend,
+  });
+  assert.equal(authored.ok, true, JSON.stringify(authored.ok ? null : authored.diagnostics));
+  if (!authored.ok) return;
+  const project = projectOf(new Uint8Array(authored.bytes));
+  const targets = project.targets as {
+    blocks: Record<string, {inputs?: Record<string, unknown[]>}>;
+  }[];
+  const primitives = targets
+    .flatMap((target) => Object.values(target.blocks))
+    .flatMap((block) => Object.values(block.inputs ?? {}))
+    .flatMap((input) => input.slice(1))
+    .filter((value): value is unknown[] => Array.isArray(value) && value.length === 2);
+  assert.ok(primitives.some(([type]) => type === 4));
+  for (const [, value] of primitives) assert.equal(typeof value, 'string');
+  const readBack = extractDsl4BlockSourcesFromProject(project);
+  assert.deepEqual(parse(readBack.sources['Stage.k4.yml']!), parse(sourceText));
+});
+
 test('names the blocks for the extension the base loads', () => {
   const bundled = authorDsl4BlockSourceSb3({
     baseBytes: baseBytes(),
