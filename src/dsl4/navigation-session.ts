@@ -93,23 +93,20 @@ function historyFailure(result: unknown): {
  * Commands whose effect outlives the action and is not captured in a save: BGM keeps playing,
  * scene audio keeps its playbacks, setText leaves text drawn on an actor, loop keeps flipping
  * costumes, and a broadcast runs project scripts that may change anything. Restoring past one would
- * silently drop its effect, so the save needs a port that captures it.
+ * silently drop its effect, so the save needs a port that captures it. An author may mark a
+ * broadcast `saveSafe` to declare that its scripts leave nothing to restore; restore never resends it.
  *
  * Speech, think bubbles, sounds and pose waits end with their action; a save taken during one
  * cancels and replays it (or waits for it to finish), so nothing of theirs is left to restore.
  */
-const dsl4UncapturedEffectCommands = new Set([
-  'bgm',
-  'audio',
-  'audioControl',
-  'setText',
-  'loop',
-  'broadcastMessageAndWait',
-]);
+const dsl4UncapturedEffectCommands = new Set(['bgm', 'audio', 'audioControl', 'setText', 'loop']);
 
 function leavesUncapturedState(action: Readonly<Record<string, unknown>>) {
   if (action.handler === 'custom') return true;
   const command = String(action.command);
+  // The author declares that the scripts this message starts leave nothing a save must restore.
+  if (command === 'broadcastMessageAndWait')
+    return (action.args as {saveSafe?: unknown} | undefined)?.saveSafe !== true;
   // A pose step's sound starts like BGM and keeps playing after the pose.
   if (command === 'pose') {
     const steps = (action.args as {steps?: unknown} | undefined)?.steps;

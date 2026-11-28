@@ -1464,6 +1464,18 @@ export function createDsl4RuntimeController({
         },
       });
     }
+    // `saveSafe` is the author's promise to save points; the Scratch broadcast takes the message only.
+    if (
+      action.handler !== 'custom' &&
+      action.command === 'broadcastMessageAndWait' &&
+      isRecord(action.args) &&
+      Object.hasOwn(action.args, 'saveSafe')
+    ) {
+      action = deepFreeze({
+        ...action,
+        args: Object.fromEntries(Object.entries(action.args).filter(([key]) => key !== 'saveSafe')),
+      });
+    }
     const transitionKey = {
       stage: 'backdrop',
       bgm: 'bgm',

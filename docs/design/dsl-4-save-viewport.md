@@ -78,7 +78,7 @@ TurboWarp host は表示のsaveに `media` を加え、次をデータとして�
 - `loop`: 俳優ごとの steps。復元は最初の段から再開する。
 - `sound` を持つ `pose` の段の音は一度だけ鳴る音で、復元では途中で止め、再開しない。取り消された `sound` と同じ扱いになる。
 
-BGM・場面の音声・`loop` は鳴らし始めると rollback で取り消せないため、採用後の finalize で旧作品の音とloopを止めた後に始める。この段階の失敗は `save.diagnostic` として通知し、採用は取り消さない。`media` のない以前のsaveは、BGM・音声・text・loopのない状態として復元する。`broadcastMessageAndWait` と custom action は Scratch の変数やリストを含む任意の状態を変えるため、TurboWarp host でも拒否を続ける。
+BGM・場面の音声・`loop` は鳴らし始めると rollback で取り消せないため、採用後の finalize で旧作品の音とloopを止めた後に始める。この段階の失敗は `save.diagnostic` として通知し、採用は取り消さない。`media` のない以前のsaveは、BGM・音声・text・loopのない状態として復元する。`broadcastMessageAndWait` は Scratch の変数やリストを含む任意の状態を変えるため拒否を続けるが、作者が `saveSafe: true` を付けた action は、receiver が残す状態はないという作者の宣言として core が許可する。復元は message を送り直さない。custom action は TurboWarp host に配線されておらず（`customAction` の port がなく、custom action を含む台本は host 作成時に `K4-HOST-PORT-MISSING` で止まる見込み。コードからの推定で未実行）、拒否を続ける。配線するときに、custom action の登録へ同じ宣言を加えるかを決める。
 
 ## 受け入れ基準と検証
 
