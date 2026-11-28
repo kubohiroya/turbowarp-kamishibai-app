@@ -10,10 +10,7 @@ import {
 } from '../dsl4/block-source-shared.js';
 import {createDsl4BlockAuthoringProjectExtensionSource} from './dsl4-catalog-extensions.js';
 import {assertDsl4MigrationPathFree, writeDsl4MigrationOutputs} from './dsl4-migration-output.js';
-import {
-  readDsl4PlaybackRuntimeExtensionSource,
-  readDsl4NarrativeRuntimeExtensionSource,
-} from './dsl4-playback-runtime-source.js';
+import {readDsl4NarrativeRuntimeExtensionSource} from './dsl4-playback-runtime-source.js';
 import {readSb3, serializeSb3} from './sb3.js';
 import {packageVersion} from './constants.js';
 import type {Dsl4SourceFrontend} from '../dsl4/source-frontend.js';
@@ -62,11 +59,11 @@ export async function migrateDsl4EmbeddedYamlFile(options: MigrateEmbeddedYamlFi
     migrated.report.channel === 'bundled'
       ? 'kubohiroyakamishibai4'
       : 'kubohiroyakamishibairuntime4';
+  // The output is the block source an author edits in the Editor, so it carries the authoring
+  // profile: only that profile registers the asset, scene and action previews and holds the
+  // embedded YAML editing schema. The playback profile is for works that are only played.
   const runtime =
-    options.runtimeExtensionSource ??
-    (options.narrativeControlEnabled
-      ? await readDsl4NarrativeRuntimeExtensionSource('playback')
-      : await readDsl4PlaybackRuntimeExtensionSource());
+    options.runtimeExtensionSource ?? (await readDsl4NarrativeRuntimeExtensionSource('authoring'));
   if (
     typeof runtime !== 'string' ||
     !runtime.includes(`// ID: ${runtimeId}\n`) ||

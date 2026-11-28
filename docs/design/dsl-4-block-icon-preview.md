@@ -46,6 +46,8 @@ Teachable Machineは後続のbundle memberとして初期化されるため、�
 
 asset・場面・動作のプレビューは、対応する Editor と編集用 runtime で既定 ON。`src/dsl4/block-icon-preview-feature-flags.ts` が起動時に一度だけ設定を読み、起動 URL の `twPlusBlockPreview=0` または読み込み前の `globalThis.TW_BLOCK_ICON_PREVIEWS = false` でだけ切り戻す。起動前の真偽値を URL より優先する。編集用 runtime の authoring profile とプレビュー登録 API が必要で、未対応の Editor では従来フォームのままとなる。
 
+編集用 SB3 を作る `migrate-embedded-yaml` は、4.0.34 まで playback profile の runtime を積んでいた。playback profile にはプレビューの登録がないため、サンプルの `*-blocks-4.0.sb3` などを Editor で開いても場面・動作・素材のプレビューが出なかった。この変換は narrative の有無にかかわらず authoring profile の runtime を積む。playback profile の2つの生成物は同じバイト列で、authoring profile は narrative を含む1つだけなので、選び分けは不要である。既に作った編集用 SB3 は、変換し直すまでプレビューが出ない。
+
 プレビューを切り戻すには、起動 URL に `twPlusBlockPreview=0` を指定するか、読み込み前に `globalThis.TW_BLOCK_ICON_PREVIEWS = false` を設定して Editor を再読み込みする。asset と場面・動作をこの指定で分けられない。コードを戻す場合は該当変更を revert し、元の YAML から編集用 SB3 を再生成する。
 
 回帰確認では、プレビュー設定を指定せずに asset アイコンと場面アイコンを開き、フォームと素材・場面の再生が表示されることを確認する。次に `twPlusBlockPreview=0` で開き直し、どちらのアイコンからもフォームだけが開くことを確認する。
