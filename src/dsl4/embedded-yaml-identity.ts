@@ -19,3 +19,20 @@ export const dsl4EmbeddedYamlRootOperation = 'embeddedYamlRoot';
 export const dsl4EmbeddedYamlRootOpcode = 'kubohiroyakamishibairuntime4_embeddedYamlRoot';
 export const dsl4BundledEmbeddedYamlRootOpcode =
   'kubohiroyakamishibai4_kubohiroyakamishibairuntime4__embeddedYamlRoot';
+
+/**
+ * Editor-only relation declarations (`scriptRelations` on a getInfo() block). TurboWarp ignores the key;
+ * the Plus Editor draws a reference arrow from each referring block to the story hat with the same
+ * DOCUMENT value. The channel is a name, not an opcode, so it holds in bundled and unbundled forms.
+ */
+export const dsl4EmbeddedYamlRelationChannel = 'kubohiroya.kamishibai4.embeddedYamlDocument';
+export const dsl4EmbeddedYamlDocumentRelationTarget = Object.freeze({
+  targets: Object.freeze([
+    Object.freeze({channel: dsl4EmbeddedYamlRelationChannel, argument: 'DOCUMENT'}),
+  ]),
+});
+export const dsl4EmbeddedYamlDocumentRelationReference = Object.freeze({
+  references: Object.freeze([
+    Object.freeze({channel: dsl4EmbeddedYamlRelationChannel, argument: 'DOCUMENT'}),
+  ]),
+});
