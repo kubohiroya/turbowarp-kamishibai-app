@@ -1044,18 +1044,22 @@ test('builds one self-contained DSL 4.0 release with a pinned runtime extension'
     `${bundleExtensionId}_${runtimeExtensionId}__showTitle`,
   );
   assert.equal(blockOf(stage, 'titleStageClick').opcode, 'event_whenstageclicked');
-  assert.deepEqual(
-    requireRecord(blockOf(stage, 'titleStageClickClose').inputs, 'its inputs').BROADCAST_INPUT,
-    [1, [11, 'closeTitle', 'closeTitleMessage']],
-  );
-  assert.equal(blockOf(stage, 'titleCloseHat').opcode, 'event_whenbroadcastreceived');
-  assert.deepEqual(
-    requireRecord(blockOf(stage, 'titleCloseHat').fields, 'its fields').BROADCAST_OPTION,
-    ['closeTitle', 'closeTitleMessage'],
-  );
+  assert.equal(blockOf(stage, 'titleStageClick').next, 'titleStageClickClose');
   assert.equal(
-    blockOf(stage, 'titleCloseStart').opcode,
+    blockOf(stage, 'titleStageClickClose').opcode,
     `${bundleExtensionId}_${runtimeExtensionId}__closeTitle`,
+  );
+  assert.deepEqual(
+    Object.values(requireRecord(stage.blocks, 'the Stage blocks'))
+      .filter((block) => requireRecord(block, 'a Stage block').topLevel === true)
+      .map((block) => requireRecord(block, 'a Stage block').opcode),
+    ['event_whenflagclicked', 'event_whenstageclicked'],
+    'The Stage holds only the green-flag and Stage-click scripts, with no stray blocks.',
+  );
+  assert.deepEqual(
+    requireRecord(stage, 'the Stage').broadcasts,
+    {},
+    'Closing the title must not round-trip through a broadcast.',
   );
 
   assert.equal(turbowarpVmCommit, 'c4823421cb7c17d8d8a89878851ce1668c26a21f');
@@ -1925,10 +1929,6 @@ test('opens the non-embedded title and menu without validating a packaged story 
       ['https://kubohiroya.github.io/turbowarp-kamishibai-app/', '_blank', 'noopener,noreferrer'],
     ]);
     assert.equal(await extensionReporter(vm, 'statusReporter'), 'title');
-    assert.equal(
-      vm.runtime.getTargetForStage().lookupBroadcastMsg('closeTitleMessage', 'closeTitle')?.name,
-      'closeTitle',
-    );
     const stageClickThreads = vm.runtime.startHats('event_whenstageclicked');
     assert.equal(stageClickThreads.length, 1, 'The Stage click must start the closeTitle stack.');
     const startupDeadline = Date.now() + 5_000;
@@ -1991,7 +1991,7 @@ test('opens the non-embedded title and menu without validating a packaged story 
       }
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
-    assert.equal(closeBroadcastStarts, 1, 'The DOM close action must broadcast closeTitle once.');
+    assert.equal(closeBroadcastStarts, 0, 'The DOM close action must close the title directly.');
     assert.equal(await extensionReporter(vm, 'statusReporter'), 'menu');
     assert.equal(
       vm.runtime.getTargetForStage().sprite.costumes[vm.runtime.getTargetForStage().currentCostume]

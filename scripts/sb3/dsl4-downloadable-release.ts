@@ -177,8 +177,6 @@ const extensionBundle = Object.freeze({
   memberColors: 'member',
   metadata: bundleMetadata,
 });
-const closeTitleBroadcastId = 'closeTitleMessage';
-const closeTitleBroadcastName = 'closeTitle';
 const poseConfidenceVariableId = 'dsl4-pose-confidence';
 const poseProgressVariableId = 'dsl4-pose-progress';
 const sourceText = `kamishibai: '4.0'
@@ -318,9 +316,7 @@ function stageTarget(
       [poseProgressVariableId]: ['チャージ', 0],
     },
     lists: {},
-    broadcasts: {
-      [closeTitleBroadcastId]: closeTitleBroadcastName,
-    },
+    broadcasts: {},
     blocks: {
       titleFlag: {
         opcode: 'event_whenflagclicked',
@@ -342,20 +338,8 @@ function stageTarget(
         shadow: false,
         topLevel: false,
       },
-      titleSetVersion: {
-        opcode: `${runtimeExtensionId}_setTextValue`,
-        next: null,
-        parent: null,
-        inputs: {
-          NAME: [1, [10, 'about.version']],
-          VALUE: [1, [10, 'Version {{VERSION}} ({{BUILD_DATE}})']],
-        },
-        fields: {},
-        shadow: false,
-        topLevel: true,
-        x: 240,
-        y: 0,
-      },
+      // The Stage click and the DOM close button both run the same `closeTitle` command. The
+      // version shown on the title lives in the Title backdrop, which the build stamps and reads.
       titleStageClick: {
         opcode: 'event_whenstageclicked',
         next: 'titleStageClickClose',
@@ -368,33 +352,9 @@ function stageTarget(
         y: 120,
       },
       titleStageClickClose: {
-        opcode: 'event_broadcast',
-        next: null,
-        parent: 'titleStageClick',
-        inputs: {
-          BROADCAST_INPUT: [1, [11, closeTitleBroadcastName, closeTitleBroadcastId]],
-        },
-        fields: {},
-        shadow: false,
-        topLevel: false,
-      },
-      titleCloseHat: {
-        opcode: 'event_whenbroadcastreceived',
-        next: 'titleCloseStart',
-        parent: null,
-        inputs: {},
-        fields: {
-          BROADCAST_OPTION: [closeTitleBroadcastName, closeTitleBroadcastId],
-        },
-        shadow: false,
-        topLevel: true,
-        x: 0,
-        y: 240,
-      },
-      titleCloseStart: {
         opcode: `${runtimeExtensionId}_closeTitle`,
         next: null,
-        parent: 'titleCloseHat',
+        parent: 'titleStageClick',
         inputs: {},
         fields: {},
         shadow: false,

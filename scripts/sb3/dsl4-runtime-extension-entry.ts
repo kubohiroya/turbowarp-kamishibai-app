@@ -135,7 +135,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.22';
+const extensionVersion = '4.0.23';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -1143,14 +1143,6 @@ class KamishibaiDsl4RuntimeExtension {
     return pendingStart.start();
   }
 
-  requestCloseTitle() {
-    const threads = this.turboWarpHost.startHats('event_whenbroadcastreceived', {
-      BROADCAST_OPTION: 'closeTitle',
-    });
-    if (threads.length === 0) return this.closeTitle();
-    return undefined;
-  }
-
   openOfficialWebsite() {
     if (this.shell?.titleElement) {
       this.shell.openOfficialWebsite();
@@ -1612,7 +1604,7 @@ class KamishibaiDsl4RuntimeExtension {
         },
         websiteIconUrl: officialWebsiteIcon,
         onWebsite: () => this.openOfficialWebsite(),
-        onClose: () => this.requestCloseTitle(),
+        onClose: () => this.closeTitle(),
         onConfig: () => this.openPlaybackSettings('title'),
         onError: (error) => this.reportFailure(error, 'title-controls'),
       });
@@ -2255,11 +2247,6 @@ class KamishibaiDsl4RuntimeExtension {
           runtime: turboWarpHost.runtime,
           audioMixer: this.audioMixer,
           skipOverride: () => this.playbackPreferences.getSkipOverride(),
-          onTitleStart() {
-            turboWarpHost.startHats('event_whenbroadcastreceived', {
-              BROADCAST_OPTION: 'closeTitle',
-            });
-          },
           createHostPort: async ({runtimeHost}: {runtimeHost: unknown}) =>
             createDsl4TurboWarpTransitionPort({runtimeHost}),
           ...this.tmComputeOptions(),

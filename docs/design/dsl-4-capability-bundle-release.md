@@ -161,8 +161,10 @@ cleanupを継続します。
 タイトルから物語またはメニューへ進む分岐は、
 [3.2内部仕様書の状態遷移](https://kubohiroya.github.io/turbowarp-kamishibai-docs/3.2/developer-guides/internal-specification/document.html#%E7%8A%B6%E6%85%8B%E9%81%B7%E7%A7%BB)
 を4.0 Standardでも維持します。緑の旗は初期化後に`showTitle`へ進み、タイトル表示中は物語を開始しません。
-ステージ上のタイトル背景クリックと右上の閉じるボタンは、いずれも`closeTitle` broadcastへ集約します。
-`closeTitle`受信後は、台本埋め込み版なら`startStory`、非埋め込み版なら`showCover`からカバー／メニューへ進みます。
+ステージ上のタイトル背景クリックと右上の閉じるボタンは、いずれも`closeTitle`コマンドへ集約します。
+ステージは「ステージが押されたとき → タイトル画面を閉じる」を直接実行し、閉じるボタンはランタイムから
+同じコマンドを呼びます。broadcastを経由する往復はしません。
+`closeTitle`の後は、台本埋め込み版なら`startStory`、非埋め込み版なら`showCover`からカバー／メニューへ進みます。
 物語の終了または中止は`stopStory`からカバー／メニューへ戻し、タイトルを再表示しません。
 
 ## 7. releaseとrollback

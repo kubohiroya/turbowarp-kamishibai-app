@@ -3,7 +3,7 @@
   "issue": 266,
   "standardArtifact": {
     "series": "4.0",
-    "version": "4.0.22",
+    "version": "4.0.23",
     "extensionId": "kubohiroyakamishibai4",
     "runtimeComponentId": "kubohiroyakamishibairuntime4",
     "integration": "static-extension-bundle",
@@ -278,7 +278,7 @@
     "reference": "https://kubohiroya.github.io/turbowarp-kamishibai-docs/3.2/developer-guides/internal-specification/document.html#%E7%8A%B6%E6%85%8B%E9%81%B7%E7%A7%BB",
     "greenFlag": ["initialize", "showTitle", "title"],
     "closeInputs": ["stage-click", "close-button"],
-    "sharedBroadcast": "closeTitle",
+    "sharedCommand": "closeTitle",
     "embeddedExit": "startStory",
     "externalExit": ["showCover", "showMenu"],
     "storyExit": ["stopStory", "showCover", "showMenu"],
@@ -309,7 +309,7 @@
     "immutableStates": ["frozen", "published"],
     "npmDistTag": "latest",
     "githubPrerelease": false,
-    "recommendedStableVersion": "4.0.22"
+    "recommendedStableVersion": "4.0.23"
   },
   "rollbackOrder": [
     "disable-default-off-feature-surface",
