@@ -188,7 +188,8 @@ test('application menu centers reload when only reload, about, and language are 
   const reload = button('reload');
   assert.equal(reload.style.left, '31.6667%');
   const margins =
-    Number.parseFloat(String(reload.style.left)) * 2 + Number.parseFloat(String(reload.style.width));
+    Number.parseFloat(String(reload.style.left)) * 2 +
+    Number.parseFloat(String(reload.style.width));
   assert.ok(Math.abs(margins - 100) < 0.001, `reload is off center: ${margins}`);
   assert.equal(button('about').style.left, '10%');
   assert.equal(button('language').style.left, '53.3333%');
