@@ -11,6 +11,10 @@ import {
   type Dsl4PresentationEffectSurface,
 } from './presentation-effect-port.js';
 import {createDsl4PresentationSavePort} from './presentation-save-port.js';
+import {
+  createDsl4PresentationMediaSave,
+  validateDsl4MediaRestoreSupport,
+} from './presentation-media-save.js';
 import {dsl4CoreActionManifest} from '../core-action-manifest.js';
 import type {Dsl4RuntimePortOperation} from '../runtime-port.js';
 import type {Dsl4NavigationSessionSurface} from '../navigation-session-surface.js';
@@ -908,7 +912,11 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
         const key = Object.keys(storyActors).find(
           (key) => actorPlatform?.resolveActor(key) === target,
         );
-        if (key) displayBindings.set(key, name);
+        if (key) {
+          displayBindings.set(key, name);
+          // A new skin covers the text drawn on the actor, so a save must not draw it again.
+          svgTextPlatform?.forgetText(key);
+        }
       },
     };
     mediaPort = createDsl4MediaActionPort({
@@ -1133,6 +1141,19 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
         })),
       ],
       video: () => videoPort,
+      media: createDsl4PresentationMediaSave({
+        bgm: crossfadePlatform,
+        requireBgmAsset(asset) {
+          if (
+            !imageComposition.isRegistered(asset) ||
+            !String(imageComposition.getMimeType(asset)).startsWith('audio/')
+          )
+            throw new TypeError(`Saved BGM is not prepared: ${asset}`);
+        },
+        audio: audioPort,
+        texts: svgTextPlatform,
+        loops: mediaPort,
+      }),
       async finalizePrevious() {
         const results = await Promise.allSettled([
           Promise.resolve().then(() => mediaPort?.stopAllLoops()),
@@ -1177,6 +1198,12 @@ export async function createDsl4TurboWarpRuntimeEnvironment(
       ['capturePresentationState', 'prepareRestorePresentation'],
       'presentation save port',
     );
+    const savedBgmSupported = crossfadePlatform !== null;
+    // The presentation save above captures and restores these; anything else stays refused.
+    port.validateSaveRestoreSupport = (_save, unsupported) =>
+      validateDsl4MediaRestoreSupport(unsupported as readonly Readonly<Record<string, unknown>>[], {
+        bgm: savedBgmSupported,
+      });
     const activeActorPlatformForTransitions = actorPlatform;
     port.finishPresentationTransitions = (reason: unknown) => {
       const errors = [];

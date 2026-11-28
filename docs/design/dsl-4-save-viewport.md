@@ -68,7 +68,17 @@ disposeは新しいcheckpoint操作を閉じてprepareへabortを通知し、遅
 
 組込みは、準備済みcostume名によるactor/backdropと画像assetのbinding、actorのXY・size・direction・visible・effect、story actor同士の相対layer順、および動画を復元する。renderer IDやVM target objectを保存しない。物語と無関係なspriteとの任意のinterleaveは復元対象にしない。
 
-action が終わった後も残り、saveに入らない作用は、通常のcommandを再実行して推測復元しない。対象は BGM（`bgm`、および `sound` を持つ `pose` の段）、場面の音声（`audio`・`audioControl`）、動的SVG text（`setText`）、コスチュームの `loop`、外部broadcast（`broadcastMessageAndWait`）、custom action。その履歴を持つcheckpointは、portが`validateSaveRestoreSupport(save, actions)`と対応するcapture/prepareRestorePresentation handlerを持つ場合だけ許可する。speech bubble（`say`・`think`）、`sound`、`sound` を持たない `pose` は action の終了とともに作用が消え、save 中の実行は取り消して再実行する（`sound` は終了を待つ）ため、残る作用がなく handler なしで許可する。handlerはデータ検証、commit、失敗時rollback、採用後finalizeを持ち、非JSONのownerをsaveへ混ぜない。未対応を黙って落とさない。
+action が終わった後も残る作用は、通常のcommandを再実行して推測復元しない。core は BGM（`bgm`、および `sound` を持つ `pose` の段）、場面の音声（`audio`・`audioControl`）、動的SVG text（`setText`）、コスチュームの `loop`、外部broadcast（`broadcastMessageAndWait`）、custom action を履歴に持つcheckpointを、portが`validateSaveRestoreSupport(save, actions)`と対応するcapture/prepareRestorePresentation handlerを持つ場合だけ許可する。speech bubble（`say`・`think`）、`sound`、`sound` を持たない `pose` は action の終了とともに作用が消え、save 中の実行は取り消して再実行する（`sound` は終了を待つ）ため、残る作用がなく handler なしで許可する。handlerはデータ検証、commit、失敗時rollback、採用後finalizeを持ち、非JSONのownerをsaveへ混ぜない。未対応を黙って落とさない。
+
+TurboWarp host は表示のsaveに `media` を加え、次をデータとして保持して復元する（`src/dsl4/platform/presentation-media-save.ts`）。
+
+- BGM: crossfade の BGM の asset と、fade 中なら向かう先の音量（0〜100）。復元は今鳴っている BGM（fade 中の voice を含む）を止め、保存した BGM を最初から鳴らし直す。voice は再生位置を返さないため位置は保持しない。保存時に BGM がなければ止めるだけになる。crossfade を使えない host は `bgm` を対応外として拒否を続ける。
+- 場面の音声: id、asset または URL、再生位置、paused、loop、音量、muted、速度。復元は prepare で playback を作って位置を合わせ、失敗すればcheckpoint全体を拒否する。採用後に置き換え、再生中だったものだけを再開する。
+- `setText`: 俳優ごとの content run と style。commit の中で、保存時に text がない俳優のtextを解放し、costumeとbindingを戻した後に保存した text を描き直す。rollback は以前の text を描き直す。後から skin を貼った俳優の text は覆われて見えないため、記録から外す。
+- `loop`: 俳優ごとの steps。復元は最初の段から再開する。
+- `sound` を持つ `pose` の段の音は一度だけ鳴る音で、復元では途中で止め、再開しない。取り消された `sound` と同じ扱いになる。
+
+BGM・場面の音声・`loop` は鳴らし始めると rollback で取り消せないため、採用後の finalize で旧作品の音とloopを止めた後に始める。この段階の失敗は `save.diagnostic` として通知し、採用は取り消さない。`media` のない以前のsaveは、BGM・音声・text・loopのない状態として復元する。`broadcastMessageAndWait` と custom action は Scratch の変数やリストを含む任意の状態を変えるため、TurboWarp host でも拒否を続ける。
 
 ## 受け入れ基準と検証
 

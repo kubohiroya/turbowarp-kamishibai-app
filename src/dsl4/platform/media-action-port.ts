@@ -189,7 +189,9 @@ export function createDsl4MediaActionPort(options: {
   const onBackgroundError = options.onBackgroundError ?? (() => {});
   const scheduler = validateScheduler(options.scheduler ?? createDefaultScheduler());
   const transitionHost = validateTransitionHost(options.transitionHost);
-  const actorLoops: Map<string, {timer?: unknown; active: boolean}> = new Map();
+  type LoopStep = Readonly<{skin: string; seconds: number}>;
+  const actorLoops: Map<string, {timer?: unknown; active: boolean; steps?: readonly LoopStep[]}> =
+    new Map();
   const actorSkinQueues: Map<string, Promise<unknown>> = new Map();
 
   function enqueueActorSkin(target: string, apply: () => unknown | Promise<unknown>) {
@@ -251,6 +253,89 @@ export function createDsl4MediaActionPort(options: {
       throw portError('K4-MEDIA-PORT-003', `Actor target is unavailable: ${actorId}`);
     }
     return value as unknown as Readonly<{id: string; isStage: false}>;
+  }
+
+  function validateLoopSteps(value: unknown) {
+    if (!Array.isArray(value) || value.length === 0) {
+      throw portError('K4-MEDIA-PORT-001', 'loop payload must provide target and non-empty steps');
+    }
+    const steps = value.map((step) => {
+      if (
+        !isRecord(step) ||
+        Object.keys(step).length !== 2 ||
+        typeof step.skin !== 'string' ||
+        step.skin.length === 0 ||
+        typeof step.seconds !== 'number' ||
+        !Number.isFinite(step.seconds) ||
+        step.seconds < 0
+      ) {
+        throw portError(
+          'K4-MEDIA-PORT-001',
+          'loop steps must provide a non-empty skin and non-negative finite seconds',
+        );
+      }
+      requireAsset(step.skin, 'image');
+      return Object.freeze({skin: step.skin, seconds: step.seconds});
+    });
+    if (!steps.some(({seconds}) => seconds > 0)) {
+      throw portError('K4-MEDIA-PORT-001', 'loop requires at least one positive duration');
+    }
+    return Object.freeze(steps);
+  }
+
+  function validateLoops(input: unknown): Readonly<Record<string, readonly LoopStep[]>> {
+    if (!isRecord(input) || Object.keys(input).length > 512) {
+      throw portError('K4-MEDIA-PORT-001', 'Saved loops must be an object keyed by actor');
+    }
+    return Object.fromEntries(
+      Object.entries(input).map(([target, steps]) => {
+        if (!target) throw portError('K4-MEDIA-PORT-001', 'Saved loop target is empty');
+        return [target, validateLoopSteps(steps)];
+      }),
+    );
+  }
+
+  async function startLoop(target: string, steps: readonly LoopStep[], context: unknown) {
+    const signal = validateContext(context);
+    if (signal.aborted) throw abortError();
+    const actionContext = context as unknown as Readonly<Record<string, unknown>>;
+    const actor = validateActor(
+      await runCancellable(() => resolveActor(target, actionContext), signal),
+      target,
+    );
+    await runCancellable(() => stopLoop(target), signal);
+    const state: {timer?: unknown; active: boolean; steps?: readonly LoopStep[]} = {
+      active: true,
+      steps,
+    };
+    actorLoops.set(target, state);
+
+    async function applyStep(index: number) {
+      if (!state.active) return;
+      // The index is taken modulo the step count, so it always resolves.
+      const step = steps[index];
+      if (!step) return;
+      await enqueueActorSkin(target, () => composition.applyToTarget(step.skin, actor));
+      if (!state.active) return;
+      state.timer = scheduler.setTimeout(() => {
+        state.timer = undefined;
+        void applyStep((index + 1) % steps.length).catch((error) => {
+          void stopLoop(target, state);
+          onBackgroundError(error);
+        });
+      }, step.seconds * 1000);
+    }
+
+    try {
+      await runCancellable(
+        () => applyStep(0),
+        signal,
+        () => void stopLoop(target, state),
+      );
+    } catch (error) {
+      await stopLoop(target, state);
+      throw error;
+    }
   }
 
   return Object.freeze({
@@ -458,67 +543,27 @@ export function createDsl4MediaActionPort(options: {
         );
       }
       const target = payload.target;
-      const steps = payload.steps.map((step) => {
-        if (
-          !isRecord(step) ||
-          Object.keys(step).length !== 2 ||
-          typeof step.skin !== 'string' ||
-          step.skin.length === 0 ||
-          typeof step.seconds !== 'number' ||
-          !Number.isFinite(step.seconds) ||
-          step.seconds < 0
-        ) {
-          throw portError(
-            'K4-MEDIA-PORT-001',
-            'loop steps must provide a non-empty skin and non-negative finite seconds',
-          );
-        }
-        requireAsset(step.skin, 'image');
-        return Object.freeze({skin: step.skin, seconds: step.seconds});
-      });
-      if (!steps.some(({seconds}) => seconds > 0)) {
-        throw portError('K4-MEDIA-PORT-001', 'loop requires at least one positive duration');
-      }
-      const signal = validateContext(context);
-      if (signal.aborted) throw abortError();
-      const actionContext = context as unknown as Readonly<Record<string, unknown>>;
-      const actor = validateActor(
-        await runCancellable(() => resolveActor(target, actionContext), signal),
-        target,
-      );
-      await runCancellable(() => stopLoop(target), signal);
-      const state: {timer?: unknown; active: boolean} = {active: true};
-      actorLoops.set(target, state);
-
-      async function applyStep(index: number) {
-        if (!state.active) return;
-        // The index is taken modulo the step count, so it always resolves.
-        const step = steps[index];
-        if (!step) return;
-        await enqueueActorSkin(target, () => composition.applyToTarget(step.skin, actor));
-        if (!state.active) return;
-        state.timer = scheduler.setTimeout(() => {
-          state.timer = undefined;
-          void applyStep((index + 1) % steps.length).catch((error) => {
-            void stopLoop(target, state);
-            onBackgroundError(error);
-          });
-        }, step.seconds * 1000);
-      }
-
-      try {
-        await runCancellable(
-          () => applyStep(0),
-          signal,
-          () => void stopLoop(target, state),
-        );
-      } catch (error) {
-        await stopLoop(target, state);
-        throw error;
-      }
+      const steps = validateLoopSteps(payload.steps);
+      return startLoop(target, steps, context);
     },
 
     stopActorLoop: stopLoop,
+    /** The running loops as data; a save restarts each from its first step. */
+    captureLoops() {
+      return Object.fromEntries(
+        [...actorLoops]
+          .filter(([, loop]) => loop.active && loop.steps)
+          .map(([target, loop]) => [target, loop.steps!.map((step) => ({...step}))]),
+      );
+    },
+    validateLoops,
+    /** Restart saved loops in the background, after the previous loops were stopped. */
+    async restoreLoops(input: unknown) {
+      const loops = validateLoops(input);
+      await stopAllLoops();
+      const signal = new AbortController().signal;
+      for (const [target, steps] of Object.entries(loops)) await startLoop(target, steps, {signal});
+    },
     stopAllLoops,
     finishTransitions(reason = 'finish') {
       return transitionHost?.finishAll(reason);

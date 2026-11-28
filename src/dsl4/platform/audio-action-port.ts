@@ -7,6 +7,7 @@ import {dsl4VideoControlValueFields, dsl4VideoOperations, isDsl4VideoUrl} from '
 
 interface AudioEntry {
   readonly assetId: string | null;
+  readonly url: string | null;
   readonly playback: AssetManagerAudioPlayback;
   cancel: (() => void) | null;
   run: number;
@@ -17,7 +18,22 @@ export interface Dsl4AudioActionPort extends Readonly<Record<string, unknown>> {
   audioControl(payload: unknown, context: unknown): Promise<void>;
   clear(): void;
   releaseAssets(assetIds: readonly string[]): void;
+  captureState(): readonly Dsl4AudioPlaybackState[];
+  prepareRestoreState(state: unknown): Promise<Readonly<{start(): void; dispose(): void}>>;
   dispose(): void;
+}
+
+/** One scene audio instance as data; native playback handles never enter a save. */
+export interface Dsl4AudioPlaybackState {
+  readonly id: string;
+  readonly asset?: string;
+  readonly url?: string;
+  readonly time: number;
+  readonly paused: boolean;
+  readonly loop: boolean;
+  readonly volume: number;
+  readonly muted: boolean;
+  readonly rate: number;
 }
 
 function failure(code: string, message: string, cause?: unknown) {
@@ -118,6 +134,53 @@ export function createDsl4AudioActionPort(options: {
     if (errors.length) throw new AggregateError(errors, 'Audio cleanup failed');
   }
 
+  function validateState(input: unknown): readonly Dsl4AudioPlaybackState[] {
+    if (!Array.isArray(input) || input.length > 32)
+      throw failure('RESTORE', 'Saved audio must be a list of at most 32 instances');
+    const ids = new Set<string>();
+    return input.map((raw: unknown) => {
+      const state = record(raw);
+      const source = Object.hasOwn(state, 'asset') ? 'asset' : 'url';
+      const expected = ['id', source, 'time', 'paused', 'loop', 'volume', 'muted', 'rate'];
+      if (
+        Object.keys(state).length !== expected.length ||
+        expected.some((key) => !Object.hasOwn(state, key))
+      )
+        throw failure('RESTORE', 'Saved audio fields are invalid');
+      const id = idFor(state);
+      if (ids.has(id)) throw failure('RESTORE', `Saved audio id is duplicated: ${id}`);
+      ids.add(id);
+      if (source === 'url' ? !isDsl4VideoUrl(state.url) : typeof state.asset !== 'string')
+        throw failure('RESTORE', 'Saved audio source must be an asset or HTTP(S) URL');
+      if (
+        source === 'asset' &&
+        (options.getAssetResource(state.asset as string) as {kind?: string} | null)?.kind !==
+          'sound'
+      )
+        throw failure('ASSET', `Audio asset is not prepared: ${String(state.asset)}`);
+      numeric(state.time, 0, Number.MAX_SAFE_INTEGER, 'time');
+      numeric(state.volume, 0, Number.MAX_VALUE, 'volume');
+      numeric(state.rate, 0.25, 4, 'rate');
+      if (['paused', 'loop', 'muted'].some((key) => typeof state[key] !== 'boolean'))
+        throw failure('RESTORE', 'Saved audio playback flags must be boolean');
+      return state as unknown as Dsl4AudioPlaybackState;
+    });
+  }
+
+  function playInBackground(id: string, entry: AudioEntry, loop: boolean) {
+    const run = entry.run;
+    const controller = new AbortController();
+    entry.cancel = () => controller.abort();
+    const report = (cause: unknown) => {
+      if (entry.run !== run || controller.signal.aborted) return;
+      options.onBackgroundError?.(failure('PLAY', `Audio playback could not resume: ${id}`, cause));
+    };
+    void Promise.resolve()
+      .then(() => entry.playback.play({restart: false, loop, signal: controller.signal}))
+      .then(() => entry.playback.ended)
+      .catch(report);
+  }
+
   const port: Dsl4AudioActionPort = {
     async audio(payload, context) {
       requireActive();
@@ -202,7 +265,13 @@ export function createDsl4AudioActionPort(options: {
         const playback = await Promise.race([prepared, aborted]);
         pending.delete(id);
         release(id);
-        entries.set(id, {assetId, playback, cancel: null, run: 0});
+        entries.set(id, {
+          assetId,
+          url: assetId === null ? (source as {url: string}).url : null,
+          playback,
+          cancel: null,
+          run: 0,
+        });
       } finally {
         signal.removeEventListener('abort', onAbort);
         if (pending.get(id) === token) pending.delete(id);
@@ -313,6 +382,77 @@ export function createDsl4AudioActionPort(options: {
       }
     },
     clear,
+    captureState() {
+      return [...entries].map(([id, entry]) => ({
+        id,
+        ...(entry.assetId === null ? {url: entry.url!} : {asset: entry.assetId}),
+        time: entry.playback.currentTime,
+        paused: entry.playback.paused,
+        loop: entry.playback.loop,
+        volume: entry.playback.gain * 100,
+        muted: entry.playback.muted,
+        rate: entry.playback.playbackRate,
+      }));
+    },
+    /**
+     * Create and seek the saved playbacks before anything changes, so a missing source refuses the
+     * restore. `start` replaces the current instances and resumes the ones that were playing.
+     */
+    async prepareRestoreState(input) {
+      requireActive();
+      const states = validateState(input);
+      const prepared: {state: Dsl4AudioPlaybackState; playback: AssetManagerAudioPlayback}[] = [];
+      let settled = false;
+      const dispose = () => {
+        if (settled) return;
+        settled = true;
+        const errors: unknown[] = [];
+        for (const {playback} of prepared)
+          try {
+            playback.dispose();
+          } catch (error) {
+            errors.push(error);
+          }
+        if (errors.length) throw new AggregateError(errors, 'Prepared audio cleanup failed');
+      };
+      try {
+        for (const state of states) {
+          const playback = await options.createAudioPlayback(
+            state.url === undefined ? {asset: state.asset!} : {url: state.url},
+            {gain: state.volume / 100, muted: state.muted, playbackRate: state.rate},
+          );
+          prepared.push({state, playback});
+          if (state.time > 0) await playback.seek(state.time);
+        }
+      } catch (error) {
+        try {
+          dispose();
+        } catch {
+          /* The preparation failure is the one to report. */
+        }
+        throw failure('RESTORE', 'Saved audio could not be prepared', error);
+      }
+      return Object.freeze({
+        start() {
+          requireActive();
+          if (settled) throw failure('RESTORE', 'Prepared audio was already settled');
+          settled = true;
+          clear();
+          for (const {state, playback} of prepared) {
+            const entry: AudioEntry = {
+              assetId: state.asset ?? null,
+              url: state.url ?? null,
+              playback,
+              cancel: null,
+              run: 0,
+            };
+            entries.set(state.id, entry);
+            if (!state.paused) playInBackground(state.id, entry, state.loop);
+          }
+        },
+        dispose,
+      });
+    },
     releaseAssets(assetIds) {
       for (const [id, token] of pending)
         if (token.assetId && assetIds.includes(token.assetId)) cancelPending(id);
