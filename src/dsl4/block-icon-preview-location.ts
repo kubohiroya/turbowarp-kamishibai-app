@@ -1,3 +1,4 @@
+import {dsl4AuthoringBlockName, isDsl4LabeledBlockSourceHat} from './block-source-shared.js';
 import {isSeq, parse, parseDocument} from 'yaml';
 import {extractDsl4BlockSourcesFromProject} from './turbowarp-yaml-json-block-source.js';
 import {readReference} from '@kubohiroya/turbowarp-document-source';
@@ -125,7 +126,7 @@ export async function projectDsl4NamedBlockIconPreview(
       (target) =>
         record(target.blocks) &&
         Object.values(target.blocks).some(
-          (b) => record(b) && b.opcode === dsl4LabeledBlockSourceHatOpcode,
+          (b) => record(b) && isDsl4LabeledBlockSourceHat(b.opcode),
         ),
     )
   )
@@ -320,7 +321,7 @@ export function resolveDsl4BlockIconPreviewLocation(
   if (!block || block.opcode !== reference.opcode)
     failure('プレビュー対象のブロックが見つかりません。');
   const scenes = Array.isArray(storyDocument.scenes) ? storyDocument.scenes.filter(record) : [];
-  if (reference.opcode === 'kubohiroyakamishibaiauthoring4_scene') {
+  if (dsl4AuthoringBlockName(reference.opcode) === 'scene') {
     const sceneId = String(literalField(block, blocks, 'SCENE').value);
     if (!scenes.some((scene) => scene.id === sceneId))
       failure('プレビュー対象の場面が見つかりません。');

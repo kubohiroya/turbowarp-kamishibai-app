@@ -1773,9 +1773,39 @@ test('registers the standard DSL 4.0 runtime blocks as visible VM primitives', a
       'canNavigateToPreviousAction',
       'canNavigateToNextAction',
     ];
-    const bundledCommands = ['embeddedYaml', ...commands, ...stateSurfaceReporters].map(
-      (command) => `${runtimeExtensionId}__${command}`,
-    );
+    // The Block Script declarations the runtime now defines, in palette order; the source hats,
+    // legacy properties, includes and sections stay hidden from the palette.
+    const declarations = [
+      'asset',
+      'control',
+      'actor',
+      'textStyle',
+      'variable',
+      'cover',
+      'loading',
+      'recognition',
+      'viewport',
+      'scene',
+      'actionOptions',
+      'poseSteps',
+      'poseStep',
+      'narrativeIf',
+      'narrativeRepeat',
+      'narrativeForEach',
+      'narrativeReference',
+      'narrativeVariable',
+      'narrativeCompare',
+      'narrativeLogic',
+      'narrativeLogicList',
+      'narrativeNot',
+      'customAction',
+    ];
+    const bundledCommands = [
+      'embeddedYaml',
+      ...declarations,
+      ...commands,
+      ...stateSurfaceReporters,
+    ].map((command) => `${runtimeExtensionId}__${command}`);
     const category = vm.runtime._blockInfo.find(({id}: {id: string}) => id === bundleExtensionId);
     assert(category, 'The embedded DSL 4.0 runtime category was not registered.');
     assert.deepEqual(
@@ -1835,6 +1865,13 @@ test('registers the standard DSL 4.0 runtime blocks as visible VM primitives', a
         'function',
         command,
       );
+    }
+    for (const declaration of declarations) {
+      const inert = vm.runtime.getOpcodeFunction(
+        `${bundleExtensionId}_${runtimeExtensionId}__${declaration}`,
+      );
+      assert.equal(typeof inert, 'function', declaration);
+      assert.equal(inert({}, {}), undefined, `${declaration} must remain inert.`);
     }
   } finally {
     vm.quit();

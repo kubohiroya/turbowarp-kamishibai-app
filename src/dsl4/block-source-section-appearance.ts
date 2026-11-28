@@ -116,13 +116,13 @@ export async function installDsl4SectionAppearance(
       workspace?.addChangeListener(changed);
     }
     if (!workspace) return;
-    const off = workspace
-      .getAllBlocks(false)
-      .filter(
-        (block) =>
-          block.type === 'kubohiroyakamishibaiauthoring4_useSection' &&
-          block.getFieldValue('ENABLED') === 'off',
-      );
+    const off = workspace.getAllBlocks(false).filter(
+      (block) =>
+        // Self-contained: the retired extension and the runtime both spell this block.
+        /^(?:kubohiroyakamishibaiauthoring4_|kubohiroyakamishibairuntime4_|kubohiroyakamishibai4_kubohiroyakamishibairuntime4__)useSection$/u.test(
+          block.type,
+        ) && block.getFieldValue('ENABLED') === 'off',
+    );
     const nextMuted = new Set<SectionVisualBlock>();
     const nextRegions = new Set<SectionVisualBlock>();
     for (const section of off) {

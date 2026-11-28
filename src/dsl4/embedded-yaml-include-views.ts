@@ -1,3 +1,8 @@
+import {
+  isDsl4ConfigBlockSourceHat,
+  isDsl4IncludeBlocks,
+  isDsl4LabeledBlockSourceHat,
+} from './block-source-shared.js';
 import {parse} from 'yaml';
 import {yamlBlockIconURI} from '@kubohiroya/turbowarp-yaml-json/yaml-blocks';
 import {
@@ -85,12 +90,12 @@ export function mergeKamishibaiConfigurationDeclarations<T extends ObjectRecord>
     const blocks = target.blocks as ObjectRecord;
     for (const [id, block] of Object.entries(blocks))
       if (record(block)) {
-        if (block.opcode === dsl4LabeledBlockSourceHatOpcode) {
+        if (isDsl4LabeledBlockSourceHat(block.opcode)) {
           const label = text(blocks, block, 'LABEL');
           if (stories.has(label)) fail('VIEW_CONFIG_DOCUMENT', 'A document label is duplicated.');
           stories.set(label, {target, id, block});
         }
-        if (block.opcode === dsl4ConfigBlockSourceHatOpcode)
+        if (isDsl4ConfigBlockSourceHat(block.opcode))
           configs.push({
             target,
             id,
@@ -328,14 +333,13 @@ export function createKamishibaiIncludeReferenceView<T extends ObjectRecord>(
     const blocks = target.blocks as ObjectRecord;
     for (const block of Object.values(blocks)) {
       if (!record(block)) continue;
-      const role =
-        block.opcode === dsl4LabeledBlockSourceHatOpcode
-          ? 'story'
-          : block.opcode === dsl4ConfigBlockSourceHatOpcode
-            ? 'config'
-            : block.opcode === dsl4IncludeBlocksOpcode
-              ? 'include'
-              : null;
+      const role = isDsl4LabeledBlockSourceHat(block.opcode)
+        ? 'story'
+        : isDsl4ConfigBlockSourceHat(block.opcode)
+          ? 'config'
+          : isDsl4IncludeBlocks(block.opcode)
+            ? 'include'
+            : null;
       if (!role) continue;
       const label = text(blocks, block, 'LABEL'),
         binding = byLabel.get(label);
@@ -395,11 +399,9 @@ export function readKamishibaiIncludeReferenceView(
     for (const block of Object.values(target.blocks as ObjectRecord)) {
       if (!record(block)) continue;
       if (
-        [
-          dsl4LabeledBlockSourceHatOpcode,
-          dsl4ConfigBlockSourceHatOpcode,
-          dsl4IncludeBlocksOpcode,
-        ].includes(String(block.opcode))
+        isDsl4LabeledBlockSourceHat(block.opcode) ||
+        isDsl4ConfigBlockSourceHat(block.opcode) ||
+        isDsl4IncludeBlocks(block.opcode)
       )
         fail(
           'VIEW_INCLUDE_MIXED',

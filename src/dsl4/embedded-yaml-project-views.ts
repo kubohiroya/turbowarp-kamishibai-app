@@ -22,8 +22,6 @@ import {
 } from '@kubohiroya/turbowarp-document-data/view-metadata';
 import {parseSourceSyntax} from '@kubohiroya/turbowarp-yaml-json/source-syntax';
 import {createDsl4BlockAuthoringInfo} from './structured-block-source-codec.js';
-import {dsl4BlockAuthoringExtensionId} from './block-source-shared.js';
-import {embeddedYamlAuthoringRuntimeURL} from './generated/embedded-yaml-authoring-runtime.js';
 import {
   buildKamishibaiSchemaBlockView,
   sourceFromKamishibaiSchemaBlockView,
@@ -141,18 +139,6 @@ function owner(project: JsonObject) {
   )
     fail('VIEW_SOURCE_INVALID', 'A canonical embedded story source is required.');
   return {...selected, source: selected.owner.source};
-}
-function authoringRuntime(project: JsonObject) {
-  if (project.extensions !== undefined && !Array.isArray(project.extensions))
-    fail('VIEW_PROJECT_INVALID', 'Project extensions must be an array.');
-  const extensions = (project.extensions ??= []) as string[];
-  if (!extensions.includes(dsl4BlockAuthoringExtensionId))
-    extensions.push(dsl4BlockAuthoringExtensionId);
-  if (project.extensionURLs === undefined) project.extensionURLs = {};
-  if (!record(project.extensionURLs))
-    fail('VIEW_PROJECT_INVALID', 'Project extension URLs must be an object.');
-  if (project.extensionURLs[dsl4BlockAuthoringExtensionId] === undefined)
-    project.extensionURLs[dsl4BlockAuthoringExtensionId] = embeddedYamlAuthoringRuntimeURL;
 }
 export interface KamishibaiViewBuildInput {
   project: JsonObject;
@@ -300,7 +286,6 @@ export async function buildKamishibaiDocumentViewCandidate(
         ...built.descriptor,
         baseSourceRevision: selected.source.integrity,
       };
-      authoringRuntime(project);
     } else {
       const stages = (project.targets as JsonObject[]).filter((target) => target.isStage === true);
       if (!root && stages.length !== 1) fail('VIEW_ROOT_INVALID', 'A Stage is required.');
@@ -442,12 +427,15 @@ export async function buildKamishibaiDocumentPreviewArtifact(
   );
   const runtimePrefix = opcodeFor(selected.form).slice(0, -'embeddedYaml'.length);
   const blockDefinitions = [
-    ...info.blocks.map((definition) => ({
-      ...definition,
-      opcode: `${info.id}_${definition.opcode}`,
-      colour: 'color1' in definition ? definition.color1 : info.color1,
-      blockIconURI: 'blockIconURI' in definition ? definition.blockIconURI : info.blockIconURI,
-    })),
+    // Declarations are runtime blocks now; a view saved earlier may still use the retired spelling.
+    ...info.blocks.flatMap((definition) =>
+      [`${runtimePrefix}${definition.opcode}`, `${info.id}_${definition.opcode}`].map((opcode) => ({
+        ...definition,
+        opcode,
+        colour: 'color1' in definition ? definition.color1 : info.color1,
+        blockIconURI: 'blockIconURI' in definition ? definition.blockIconURI : info.blockIconURI,
+      })),
+    ),
     ...createYamlBlockDefinitions().map((definition) => ({
       ...definition,
       opcode: runtimePrefix + definition.opcode,

@@ -11,17 +11,12 @@ import {
   validateDsl4EmbeddedSourceDescriptor,
 } from './source-descriptor.js';
 import type {Dsl4SourceFrontend} from './source-frontend.js';
-import {
-  dsl4ConfigBlockSourceHatOpcode,
-  dsl4LabeledBlockSourceHatOpcode,
-} from './block-source-shared.js';
+import {isDsl4BlockSourceHat} from './block-source-shared.js';
 import type {Dsl4SubtleCrypto} from './subtle-crypto.js';
 
 /** The distribution profiles a build can write. */
 export const dsl4DistributionProfiles = Object.freeze(['source', 'compiled'] as const);
 export type Dsl4DistributionProfile = (typeof dsl4DistributionProfiles)[number];
-
-const sourceHatOpcodes = new Set([dsl4LabeledBlockSourceHatOpcode, dsl4ConfigBlockSourceHatOpcode]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -64,7 +59,7 @@ export function removeDsl4BlockSourceDeclarations(project: Record<string, unknow
     const doomed = new Set(
       Object.keys(blocks).filter((id) => {
         const top = blocks[root(id)];
-        return isRecord(top) && typeof top.opcode === 'string' && sourceHatOpcodes.has(top.opcode);
+        return isRecord(top) && typeof top.opcode === 'string' && isDsl4BlockSourceHat(top.opcode);
       }),
     );
     for (const id of doomed) delete blocks[id];

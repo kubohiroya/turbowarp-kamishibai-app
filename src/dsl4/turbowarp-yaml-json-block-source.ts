@@ -1,10 +1,7 @@
+import {isDsl4ConfigBlockSourceHat, isDsl4LabeledBlockSourceHat} from './block-source-shared.js';
 import {deepFreeze} from './story-document.js';
 import {Dsl4BlockSourceError} from './block-source-shared.js';
-import {
-  readDsl4StructuredBlockSource,
-  dsl4LabeledBlockSourceHatOpcode,
-  dsl4ConfigBlockSourceHatOpcode,
-} from './structured-block-source-codec.js';
+import {readDsl4StructuredBlockSource} from './structured-block-source-codec.js';
 export {
   dsl4BlockSourceRuntimeExtensionId,
   dsl4BlockSourceBundleExtensionId,
@@ -222,7 +219,7 @@ export function extractDsl4BlockSourcesFromProject(
     const configs = blockIds
       .filter((id) => {
         const block = blocks[id];
-        return isRecord(block) && block.opcode === dsl4ConfigBlockSourceHatOpcode;
+        return isRecord(block) && isDsl4ConfigBlockSourceHat(block.opcode);
       })
       .sort();
     for (const blockId of configs) {
@@ -268,7 +265,7 @@ export function extractDsl4BlockSourcesFromProject(
         return (
           isRecord(block) &&
           typeof block.opcode === 'string' &&
-          block.opcode === dsl4LabeledBlockSourceHatOpcode &&
+          isDsl4LabeledBlockSourceHat(block.opcode) &&
           block.topLevel === true &&
           block.parent === null
         );

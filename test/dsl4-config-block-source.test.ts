@@ -1,3 +1,5 @@
+import {dsl4AuthoringBlockName} from '../src/dsl4/block-source-shared.js';
+import {canonicalDsl4AuthoringOpcode} from '../src/dsl4/block-source-shared.js';
 import assert from 'node:assert/strict';
 import {test} from 'vitest';
 import {parse} from 'yaml';
@@ -27,7 +29,9 @@ const project = (blocks: Blocks) => ({targets: [{isStage: true, name: 'Stage', b
 const read = (blocks: Blocks) =>
   parse(extractDsl4BlockSourcesFromProject(project(blocks)).sources['Stage.k4.yml']!);
 function find(blocks: Blocks, opcode: string) {
-  const pair = Object.entries(blocks).find(([, block]) => block.opcode === prefix + opcode);
+  const pair = Object.entries(blocks).find(
+    ([, block]) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + opcode,
+  );
   assert(pair);
   return pair;
 }
@@ -38,7 +42,7 @@ function chain(blocks: Blocks, hat: string) {
   while (id) {
     const block = blocks[id]!;
     assert.equal(block.parent, parent);
-    opcodes.push(block.opcode.slice(prefix.length));
+    opcodes.push(dsl4AuthoringBlockName(block.opcode) ?? block.opcode);
     parent = id;
     id = block.next;
   }
@@ -62,7 +66,11 @@ test('splits all seven configuration definitions from actors and scenes and read
     'recognition',
   ]);
   assert.deepEqual(chain(blocks, 'root'), ['actor', 'scene']);
-  assert(!Object.values(blocks).some((block) => block.opcode === prefix + 'includeBlocks'));
+  assert(
+    !Object.values(blocks).some(
+      (block) => canonicalDsl4AuthoringOpcode(String(block.opcode)) === prefix + 'includeBlocks',
+    ),
+  );
   assert.deepEqual(read(blocks), source);
   const [, variable] = find(blocks, 'variable');
   variable.inputs.VALUE = [1, [10, '42']];
@@ -77,7 +85,7 @@ test('retains the legacy inline definition chain without a configuration hat', (
       id !== 'root' &&
       id !== configId &&
       blocks[id]!.next === null &&
-      blocks[id]!.opcode === prefix + 'recognition',
+      canonicalDsl4AuthoringOpcode(String(blocks[id]!.opcode)) === prefix + 'recognition',
   )!;
   blocks[tail]!.next = blocks.root!.next;
   blocks[blocks.root!.next!]!.parent = tail;
@@ -148,7 +156,8 @@ test('omits empty configuration hats and gives module configuration its source l
       hatId: 'root',
     });
     const config = Object.values(blocks).find(
-      (block) => block.opcode === dsl4ConfigBlockSourceHatOpcode,
+      (block) =>
+        canonicalDsl4AuthoringOpcode(String(block.opcode)) === dsl4ConfigBlockSourceHatOpcode,
     );
     if (label) assert.deepEqual(config?.inputs.LABEL, [1, [10, label]]);
     else assert.equal(config, undefined);

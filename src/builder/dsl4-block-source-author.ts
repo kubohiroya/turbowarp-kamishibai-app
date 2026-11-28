@@ -1,4 +1,9 @@
 import {
+  dsl4UnifiedDeclarationsRuntimeCapability,
+  isDsl4ConfigBlockSourceHat,
+  isDsl4LabeledBlockSourceHat,
+} from '../dsl4/block-source-shared.js';
+import {
   dsl4StoryUsesTextInterpolation,
   dsl4TextInterpolationRuntimeCapability,
 } from '../dsl4/text-interpolation.js';
@@ -29,8 +34,6 @@ import {
 import {
   createDsl4StructuredBlockSourceDeclaration,
   dsl4BlockAuthoringExtensionId,
-  dsl4LabeledBlockSourceHatOpcode,
-  dsl4ConfigBlockSourceHatOpcode,
 } from '../dsl4/structured-block-source.js';
 import {createDsl4SourceGraphFrontend} from '../dsl4/source-graph-frontend.js';
 import {createDsl4BlockSourceGraph} from '../dsl4/block-source-export.js';
@@ -210,6 +213,14 @@ function writeAuthoredProject(
       'Invalidated recognition requires a runtime that suppresses model preloading.',
       'K4-INVALIDATE-PRELOAD-RUNTIME-001',
     );
+  // A current runtime defines the declarations itself; an older base keeps the retired extension.
+  const declarations = dsl4HasRuntimeCapability(
+    undefined,
+    runtimeUrl,
+    dsl4UnifiedDeclarationsRuntimeCapability,
+  )
+    ? 'unified'
+    : 'legacy';
   const simpleSpeech =
     typeof runtimeUrl === 'string' &&
     runtimeUrl.startsWith('data:text/javascript;base64,') &&
@@ -232,8 +243,7 @@ function writeAuthoredProject(
       if (
         isRecord(block) &&
         typeof block.opcode === 'string' &&
-        (block.opcode === dsl4LabeledBlockSourceHatOpcode ||
-          block.opcode === dsl4ConfigBlockSourceHatOpcode)
+        (isDsl4LabeledBlockSourceHat(block.opcode) || isDsl4ConfigBlockSourceHat(block.opcode))
       ) {
         fail(
           `${target.name === stage.name ? 'Stage' : 'Target'} already declares a DSL source in block ${blockId}`,
@@ -263,6 +273,7 @@ function writeAuthoredProject(
         version: modules[0]?.source.kamishibai ?? '4.0',
         form,
         simpleSpeech,
+        declarations,
         hatId,
         idPrefix: index === 0 ? 'dsl4SourceBlock' : `dsl4Module${index}Block`,
       });
@@ -282,12 +293,13 @@ function writeAuthoredProject(
       if (block.topLevel) block.x = startX + index * 1800 + (block.x ?? 40) - 40;
     }
   }
+  const legacyDeclarations = declarations === 'legacy';
   const authoredProject = {
     ...project,
     extensions: [
       ...new Set([
         ...(Array.isArray(project.extensions) ? project.extensions : []),
-        dsl4BlockAuthoringExtensionId,
+        ...(legacyDeclarations ? [dsl4BlockAuthoringExtensionId] : []),
       ]),
     ],
     extensionURLs: {
@@ -301,12 +313,16 @@ function writeAuthoredProject(
           ],
         ),
       ),
-      [dsl4BlockAuthoringExtensionId]: `data:text/javascript;base64,${Buffer.from(
-        createDsl4BlockAuthoringProjectExtensionSource(form, {
-          sourceSections,
-          narrativeControlEnabled,
-        }),
-      ).toString('base64')}`,
+      ...(legacyDeclarations
+        ? {
+            [dsl4BlockAuthoringExtensionId]: `data:text/javascript;base64,${Buffer.from(
+              createDsl4BlockAuthoringProjectExtensionSource(form, {
+                sourceSections,
+                narrativeControlEnabled,
+              }),
+            ).toString('base64')}`,
+          }
+        : {}),
     },
     targets: (project.targets as Record<string, unknown>[]).map((target) =>
       target === stage ? {...stage, blocks} : target,

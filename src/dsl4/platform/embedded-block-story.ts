@@ -1,3 +1,4 @@
+import {isDsl4ConfigBlockSourceHat, isDsl4LabeledBlockSourceHat} from '../block-source-shared.js';
 import {rebindDsl4AssetBundleReferences} from '../asset-bundle-references.js';
 import {locateDsl4BlockDiagnostic} from '../block-source-diagnostic-location.js';
 import {createDsl4EmbeddedAssetBundle} from '../asset-bundle-descriptor.js';
@@ -7,10 +8,7 @@ import {createDsl4EmbeddedSourceDescriptor} from '../source-descriptor.js';
 import type {Dsl4SourceFrontend} from '../source-frontend.js';
 import {createDsl4SourceGraphFrontend} from '../source-graph-frontend.js';
 import {dsl4StandardProductionFeatureFlags} from '../feature-flags.js';
-import {
-  dsl4LabeledBlockSourceHatOpcode,
-  dsl4ConfigBlockSourceHatOpcode,
-} from '../structured-block-source.js';
+import {} from '../structured-block-source.js';
 import type {Dsl4SubtleCrypto} from '../subtle-crypto.js';
 import {extractDsl4BlockSourcesFromProject} from '../turbowarp-yaml-json-block-source.js';
 
@@ -29,8 +27,8 @@ export function hasDsl4EmbeddedBlockStory(project: unknown): boolean {
         (block) =>
           isRecord(block) &&
           typeof block.opcode === 'string' &&
-          (block.opcode === dsl4LabeledBlockSourceHatOpcode ||
-            block.opcode === dsl4ConfigBlockSourceHatOpcode ||
+          (isDsl4LabeledBlockSourceHat(block.opcode) ||
+            isDsl4ConfigBlockSourceHat(block.opcode) ||
             block.opcode.endsWith('whenDsl4Source')),
       ),
   );

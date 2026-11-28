@@ -19,8 +19,11 @@ turbowarp-kamishibai export-block-dsl --input blocks.sb3 --output-dir exported
 
 ## 補助ブロック
 
-生成SB3には、編集用拡張`kubohiroyakamishibaiauthoring4`をdata URLで同梱する。
-既存のベースSB3でも補助ブロックを表示でき、通常ランタイムの再リリースを必要としない。
+補助ブロックは runtime 拡張が定義する。土台の runtime が
+`// Kamishibai capabilities: unified-declarations-v1` を持つ場合、生成SB3は補助ブロックを runtime の opcode で書き、
+別の拡張を同梱しない。古い土台には、従来どおり編集用拡張`kubohiroyakamishibaiauthoring4`をdata URLで同梱し、
+その opcode で書く。どちらの書き方も同じ台本として読む。経緯は[パレットの統合](dsl-4-block-palette-unification.md)を参照。
+以下の「編集用拡張」の記述は、古い土台へ書く場合の記録として残す。
 
 | ブロック        | 役割                                                                                                              |
 | --------------- | ----------------------------------------------------------------------------------------------------------------- |

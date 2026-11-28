@@ -43,7 +43,6 @@ import {
 import {
   dsl4LabeledBlockSourceHatOpcode,
   dsl4ConfigBlockSourceHatOpcode,
-  dsl4BlockAuthoringExtensionId,
 } from './block-source-shared.js';
 import {dsl4IncludeBlocksOpcode} from './structured-block-source-codec.js';
 import {
@@ -66,7 +65,6 @@ import {
   dsl4EmbeddedYamlConfigHatOpcode,
   dsl4BundledEmbeddedYamlConfigHatOpcode,
 } from './embedded-yaml-identity.js';
-import {embeddedYamlAuthoringRuntimeURL} from './generated/embedded-yaml-authoring-runtime.js';
 import {patchKamishibaiSourceValue} from './embedded-yaml-syntax-patch.js';
 import type {Dsl4SourceFrontend} from './source-frontend.js';
 type ObjectRecord = Record<string, unknown>;
@@ -199,16 +197,6 @@ function removeBody(
         if (record(c) && typeof c.blockId === 'string' && owned.has(c.blockId))
           delete r.target.comments[id];
   }
-}
-function addAuthoring(project: ObjectRecord) {
-  const extensions = (project.extensions ??= []) as unknown;
-  if (!Array.isArray(extensions))
-    fail('VIEW_PROJECT_INVALID', 'Project extensions must be an array.');
-  if (!extensions.includes(dsl4BlockAuthoringExtensionId))
-    extensions.push(dsl4BlockAuthoringExtensionId);
-  const urls = (project.extensionURLs ??= {});
-  if (!record(urls)) fail('VIEW_PROJECT_INVALID', 'Extension URLs must be an object.');
-  urls[dsl4BlockAuthoringExtensionId] ??= embeddedYamlAuthoringRuntimeURL;
 }
 function uniquePrefix(project: ObjectRecord) {
   let prefix = 'graphYaml1_',
@@ -697,7 +685,6 @@ export async function buildKamishibaiGraphDocumentViewCandidate(
         baseSourceRevision: selected.file.integrity,
         sourceGraphIntegrity: selected.graph.integrity,
       };
-      addAuthoring(project);
     }
     writeDocumentViewMetadata(selected.owner, reference, {
       activeKind: request.kind,
@@ -811,11 +798,14 @@ export async function buildKamishibaiGraphDocumentPreviewArtifact(
       .map((b) => b.opcode),
   );
   const blockDefinitions = [
-    ...info.blocks.map((d) => ({
-      ...d,
-      opcode: `${info.id}_${d.opcode}`,
-      colour: info.color1,
-    })),
+    // Declarations are runtime blocks now; a view saved earlier may still use the retired spelling.
+    ...info.blocks.flatMap((d) =>
+      [`${prefix}${d.opcode}`, `${info.id}_${d.opcode}`].map((opcode) => ({
+        ...d,
+        opcode,
+        colour: info.color1,
+      })),
+    ),
     ...runtimeDefinitions.map((d) => ({
       ...d,
       opcode: `${prefix}${d.opcode}`,

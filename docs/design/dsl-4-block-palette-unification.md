@@ -1,6 +1,6 @@
 # DSL 4.0 ブロックパレットの統合（草案）
 
-状態: 草案（未決定）。2026-11-28。
+状態: 段階1を実装中。2026-11-28。実装で決めたことは §10 に記録する。
 
 ## 1. 結論（提案）
 
@@ -121,3 +121,25 @@ playback の bundle からは tree-shake する。
 
 段階1〜3では旧拡張と旧 prefix の読み取りを残すため、差分を戻せば以前の2拡張構成に戻る。
 移行 CLI で変換した作品は、逆変換（新 opcode → 旧 opcode と台本拡張の再同梱）で戻せるようにする。
+
+## 10. 段階1の実装記録
+
+- **opcode の3つの書き方**: 宣言ブロックは、旧台本拡張（`kubohiroyakamishibaiauthoring4_scene`）、runtime 単体
+  （`kubohiroyakamishibairuntime4_scene`）、Standard bundle（`kubohiroyakamishibai4_kubohiroyakamishibairuntime4__scene`）
+  のどれでも同じ宣言として読む。判定は [block-source-shared.ts](../../src/dsl4/block-source-shared.ts) の
+  `dsl4AuthoringBlockName` / `canonicalizeDsl4AuthoringBlocks` に集め、codec は読み始めに旧拡張の綴りへ揃えてから比べる。
+  名前の一覧（`dsl4AuthoringBlockNames`）は runtime の opcode と重ならないことを確かめた。
+- **書き手の切り替え**: 土台の runtime が `// Kamishibai capabilities: unified-declarations-v1` を持つときだけ、宣言を
+  runtime の opcode で書き、旧台本拡張を同梱しない。持たない古い土台には、従来どおり旧拡張を同梱して旧 opcode で書く。
+  組込 YAML のビューは現行 runtime の中で動くので、常に新しい書き方で書き、旧拡張を足さない。
+- **runtime の定義**: runtime 拡張の `getInfo()` が宣言ブロックを定義し、全プロファイル（authoring・playback）で
+  受け付ける。宣言は実行しない（クリックしても何もしない）。編集フォームと「この部分を使う」の見た目は authoring
+  プロファイルだけが登録する（`installDsl4RuntimeDeclarationEditors`）。登録は runtime 単体と bundle の両方の綴りに行う。
+- **「この部分を使う」の表示**: 旧拡張では CLI の `--block-sections true` で選んだ変種がパレット表示を決めていた。
+  runtime では、読み込んだ作品に「この部分を使う」ブロックが既にあるときだけパレットに出す。古い土台へ書く場合は
+  従来どおり CLI の指定に従う。
+- **表示名**: パレット上の runtime の名前を「紙芝居」（英語 `Kamishibai`）にした。拡張ファイル先頭の `// Name:` と
+  bundle の名前は、配布物の同一性の検査に使われているため変えていない。
+- **グループ**: §5 の並びで `dsl4RuntimePaletteGroups` を作り直した。組込 YAML の4つの文書ハットは「台本の骨組み」に、
+  低水準の YAML ブロックは最後の「YAMLの部品」に置いた。グループ ID が変わったものは、Plus の表示・非表示の設定が
+  初期状態に戻る。

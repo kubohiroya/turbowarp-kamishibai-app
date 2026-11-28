@@ -1,3 +1,4 @@
+import {canonicalDsl4AuthoringOpcode} from '../src/dsl4/block-source-shared.js';
 import assert from 'node:assert/strict';
 import {mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
 import os from 'node:os';
@@ -244,7 +245,8 @@ scenes:
     assert.deepEqual(sceneEditor.opcodes, [`${dsl4BlockAuthoringExtensionId}_scene`]);
     const scene = Object.values(requireRecord(stage.blocks, 'the Stage blocks')).find(
       (block) =>
-        requireRecord(block, 'a block').opcode === `${dsl4BlockAuthoringExtensionId}_scene`,
+        canonicalDsl4AuthoringOpcode(String(requireRecord(block, 'a block').opcode)) ===
+        `${dsl4BlockAuthoringExtensionId}_scene`,
     );
     assert.ok(scene);
     const properties = {
