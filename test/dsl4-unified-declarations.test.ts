@@ -13,7 +13,14 @@ import {
 import {createDsl4BlockAuthoringInfo} from '../src/dsl4/structured-block-source-codec.js';
 import {dsl4CoreActionManifest} from '../src/dsl4/core-action-manifest.js';
 import {dsl4RuntimePaletteGroups, dsl4RuntimeTranslations} from '../src/dsl4/block-palette-i18n.js';
-import {createDsl4RuntimeDeclarationEditorDefinitions} from '../src/builder/dsl4-runtime-declaration-editors.js';
+import {
+  createDsl4RuntimeDeclarationEditorDefinitions,
+  installDsl4RuntimeDeclarationEditors,
+} from '../src/builder/dsl4-runtime-declaration-editors.js';
+import {
+  readDsl4NarrativeRuntimeExtensionSource,
+  readDsl4PlaybackRuntimeExtensionSource,
+} from '../src/builder/dsl4-playback-runtime-source.js';
 
 const spellings = {
   legacy: 'kubohiroyakamishibaiauthoring4_',
@@ -135,4 +142,46 @@ test('the runtime registers declaration forms for the runtime and the bundle', (
   assert.ok(
     definitions.some((definition) => definition.opcodes.includes(`${spellings.bundle}pose`)),
   );
+});
+
+test('installing the declaration forms registers both forms and removes them again', () => {
+  const registered: {extensionId: string; editorId?: string}[] = [];
+  let removed = 0;
+  const register = (definition: unknown) => {
+    registered.push(definition as {extensionId: string; editorId?: string});
+    return () => {
+      removed += 1;
+    };
+  };
+  const dispose = installDsl4RuntimeDeclarationEditors(
+    {gui: {blockEditors: {apiVersion: 1, registerSchema: register, register}}},
+    {narrativeControlEnabled: true},
+  );
+  assert.ok(registered.length > 0);
+  assert.deepEqual(
+    new Set(registered.map((definition) => definition.extensionId)),
+    new Set(['kubohiroyakamishibairuntime4', 'kubohiroyakamishibai4']),
+  );
+  // The rows table replaces the schema form where the editor hosts custom editors.
+  assert.ok(registered.some((definition) => definition.editorId === 'narrative-rows-table'));
+  assert.equal(
+    registered.some((definition) => definition.editorId === 'narrative-rows'),
+    false,
+  );
+  dispose();
+  assert.equal(removed, registered.length);
+  // Without the editor API, as in the Packager, nothing is registered.
+  assert.doesNotThrow(() =>
+    installDsl4RuntimeDeclarationEditors({}, {narrativeControlEnabled: true})(),
+  );
+});
+
+test('the playback runtime carries the declaration forms, so an editor shows them', async () => {
+  for (const source of [
+    await readDsl4PlaybackRuntimeExtensionSource(),
+    await readDsl4NarrativeRuntimeExtensionSource('playback'),
+  ]) {
+    assert.ok(source.includes('scene-properties'));
+    assert.ok(source.includes('narrative-rows-table'));
+  }
 });

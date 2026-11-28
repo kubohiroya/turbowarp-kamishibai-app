@@ -142,7 +142,7 @@ import {
 } from '../../dist/dsl4/block-icon-preview-feature-flags.js';
 
 const extensionId = 'kubohiroyakamishibairuntime4';
-const extensionVersion = '4.0.27';
+const extensionVersion = '4.0.28';
 const blockIconURI = dsl4RuntimeBlockIconURI;
 const applicationMenuIcons = DSL4_APPLICATION_MENU_ICONS;
 const officialWebsiteIcon = DSL4_OFFICIAL_WEBSITE_ICON;
@@ -780,10 +780,11 @@ class KamishibaiDsl4RuntimeExtension {
       const self = this as unknown as Record<string, unknown>;
       if (self[name] === undefined) self[name] = () => {};
     }
-    if (DSL4_AUTHORING_PROFILE)
-      installDsl4RuntimeDeclarationEditors(Scratch as never, {
-        narrativeControlEnabled: productionFeatureFlags.dsl4NarrativeControl,
-      });
+    // Every profile registers the declaration forms: a work carrying the playback runtime is still
+    // opened in an editor, and outside one the editor API is absent and nothing is registered.
+    installDsl4RuntimeDeclarationEditors(Scratch as never, {
+      narrativeControlEnabled: productionFeatureFlags.dsl4NarrativeControl,
+    });
     if (
       DSL4_AUTHORING_PROFILE &&
       (assetIconPreviewsEnabledAtStartup || blockIconPreviewsEnabledAtStartup) &&
