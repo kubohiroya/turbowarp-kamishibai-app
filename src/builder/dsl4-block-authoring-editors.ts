@@ -226,6 +226,52 @@ export function createDsl4BlockAuthoringEditorDefinitions(
   ];
 }
 
+const animateTitles: Record<string, string> = {
+  to: '変化させる値',
+  seconds: '秒数',
+  easing: '動き方',
+  delaySeconds: '開始までの秒数',
+  repeat: '繰り返す回数',
+  alternate: '往復する',
+  background: '終わりを待たずに次へ進む',
+};
+const animateTargetTitles: Record<string, string> = {
+  x: 'x座標',
+  y: 'y座標',
+  scale: '大きさ（%）',
+  direction: '向き',
+  transparency: '透明度（%）',
+};
+
+/** Label the animation fields here, so the shared titles of other forms stay unchanged. */
+function animateArgsWithTitles(): Schema {
+  const animate = definitions.animateArgs!;
+  const properties = animate.properties as Record<string, Schema>;
+  const titled = (props: Record<string, Schema>, labels: Record<string, string>) =>
+    Object.fromEntries(
+      Object.entries(props).map(([name, property]) => [
+        name,
+        labels[name] ? {...property, title: labels[name]} : property,
+      ]),
+    );
+  return {
+    ...animate,
+    properties: titled(
+      {
+        ...properties,
+        to: {
+          ...properties.to!,
+          properties: titled(
+            properties.to!.properties as Record<string, Schema>,
+            animateTargetTitles,
+          ),
+        },
+      },
+      animateTitles,
+    ),
+  };
+}
+
 /** Match action editors to the opcode namespace the authored project's base actually loads. */
 export function createDsl4CoreActionBlockEditorDefinitions(
   form: 'runtime' | 'bundle',
@@ -257,6 +303,15 @@ export function createDsl4CoreActionBlockEditorDefinitions(
       argument: 'STEPS',
       format: 'json',
       schema: editorSchema(steps, 'ポーズ認識の手順'),
+    },
+    {
+      apiVersion: 1,
+      extensionId,
+      editorId: 'action-animate-spec',
+      opcodes: [`${opcodePrefix}animate`],
+      argument: 'SPEC',
+      format: 'json',
+      schema: editorSchema(animateArgsWithTitles(), 'アニメーション'),
     },
     ...(['say', 'think'] as const).map((command) => ({
       apiVersion: 1,

@@ -5,11 +5,11 @@
   "channel": "latest",
   "buildDate": "2026-11-28",
   "state": "frozen",
-  "sourceIdentity": "sha256:4b6553fb95442173506b7587a74be95ecb6fea97070c5a9207d257faac6b2858",
+  "sourceIdentity": "sha256:8fc4c84ebac78dec694aa7045a63319a29e9fa18d6e6b0aaf539bf2607b2788a",
   "artifact": {
     "filename": "kamishibai-4.0.36.sb3",
-    "sha256": "9d94fab5bff77cf57b4c777ba6d468ea24fcd1e5534cd5fd2fbdcc87f4b68418",
-    "size": 1557465,
+    "sha256": "b62585bce3c75051f6e6786b14aeb009d5758d42ba1d06847d7d57098d94255a",
+    "size": 1557524,
     "url": "https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/download/v4.0.36/kamishibai-4.0.36.sb3"
   },
   "publication": {
