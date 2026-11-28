@@ -204,6 +204,8 @@ export function createDsl4TurboWarpCrossfadePlatform(options: {
     assetId: string;
     voice: Dsl4CrossfadeAudioVoice;
     gain: number;
+    /** The gain a running fade is heading for; a save keeps this, not the momentary level. */
+    targetGain: number;
   } | null = null;
   let currentBgmTransition: Dsl4CrossfadeOperation | null = null;
 
@@ -482,7 +484,7 @@ export function createDsl4TurboWarpCrossfadePlatform(options: {
       error.name = 'AbortError';
       throw error;
     }
-    const next = {assetId, voice, gain: crossfade ? 0 : targetGain};
+    const next = {assetId, voice, gain: crossfade ? 0 : targetGain, targetGain};
     currentVoice = next;
     void voice.ended.then(
       () => {
@@ -573,6 +575,7 @@ export function createDsl4TurboWarpCrossfadePlatform(options: {
     const duration = fadeSeconds(seconds);
     const playing = currentVoice;
     if (!playing) return Promise.resolve();
+    playing.targetGain = target;
     if (duration <= 0) {
       currentBgmTransition?.finish('replaced');
       currentBgmTransition = null;
@@ -628,6 +631,26 @@ export function createDsl4TurboWarpCrossfadePlatform(options: {
     replaceBgm,
     stopBgm,
     setBgmVolume,
+    /** The BGM a save restarts: its asset and author-facing volume, or null when none plays. */
+    captureBgm() {
+      return currentVoice === null
+        ? null
+        : {asset: currentVoice.assetId, volume: Math.round(currentVoice.targetGain * 10_000) / 100};
+    },
+    /** Stop whatever BGM plays now, including a fade in progress, and start the saved one over. */
+    async restoreBgm(state: Readonly<{asset: string; volume: number}> | null) {
+      if (disposed) throw platformError('Crossfade platform is disposed');
+      currentBgmTransition?.finish('replaced');
+      currentBgmTransition = null;
+      const playing = currentVoice;
+      currentVoice = null;
+      playing?.voice.stop();
+      if (state !== null)
+        await replaceBgm(state.asset, {effect: 'cut'} as Dsl4CrossfadeTransition, {
+          restart: true,
+          volume: state.volume,
+        });
+    },
     finishAll() {
       const errors = [];
       for (const operation of [...active]) {

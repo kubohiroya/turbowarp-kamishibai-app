@@ -24,7 +24,7 @@ TurboWarp紙芝居は、カメラの前で取ったポーズをきっかけに�
 
 ## どの版を使うか
 
-|                      | 3.2.3                                | 4.0.34                                 |
+|                      | 3.2.3                                | 4.0.35                                 |
 | -------------------- | ------------------------------------ | -------------------------------------- |
 | 状態                 | 既存3.1／3.2作品向け安定版           | 4.0未公開候補                          |
 | 向いている用途       | 体験会、安定運用、既存の3.1／3.2作品 | YAML台本、ブラウザ制作、CLI／API       |
@@ -32,7 +32,7 @@ TurboWarp紙芝居は、カメラの前で取ったポーズをきっかけに�
 | 入手先               | [ダウンロードページ][downloads]      | [ダウンロードページ][downloads]（SB3） |
 | 変更時に確認する文書 | [公開ドキュメント][docs]             | [4.0公開状況][current-release]         |
 
-4.0.34はYAML制作フローと4.0 APIの凍結済み未公開候補です。公開確認までは、ダウンロードページにある公開済みの版を使用してください。既存の3.1／3.2作品には引き続き3.2.3を使えます。公開済みの3.1／3.2作品は、4.0へ移行しなくても引き続き利用できます。
+4.0.35はYAML制作フローと4.0 APIの凍結済み未公開候補です。公開確認までは、ダウンロードページにある公開済みの版を使用してください。既存の3.1／3.2作品には引き続き3.2.3を使えます。公開済みの3.1／3.2作品は、4.0へ移行しなくても引き続き利用できます。
 
 ## まず体験する
 
@@ -48,7 +48,7 @@ TurboWarp紙芝居は、カメラの前で取ったポーズをきっかけに�
 
 ### YAML projectには4.0を使う
 
-4.0.34候補では巻き戻しのキーの動きを変えました。`history.previousAction`（例：左矢印キー）はまず実行中のactionを開始前へ戻し、`history.previousScene`（例：上矢印キー）はまず現在のシーンの冒頭へ戻します。もう一度押すと一つ前のactionやシーンへ戻ります。4.0.33はBubble 0.22.2を含みます。画面内への配置後も、吹き出しの尾を付け根の中点からスプライト中心へ向け、舞台幅を超えるセリフを自動改行します。4.0.31では、台詞・心の声・効果音と、効果音を持たないポーズの後でもセーブポイントを保存・復元できるようにしました。これまではそれらを1つでも実行するとセーブ自体ができませんでした。4.0.30では、TurboWarp Plus Editorで配布用SB3を開いたときに紙芝居のブロックグループをすべて表示し、台本ブロックの数値の入力をScratchと同じく文字列で保存して、Editorがコンソールに出していたエラーをなくしました。4.0.29では、4.0.25から4.0.28のStandardの作品で台本ブロックの編集フォームが1つも登録されていなかった問題を直しました。4.0.28では、作品が積んでいる runtime が playback 用でもフォームが出るようにしました。4.0.27では、以前の「紙芝居の台本ブロック」拡張を「旧形式」と明示し、4.0.25より前に保存したブロックを「紙芝居」のパレットへ移す`migrate-block-palette`を案内します。4.0.26では、「組み込みYAMLの起点」「組み込みYAMLを取り込む」から対応する「組み込みYAML」ハットへの参照と、「シーンへ移る」・入力で移る行き先から同じ名前の「シーン」ブロックへの参照を宣言し、TurboWarp Plus Editorが参照の矢印として描けるようにしました。4.0.25のパレットの統合、4.0.24の`include`の正式化、それ以前のステージのスクリプト・台詞・人物アニメーション・舞台演出の変更も引き継ぎます。
+4.0.35候補ではセーブポイントから戻せるものを増やしました。BGM（保存時の音量で最初から鳴らし直す）、場面の音声（保存時の再生位置から）、俳優に表示したtext、コスチュームのloop（最初の段から）を保存して復元します。これらのactionの後でもセーブでき、復元時にはそれまで鳴っていたBGMも止めます。Scratchへのメッセージとcustom actionを履歴に持つセーブは引き続き拒否します。4.0.34では巻き戻しのキーの動きを変えました。`history.previousAction`（例：左矢印キー）はまず実行中のactionを開始前へ戻し、`history.previousScene`（例：上矢印キー）はまず現在のシーンの冒頭へ戻します。もう一度押すと一つ前のactionやシーンへ戻ります。4.0.33はBubble 0.22.2を含みます。画面内への配置後も、吹き出しの尾を付け根の中点からスプライト中心へ向け、舞台幅を超えるセリフを自動改行します。4.0.31では、台詞・心の声・効果音と、効果音を持たないポーズの後でもセーブポイントを保存・復元できるようにしました。これまではそれらを1つでも実行するとセーブ自体ができませんでした。4.0.30では、TurboWarp Plus Editorで配布用SB3を開いたときに紙芝居のブロックグループをすべて表示し、台本ブロックの数値の入力をScratchと同じく文字列で保存して、Editorがコンソールに出していたエラーをなくしました。4.0.29では、4.0.25から4.0.28のStandardの作品で台本ブロックの編集フォームが1つも登録されていなかった問題を直しました。4.0.28では、作品が積んでいる runtime が playback 用でもフォームが出るようにしました。4.0.27では、以前の「紙芝居の台本ブロック」拡張を「旧形式」と明示し、4.0.25より前に保存したブロックを「紙芝居」のパレットへ移す`migrate-block-palette`を案内します。4.0.26では、「組み込みYAMLの起点」「組み込みYAMLを取り込む」から対応する「組み込みYAML」ハットへの参照と、「シーンへ移る」・入力で移る行き先から同じ名前の「シーン」ブロックへの参照を宣言し、TurboWarp Plus Editorが参照の矢印として描けるようにしました。4.0.25のパレットの統合、4.0.24の`include`の正式化、それ以前のステージのスクリプト・台詞・人物アニメーション・舞台演出の変更も引き継ぎます。
 
 ```yaml
 kamishibai: '4.0'
@@ -69,12 +69,12 @@ scenes:
 
 ## CLI quick start
 
-rc.64では認識の計算方式画面の初期言語を修正し、TurboWarpの表示言語、未指定ならブラウザ言語を使用します。タイトル・説明・操作ボタン・読み上げ用の名前は英語・日本語に対応し、アプリ内の言語切り替えにも追従します。Teachable Machine 4.0.2と計算方式選択はrc.63で追加しました。以前のrc.58ではpreview終了時の自己abort処理を修正しました。rc.51からrc.55でsealed保存した作品は引き続き利用できないため、元の台本からsourceまたはcompiled配布として再生成してください。以下のnpm例は4.0.34がnpmに公開された後に実行し、事前に[公開状況][current-release]を確認してください。
+rc.64では認識の計算方式画面の初期言語を修正し、TurboWarpの表示言語、未指定ならブラウザ言語を使用します。タイトル・説明・操作ボタン・読み上げ用の名前は英語・日本語に対応し、アプリ内の言語切り替えにも追従します。Teachable Machine 4.0.2と計算方式選択はrc.63で追加しました。以前のrc.58ではpreview終了時の自己abort処理を修正しました。rc.51からrc.55でsealed保存した作品は引き続き利用できないため、元の台本からsourceまたはcompiled配布として再生成してください。以下のnpm例は4.0.35がnpmに公開された後に実行し、事前に[公開状況][current-release]を確認してください。
 
-[`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.34)のCLIは、CI、再現可能なbuild、大規模project、配布profileの管理に向いています。Node.js 24.0.0以上とpnpm 11を使用し、検証するversionを固定して導入します。CLIコマンド名は`turbowarp-kamishibai`です。`tm-kamishibai`は非推奨の互換aliasとして残ります。
+[`@kubohiroya/turbowarp-kamishibai-app`](https://www.npmjs.com/package/@kubohiroya/turbowarp-kamishibai-app/v/4.0.35)のCLIは、CI、再現可能なbuild、大規模project、配布profileの管理に向いています。Node.js 24.0.0以上とpnpm 11を使用し、検証するversionを固定して導入します。CLIコマンド名は`turbowarp-kamishibai`です。`tm-kamishibai`は非推奨の互換aliasとして残ります。
 
 ```bash
-pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.34
+pnpm add --save-exact @kubohiroya/turbowarp-kamishibai-app@4.0.35
 pnpm exec turbowarp-kamishibai --help
 pnpm exec turbowarp-kamishibai validate-dsl4 --input opening.k4.yml --format pretty
 pnpm exec turbowarp-kamishibai preview-dsl4 --watch --base kamishibai-4-base.sb3 --project-root .
@@ -185,5 +185,5 @@ pnpm verify:quick
 [rc81]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.81.md
 [rc82]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.82.md
 [rc88]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.0-rc.88.md
-[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.34
-[stable4]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.34.md
+[current-release]: https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/tag/v4.0.35
+[stable4]: https://github.com/kubohiroya/turbowarp-kamishibai-app/blob/main/docs/releases/v4.0.35.md

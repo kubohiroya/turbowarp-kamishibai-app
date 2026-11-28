@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'vitest';
 import {createDsl4NavigationSession} from '../src/dsl4/navigation-session.js';
+import {validateDsl4MediaRestoreSupport} from '../src/dsl4/platform/presentation-media-save.js';
 import type {Dsl4SaveDataV1} from '../src/dsl4/save-data.js';
 import {dsl4TestSourceFrontend as frontend} from './helpers/dsl4-test-frontend.ts';
 
@@ -15,7 +16,7 @@ interface Session {
 const identity = {storyId: 'save-support', sourceIntegrity: `sha256-${'c'.repeat(43)}=`};
 
 /** Runs the given actions, then parks on a wait that a save can cancel and replay. */
-function fixture(actions: string) {
+function fixture(actions: string, port: Record<string, unknown> = {}) {
   const parsed = frontend.parse(`kamishibai: '4.0'
 controls:
   keymaps:
@@ -53,6 +54,7 @@ ${actions}
           context.signal.addEventListener('abort', () => resolve(), {once: true}),
         );
       },
+      ...port,
     },
   });
   assert('session' in created, JSON.stringify(created));
@@ -110,3 +112,26 @@ for (const [name, actions] of [
     await running;
   });
 }
+
+test('a host that captures BGM, text and loops lets a save hold them and restore past them', async () => {
+  const actions = `      - bgm: Tick
+      - Hero.setText: {text: hello, style: title}
+      - Hero.loop:
+          steps:
+            - {skin: HeroIdle, seconds: 1}
+            - {skin: HeroRun, seconds: 1}`;
+  const media = {
+    validateSaveRestoreSupport: (_save: unknown, unsupported: readonly Record<string, unknown>[]) =>
+      validateDsl4MediaRestoreSupport(unsupported, {bgm: true}),
+  };
+  const first = fixture(actions, media);
+  const {running} = await parked(first);
+  const save = await first.captureSave();
+  const fresh = fixture(actions, media);
+  await fresh.restore(save);
+  assert.equal(fresh.getState().runtime.status, 'paused');
+  assert.deepEqual((await fresh.captureSave()).runtime, save.runtime);
+  await first.dispose();
+  await fresh.dispose();
+  await running;
+});

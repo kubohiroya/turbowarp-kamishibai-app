@@ -38,6 +38,7 @@ export function createDsl4PresentationSavePort({
   targets,
   video,
   bindings,
+  media,
   finalizePrevious,
 }: {
   targets: () => readonly {key: string; target: unknown}[];
@@ -47,6 +48,22 @@ export function createDsl4PresentationSavePort({
     capture(): unknown;
     validate(input: unknown): void;
     apply(input: unknown): Promise<void>;
+  };
+  /**
+   * State that outlives its action (BGM, scene audio, text, costume loops). `prepare` refuses a
+   * save it cannot restore before anything changes. `beforeTargets` and `afterTargets` run inside
+   * the reversible commit around the target and binding restore; `start` runs after the previous
+   * story's media was stopped, because starting sound is not something a rollback can take back.
+   */
+  media?: {
+    capture(): unknown;
+    prepare(input: unknown): Promise<{
+      beforeTargets(): void;
+      afterTargets(): Promise<void>;
+      revert(): Promise<void>;
+      start(): Promise<void>;
+      dispose(): void;
+    }>;
   };
 }) {
   function captureTargets(): State[] {
@@ -163,6 +180,7 @@ export function createDsl4PresentationSavePort({
         targets: captureTargets(),
         videos: video()?.captureState() ?? [],
         ...(bindings ? {bindings: bindings.capture()} : {}),
+        ...(media ? {media: media.capture()} : {}),
       };
     },
     async prepareRestorePresentation(
@@ -171,7 +189,13 @@ export function createDsl4PresentationSavePort({
     ): Promise<Dsl4RestorePresentation> {
       if (
         Object.keys(input).some(
-          (key) => !['targets', 'videos', ...(bindings ? ['bindings'] : [])].includes(key),
+          (key) =>
+            ![
+              'targets',
+              'videos',
+              ...(bindings ? ['bindings'] : []),
+              ...(media ? ['media'] : []),
+            ].includes(key),
         ) ||
         !Array.isArray(input.videos)
       )
@@ -183,6 +207,14 @@ export function createDsl4PresentationSavePort({
       const port = video();
       if (!port && input.videos.length) throw new TypeError('Video restore is unavailable');
       const videos = await port?.prepareRestoreState(input.videos, context);
+      let restoredMedia: Awaited<ReturnType<NonNullable<typeof media>['prepare']>> | undefined;
+      try {
+        // A save from before media capture holds none, which restores as silence and no text.
+        restoredMedia = await media?.prepare(input.media ?? {});
+      } catch (error) {
+        await videos?.rollback();
+        throw error;
+      }
       let changed = false,
         committed = false,
         finished = false;
@@ -190,11 +222,13 @@ export function createDsl4PresentationSavePort({
         async commit() {
           if (finished) throw new TypeError('Presentation restore already settled');
           changed = true;
+          restoredMedia?.beforeTargets();
           apply(saved);
           if (bindings) {
             await bindings.apply(input.bindings);
             apply(saved, false);
           }
+          await restoredMedia?.afterTargets();
           videos?.commit();
           committed = true;
         },
@@ -215,6 +249,17 @@ export function createDsl4PresentationSavePort({
                 errors.push(error);
               }
           }
+          if (changed)
+            try {
+              await restoredMedia?.revert();
+            } catch (error) {
+              errors.push(error);
+            }
+          try {
+            restoredMedia?.dispose();
+          } catch (error) {
+            errors.push(error);
+          }
           try {
             await videos?.rollback();
           } catch (error) {
@@ -234,6 +279,11 @@ export function createDsl4PresentationSavePort({
           }
           try {
             await finalizePrevious?.();
+          } catch (error) {
+            errors.push(error);
+          }
+          try {
+            await restoredMedia?.start();
           } catch (error) {
             errors.push(error);
           }
