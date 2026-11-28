@@ -215,7 +215,7 @@ export const dsl4AuthoringPaletteGroups: readonly Dsl4PaletteGroup[] = Object.fr
 /** Japanese texts of the retired Block Script extension; the runtime reuses its block texts. */
 export const dsl4AuthoringTranslations: Dsl4BlockTranslations = Object.freeze({
   ja: {
-    name: '紙芝居の台本ブロック',
+    name: '紙芝居の台本ブロック（旧形式）',
     blocks: {
       kamishibai: '紙芝居 [VERSION] [LABEL]',
       kamishibaiConfig: '紙芝居の設定 [LABEL]',

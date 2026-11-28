@@ -8,7 +8,8 @@ import {
 } from '../dsl4/structured-block-source.js';
 
 /**
- * The Block Script extension an authored SB3 carries, for the project's opcode form and features.
+ * The retired Block Script extension an SB3 on an older base runtime carries, for the project's
+ * opcode form and features.
  *
  * Every writer of an authored project goes through this one function, so the bytes a project
  * carries are always one of `dsl4CatalogBlockAuthoringVariants()` below. That is what lets the
@@ -59,14 +60,6 @@ export function wrapDsl4AuthoredRuntimeSource(source: string): string {
   })(Scratch);`;
 }
 
-/** The fixed Block Script an embedded-YAML project view installs; see generate-embedded-yaml-authoring-runtime. */
-export function createDsl4EmbeddedYamlAuthoringExtensionSource(): string {
-  return createDsl4BlockAuthoringExtensionSource([], {
-    narrativeControlEnabled: true,
-    referenceViews: true,
-  });
-}
-
 export interface Dsl4CatalogArtifact {
   /** Path inside the published package. */
   readonly path: string;
@@ -77,10 +70,11 @@ export interface Dsl4CatalogArtifact {
 export const dsl4CatalogBlockAuthoringDirectory = `dist/extensions/${dsl4BlockAuthoringExtensionId}`;
 
 /**
- * Every Block Script the package can write into a project, one file each.
+ * Every retired Block Script the package can still write into a project, one file each.
  *
- * The first is the variant a new project gets with the standard features; the rest differ only in
- * the opcode form of the project's base and the features it was authored with.
+ * A current runtime defines the declarations itself, so these are written only into a project
+ * whose base runtime predates that (`author-block-dsl`, and `migrate-block-palette --restore`).
+ * They differ in the opcode form of the project's base and the features it was authored with.
  */
 export function dsl4CatalogBlockAuthoringVariants(): Dsl4CatalogArtifact[] {
   const variants: Dsl4CatalogArtifact[] = [];
@@ -94,10 +88,6 @@ export function dsl4CatalogBlockAuthoringVariants(): Dsl4CatalogArtifact[] {
             narrativeControlEnabled,
           }),
         });
-  variants.push({
-    path: `${dsl4CatalogBlockAuthoringDirectory}/embedded-yaml.js`,
-    source: createDsl4EmbeddedYamlAuthoringExtensionSource(),
-  });
   return variants;
 }
 

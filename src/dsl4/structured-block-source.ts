@@ -40,8 +40,8 @@ export function formatDsl4BlockAuthoringExtensionHeader(
   return [
     `// Name: ${info.name}`,
     `// ID: ${info.id}`,
-    '// Description: Inert editor-only declarations for Kamishibai block scripts and embedded YAML views.',
-    '// Description[ja]: 紙芝居のブロックスクリプトと組込YAMLの表示に使う、実行しない宣言用の機能拡張です。',
+    '// Description: Legacy Kamishibai block-script declarations for projects saved before the runtime defined them; run migrate-block-palette to move them into the Kamishibai palette.',
+    '// Description[ja]: 台本ブロックを runtime が定義する前に保存した作品のための旧形式の宣言です。migrate-block-palette で「紙芝居」のパレットへ移せます。',
     `// By: ${author}`,
     `// Author URL: ${authorURL}`,
     `// Version: ${version}`,

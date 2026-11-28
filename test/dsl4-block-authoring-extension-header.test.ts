@@ -5,7 +5,6 @@ import {test} from 'vitest';
 import {strFromU8, strToU8, unzipSync, zipSync} from 'fflate';
 
 import {authorDsl4BlockSourceSb3} from '../src/builder/dsl4-block-source-author.js';
-import {embeddedYamlAuthoringRuntimeURL} from '../src/dsl4/generated/embedded-yaml-authoring-runtime.js';
 import {
   createDsl4BlockAuthoringExtensionSource,
   createDsl4BlockAuthoringInfo,
@@ -47,7 +46,7 @@ const packageJson = JSON.parse(
 function assertHeader(source: string) {
   const fields = parseHeader(source);
   assert.equal(fields.Name, createDsl4BlockAuthoringInfo().name);
-  assert.equal(fields.Name, 'Kamishibai Block Script');
+  assert.equal(fields.Name, 'Kamishibai Block Script (legacy)');
   assert.equal(fields.ID, dsl4BlockAuthoringExtensionId);
   assert.equal(fields.By, packageJson.author.name);
   assert.equal(fields['Author URL'], packageJson.author.url);
@@ -75,10 +74,6 @@ test('the block-script authoring extension source starts with its TurboWarp head
       narrativeControlEnabled: true,
     }),
   );
-});
-
-test('the embedded YAML authoring runtime carries the same header', () => {
-  assertHeader(decode(embeddedYamlAuthoringRuntimeURL));
 });
 
 test('an authored block-script SB3 embeds the authoring extension with its header', () => {

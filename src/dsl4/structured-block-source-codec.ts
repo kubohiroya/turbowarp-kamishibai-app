@@ -359,7 +359,7 @@ export function createDsl4BlockAuthoringInfo({
   return withDsl4PaletteGroups(
     {
       id: dsl4BlockAuthoringExtensionId,
-      name: 'Kamishibai Block Script',
+      name: 'Kamishibai Block Script (legacy)',
       blockIconURI: dsl4BlockAuthoringEditorIcon,
       menus: {
         sectionEnabled: {

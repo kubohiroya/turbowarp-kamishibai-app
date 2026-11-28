@@ -1,6 +1,6 @@
 # DSL 4.0 ブロックパレットの統合（草案）
 
-状態: 段階1を 4.0.25（#1213）で実装済み。段階2を実装中。2026-11-28。実装で決めたことは §10・§11 に記録する。
+状態: 段階1を 4.0.25（#1213）、段階2を #1214 で実装済み。段階3を実装中。2026-11-28。実装で決めたことは §10〜§12 に記録する。
 
 ## 1. 結論（提案）
 
@@ -167,3 +167,22 @@ turbowarp-kamishibai migrate-block-palette --input NEW.sb3 --output OLD.sb3 --re
 - **`migrate-embedded-yaml` との関係**: 組込 YAML への移行で差し替える runtime が統合後の版なら、同じ変換で旧台本
   拡張を外す。統合前の runtime（開発用の差し替えなど）の場合は、従来どおり旧台本拡張を作品の形式に合う変種へ
   作り直す。
+
+## 12. 段階3の実装記録（カタログ）
+
+- **一覧から外す手段がない**: TurboWarp Plus のカタログ（turbowarp-plus-packages の `extension-catalog`）は、
+  `package.json` の `turbowarpExtension.catalog` に載せた拡張を、追加できる一覧に出し、そのバイト列を SHA-256 で
+  信頼済みとして扱う。「信頼するが一覧には出さない」という項目はない。カタログから外すと、古い runtime を土台に
+  作った作品の旧台本拡張も信頼されなくなるため、項目は残す。一覧から外す仕組みは turbowarp-plus-packages 側の
+  課題として残す。
+- **旧形式と明示する**: 代わりに、旧台本拡張の名前を `Kamishibai Block Script (legacy)`（日本語のパレット名は
+  「紙芝居の台本ブロック（旧形式）」）にし、拡張ファイル先頭の説明で `migrate-block-palette` を案内する。一覧や
+  セキュリティの確認画面でも、新しい作品に使うものではないことが分かる。
+- **組込 YAML 用の変種を撤去**: 組込 YAML のビューは段階1から旧台本拡張を足さなくなったので、その変種
+  （`embedded-yaml.js`）、生成スクリプト `generate-embedded-yaml-authoring-runtime.mjs` と生成物
+  `src/dsl4/generated/embedded-yaml-authoring-runtime.js` を撤去した。カタログの変種は、古い土台へ書く8種類と
+  `authored.js` の9つになった。カタログが信頼するのは公開した版のバイト列だけで、版ごとに先頭の `// Version:` が
+  変わるため、以前の版で保存した作品の変種は撤去の前から信頼の対象ではない。
+- **版**: 旧台本拡張の名前は runtime にも含まれる（runtime が台本ブロックの定義と日本語の表示文を共有する）ため、
+  4.0.27 を切る。
+- **段階4**: 旧 opcode の読み取りと旧台本拡張の配信を終えるのは、次のメジャー版で行う。

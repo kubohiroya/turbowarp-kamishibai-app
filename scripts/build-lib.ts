@@ -61,21 +61,6 @@ const variants = [
     ),
   },
 ];
-// The Block Script embeds compiled function text, so only this build's output is comparable with
-// the committed embedded-YAML artifact that browser hosts install. A stale one would be unlisted.
-const {embeddedYamlAuthoringRuntimeURL} = (await import(
-  pathToFileURL(path.join(outputDirectory, 'dsl4/generated/embedded-yaml-authoring-runtime.js'))
-    .href
-)) as typeof import('../src/dsl4/generated/embedded-yaml-authoring-runtime.js');
-const embeddedYaml = Buffer.from(
-  embeddedYamlAuthoringRuntimeURL.split(',')[1]!,
-  'base64',
-).toString();
-if (!variants.some(({source}) => source === embeddedYaml)) {
-  throw new Error(
-    'src/dsl4/generated/embedded-yaml-authoring-runtime.js is stale; run node scripts/generate-embedded-yaml-authoring-runtime.mjs',
-  );
-}
 for (const {path: artifact, source} of variants) {
   const target = path.join(projectRoot, artifact);
   await mkdir(path.dirname(target), {recursive: true});

@@ -193,14 +193,14 @@ describe('Japanese texts', () => {
       return registered!.getInfo();
     };
     const ja = infoIn('ja');
-    expect(ja.name).toBe('紙芝居の台本ブロック');
+    expect(ja.name).toBe('紙芝居の台本ブロック（旧形式）');
     expect(ja.blocks.find((block) => block.opcode === 'narrativeIf')!.text).toEqual([
       'もし [CONDITION] ならば',
       'でなければ',
     ]);
     expect(ja.groups).toHaveLength(dsl4AuthoringPaletteGroups.length);
     const en = infoIn('en');
-    expect(en.name).toBe('Kamishibai Block Script');
+    expect(en.name).toBe('Kamishibai Block Script (legacy)');
     expect(en.blocks.find((block) => block.opcode === 'narrativeIf')!.text).toEqual([
       'if [CONDITION] then',
       'else',
