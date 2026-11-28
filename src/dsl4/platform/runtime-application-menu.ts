@@ -84,6 +84,13 @@ const buildLayout = Object.freeze({
   language: {left: '53.3333%', top: '68%', width: '36.6667%', height: '24.4444%'},
 });
 
+// Without the open action (the playback profile) the menu is reload, about and language. Reload
+// then has its row to itself, so it moves to the horizontal center instead of leaving a gap.
+const playbackLayout = Object.freeze({
+  ...compactLayout,
+  reload: {left: '31.6667%', top: '25.5556%', width: '36.6667%', height: '24.4444%'},
+});
+
 // With both build actions the row is shared: the source build on the left, compiled on the right.
 const splitBuildLayout = Object.freeze({
   ...buildLayout,
@@ -194,7 +201,9 @@ export function createDsl4RuntimeApplicationMenu(options: {
       (!isBuildAction(action) || buildEnabled);
     const visible = (action !== 'open' || openVisible) && (!isBuildAction(action) || buildVisible);
     const layout = !buildVisible
-      ? compactLayout
+      ? openVisible
+        ? compactLayout
+        : playbackLayout
       : options.onBuildCompiled
         ? splitBuildLayout
         : buildLayout;

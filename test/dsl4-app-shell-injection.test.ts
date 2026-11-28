@@ -171,6 +171,30 @@ test('application menu keeps the Kamishibai icon set, recolor, and stage-relativ
   menu.dispose();
 });
 
+test('application menu centers reload when only reload, about, and language are offered', () => {
+  const {document, mount} = stageMount();
+  const menu = createDsl4RuntimeApplicationMenu({
+    document,
+    mount,
+    locales: menuLocales,
+    openVisible: false,
+    onReload() {},
+    onAbout() {},
+    onLocaleChange() {},
+  });
+  const button = (action: string) =>
+    requireByAttribute(asFake(menu.element), 'data-dsl4-menu-action', action);
+  assert.equal(button('open').hidden, true);
+  const reload = button('reload');
+  assert.equal(reload.style.left, '31.6667%');
+  const margins =
+    Number.parseFloat(String(reload.style.left)) * 2 + Number.parseFloat(String(reload.style.width));
+  assert.ok(Math.abs(margins - 100) < 0.001, `reload is off center: ${margins}`);
+  assert.equal(button('about').style.left, '10%');
+  assert.equal(button('language').style.left, '53.3333%');
+  menu.dispose();
+});
+
 test('application menu toggles locale through the injected callback', async () => {
   const {document, mount} = stageMount();
   const locales: unknown[] = [];
