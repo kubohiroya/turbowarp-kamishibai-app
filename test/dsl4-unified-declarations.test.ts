@@ -122,29 +122,102 @@ test('the runtime palette is named for what it holds and translates the declarat
   assert.deepEqual(ja.menus!.sectionEnabled, {on: '✅ オン', off: '🚫 オフ'});
 });
 
-test('the runtime registers declaration forms for the runtime and the bundle', () => {
+test('the runtime registers its schema forms under its own ID only', () => {
   const definitions = createDsl4RuntimeDeclarationEditorDefinitions({
     narrativeControlEnabled: true,
   });
-  const sceneForms = definitions
-    .filter((definition) => definition.editorId === 'scene-properties')
-    .map((definition) => [definition.extensionId, definition.opcodes]);
-  assert.deepEqual(sceneForms, [
-    ['kubohiroyakamishibairuntime4', [`${spellings.runtime}scene`]],
-    ['kubohiroyakamishibai4', [`${spellings.bundle}scene`]],
-  ]);
-  assert.equal(
-    definitions.some((definition) =>
-      definition.opcodes.some((opcode) => opcode.startsWith(spellings.legacy)),
-    ),
-    false,
+  assert.ok(definitions.length > 0);
+  for (const definition of definitions) {
+    // The Standard bundle accepts only its member's own ID and opcodes and rewrites them.
+    assert.equal(
+      definition.extensionId,
+      'kubohiroyakamishibairuntime4',
+      String(definition.editorId),
+    );
+    for (const opcode of definition.opcodes)
+      assert.ok(opcode.startsWith(spellings.runtime), opcode);
+  }
+  assert.deepEqual(
+    definitions
+      .filter((definition) => definition.editorId === 'scene-properties')
+      .map((definition) => definition.opcodes),
+    [[`${spellings.runtime}scene`]],
   );
   assert.ok(
-    definitions.some((definition) => definition.opcodes.includes(`${spellings.bundle}pose`)),
+    definitions.some((definition) => definition.opcodes.includes(`${spellings.runtime}pose`)),
   );
 });
 
-test('installing the declaration forms registers both forms and removes them again', () => {
+/** The checks `@kubohiroya/sb3-toolchain` puts in front of a bundle member's block editor API. */
+function bundleMemberEditors(accepted: unknown[], rejected: unknown[]) {
+  const member = 'kubohiroyakamishibairuntime4';
+  const memberOnly = (definition: unknown) => {
+    const {extensionId, opcodes} = definition as {extensionId: string; opcodes: string[]};
+    if (extensionId !== member || !opcodes.every((opcode) => opcode.startsWith(`${member}_`))) {
+      rejected.push(definition);
+      throw new TypeError(`Invalid block editor registration for bundle member ${member}.`);
+    }
+    accepted.push(definition);
+    return () => {};
+  };
+  // Custom editors pass through the bundle unchanged.
+  const passThrough = (definition: unknown) => {
+    accepted.push(definition);
+    return () => {};
+  };
+  return {apiVersion: 1, registerSchema: memberOnly, register: passThrough};
+}
+
+test('inside the Standard bundle every declaration form is accepted', () => {
+  const accepted: unknown[] = [];
+  const rejected: unknown[] = [];
+  const warnings: unknown[] = [];
+  const warn = console.warn;
+  console.warn = (...args: unknown[]) => void warnings.push(args);
+  try {
+    installDsl4RuntimeDeclarationEditors(
+      {gui: {blockEditors: bundleMemberEditors(accepted, rejected)}},
+      {narrativeControlEnabled: true},
+    );
+  } finally {
+    console.warn = warn;
+  }
+  assert.deepEqual(rejected, []);
+  assert.deepEqual(warnings, []);
+  const editorIds = accepted.map((definition) => (definition as {editorId: string}).editorId);
+  for (const id of ['scene-properties', 'definition-asset', 'action-pose-steps'])
+    assert.ok(editorIds.includes(id), id);
+});
+
+test('one refused registration does not withdraw the others', () => {
+  const accepted: string[] = [];
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    installDsl4RuntimeDeclarationEditors(
+      {
+        gui: {
+          blockEditors: {
+            apiVersion: 1,
+            registerSchema(definition: unknown) {
+              const {editorId} = definition as {editorId: string};
+              if (editorId === 'scene-properties') throw new TypeError('refused');
+              accepted.push(editorId);
+              return () => {};
+            },
+          },
+        },
+      },
+      {narrativeControlEnabled: false},
+    );
+  } finally {
+    console.warn = warn;
+  }
+  assert.equal(accepted.includes('scene-properties'), false);
+  assert.ok(accepted.includes('definition-asset'));
+});
+
+test('installing the declaration forms registers them and removes them again', () => {
   const registered: {extensionId: string; editorId?: string}[] = [];
   let removed = 0;
   const register = (definition: unknown) => {
@@ -158,12 +231,14 @@ test('installing the declaration forms registers both forms and removes them aga
     {narrativeControlEnabled: true},
   );
   assert.ok(registered.length > 0);
+  // The rows table replaces the schema form where the editor hosts custom editors, and names
+  // both spellings because custom editors are not rewritten by the bundle.
   assert.deepEqual(
-    new Set(registered.map((definition) => definition.extensionId)),
-    new Set(['kubohiroyakamishibairuntime4', 'kubohiroyakamishibai4']),
+    registered
+      .filter((definition) => definition.editorId === 'narrative-rows-table')
+      .map((definition) => definition.extensionId),
+    ['kubohiroyakamishibairuntime4', 'kubohiroyakamishibai4'],
   );
-  // The rows table replaces the schema form where the editor hosts custom editors.
-  assert.ok(registered.some((definition) => definition.editorId === 'narrative-rows-table'));
   assert.equal(
     registered.some((definition) => definition.editorId === 'narrative-rows'),
     false,

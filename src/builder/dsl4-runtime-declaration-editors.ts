@@ -40,11 +40,13 @@ function retarget<T extends EditorRegistration>(registration: T, form: Dsl4Block
 }
 
 /**
- * The schema forms the runtime registers for its declarations and actions, in both forms.
+ * The schema forms the runtime registers for its declarations and actions, under its own ID.
  *
- * The GUI registers by extension and opcode, and a work loads the runtime alone or inside the
- * Standard bundle; registering both keeps the forms working in either. These used to ship in the
- * retired Block Script extension, one copy per form.
+ * Inside the Standard bundle, the bundle hands its members a `blockEditors` that accepts only the
+ * member's own extension ID and opcodes for schema, source and fixed-input editors, and rewrites
+ * them into the bundle's namespace. Loaded alone, the runtime's own ID is the right one already. So
+ * one registration in the runtime's form serves both; one in the bundle's form is refused inside
+ * the bundle. These used to ship in the retired Block Script extension, one copy per form.
  */
 export function createDsl4RuntimeDeclarationEditorDefinitions({
   narrativeControlEnabled,
@@ -54,12 +56,12 @@ export function createDsl4RuntimeDeclarationEditorDefinitions({
   const declarations = createDsl4BlockAuthoringEditorDefinitions(dsl4BlockAuthoringExtensionId, {
     narrativeControlEnabled,
   }) as EditorRegistration[];
-  return forms.flatMap((form) => [
-    ...declarations.map((registration) => retarget(registration, form)),
-    ...(createDsl4CoreActionBlockEditorDefinitions(form, {
+  return [
+    ...declarations.map((registration) => retarget(registration, 'runtime')),
+    ...(createDsl4CoreActionBlockEditorDefinitions('runtime', {
       narrativeControlEnabled,
     }) as EditorRegistration[]),
-  ]);
+  ];
 }
 
 interface BlockEditorApi {
@@ -101,25 +103,27 @@ export function installDsl4RuntimeDeclarationEditors(
     );
   const api = Scratch.gui?.blockEditors;
   if (api?.apiVersion !== 1 || typeof api.registerSchema !== 'function') return dispose;
-  const removers: (() => void)[] = [];
-  try {
-    const rowsEditor = narrativeControlEnabled && typeof api.register === 'function';
-    for (const definition of createDsl4RuntimeDeclarationEditorDefinitions({
-      narrativeControlEnabled,
-    })) {
-      // The rows dialog replaces its schema form where the editor can host it.
-      if (narrativeControlEnabled && definition.editorId === 'narrative-condition') continue;
-      if (rowsEditor && definition.editorId === 'narrative-rows') continue;
-      removers.push(api.registerSchema(definition));
+  // Each registration stands alone, so one the host refuses does not take the others with it.
+  const register = (add: () => () => void) => {
+    try {
+      cleanup.push(add());
+    } catch (error) {
+      console.warn('A Kamishibai definition form could not be registered.', error);
     }
-    if (rowsEditor) {
-      const editor = createDsl4NarrativeRowsEditor(dsl4BlockAuthoringExtensionId);
-      for (const form of forms) removers.push(api.register!(retarget(editor, form)));
-    }
-    cleanup.push(...removers);
-  } catch (error) {
-    for (const remove of removers.reverse()) remove();
-    console.warn('Kamishibai definition forms could not be registered.', error);
+  };
+  const rowsEditor = narrativeControlEnabled && typeof api.register === 'function';
+  for (const definition of createDsl4RuntimeDeclarationEditorDefinitions({
+    narrativeControlEnabled,
+  })) {
+    // The rows dialog replaces its schema form where the editor can host it.
+    if (narrativeControlEnabled && definition.editorId === 'narrative-condition') continue;
+    if (rowsEditor && definition.editorId === 'narrative-rows') continue;
+    register(() => api.registerSchema!(definition));
+  }
+  if (rowsEditor) {
+    // A custom editor passes through the bundle unchanged, so it names both spellings itself.
+    const editor = createDsl4NarrativeRowsEditor(dsl4BlockAuthoringExtensionId);
+    for (const form of forms) register(() => api.register!(retarget(editor, form)));
   }
   return dispose;
 }

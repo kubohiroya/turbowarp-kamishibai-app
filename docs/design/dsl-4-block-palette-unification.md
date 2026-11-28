@@ -1,6 +1,6 @@
 # DSL 4.0 ブロックパレットの統合（草案）
 
-状態: 段階1を 4.0.25（#1213）、段階2を #1214、段階3を 4.0.27（#1215）で実装済み。2026-11-28。実装で決めたことは §10〜§13 に記録する。
+状態: 段階1を 4.0.25（#1213）、段階2を #1214、段階3を 4.0.27（#1215）で実装済み。編集フォームの修正を 4.0.28（#1216）と 4.0.29 で行った。2026-11-28。実装で決めたことは §10〜§14 に記録する。
 
 ## 1. 結論（提案）
 
@@ -199,3 +199,18 @@ turbowarp-kamishibai migrate-block-palette --input NEW.sb3 --output OLD.sb3 --re
   `Scratch.gui.blockEditors` が無いので何も登録しない。
 - **大きさ**: playback runtime は約 16.5 KB（gzip で約 7 KB、約 0.8%）大きくなる。フォームの JSON Schema は、playback runtime が台本の検証のために既に持っている DSL の Schema から作るので、増えるのは主にフォームを組み立てて登録するコードである。
   組込 YAML の編集用 Schema（`dsl-4-editor.schema.json`）は従来どおり authoring プロファイルだけが持つ。
+
+## 14. bundle の中でフォームが登録されていなかった問題（4.0.29）
+
+- **見つけ方**: 4.0.28 の Standard SB3 を TurboWarp Plus Editor で開いて確かめたところ、パレットは設計どおりに並ぶ一方、
+  台本ブロックの編集フォームが1つも出なかった。コンソールに
+  `Invalid block editor registration for bundle member kubohiroyakamishibairuntime4` が出ていた。
+- **原因**: sb3-toolchain の bundle は、中に入った拡張に渡す `Scratch.gui.blockEditors` で、スキーマ・ソース・固定入力の
+  フォーム登録をメンバー自身の拡張 ID と opcode に限り、それを bundle の名前空間へ書き換えてから GUI に渡す。
+  `installDsl4RuntimeDeclarationEditors` は runtime 単体と bundle の両方の綴りで登録していたため、bundle の綴りの
+  登録が断られ、さらに失敗時に登録を全部取り消していた。そのため 4.0.25〜4.0.28 では、Standard の作品で
+  台本ブロックのフォームが出ていなかった（runtime 単体の作品では出ていた）。
+- **対応**: スキーマのフォームは runtime 自身の綴りだけで登録する。bundle の中では bundle が書き換え、runtime 単体では
+  そのまま使われる。書き換えられない独自エディター（`register`、行の表）とプレビュー（`registerPreview`）は、従来
+  どおり両方の綴りで登録する。登録は1件ずつ独立させ、1件が断られてもほかを取り消さない。
+- **テスト**: bundle がメンバーに課す確認を模した登録口で、全フォームが受け付けられることを確かめる。
