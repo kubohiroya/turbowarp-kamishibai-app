@@ -31,7 +31,8 @@ const fields = ['bgm', 'audio', 'texts', 'loops'] as const;
 /**
  * Refuse a checkpoint whose history holds an action this media save cannot bring back. A pose
  * step's sound is a one-shot that restore stops rather than resumes, like the rest of a cancelled
- * sound. Messages to Scratch and custom actions change state no save holds, so they stay refused.
+ * sound. Messages to Scratch and custom actions change state no save holds, so they stay refused;
+ * a message the author marked `saveSafe` never reaches this check.
  */
 export function validateDsl4MediaRestoreSupport(
   actions: readonly Readonly<Record<string, unknown>>[],
@@ -45,7 +46,10 @@ export function validateDsl4MediaRestoreSupport(
         (options.bgm && command === 'bgm'));
     if (!restorable)
       throw new TypeError(
-        `This checkpoint requires an explicit presentation restore handler: ${command}`,
+        `This checkpoint requires an explicit presentation restore handler: ${command}` +
+          (command === 'broadcastMessageAndWait' && action.handler !== 'custom'
+            ? '. Declare saveSafe: true when the scripts it starts leave nothing to restore'
+            : ''),
       );
   }
 }

@@ -921,7 +921,7 @@ iconへ反映します。
 | `sound`                   | sound ID、または`{sound, stableId?}`                                 |
 | `wait`                    | 秒数、または`{seconds, stableId?}`                                   |
 | `debugger`                | 引数なし（`debugger:`）                                              |
-| `broadcastMessageAndWait` | message名、または`{message, stableId?}`                              |
+| `broadcastMessageAndWait` | message名、または`{message, saveSafe?, stableId?}`                    |
 | `transition`              | `{effect, seconds, stableId?}`                                       |
 | `goto`                    | scene ID、または`{scene, stableId?}`                                 |
 | `branch`                  | branch ID、または`{branch, stableId?}`                               |
@@ -1003,6 +1003,18 @@ Scratch側では`playMiniGame`や`playCostumeAnimation`の「メッセージを�
 - broadcastMessageAndWait:
     message: showEndingEffects
     stableId: endingEffects
+```
+
+receiverはScratchの変数・リスト・spriteなど、セーブポイントが保持しない状態を変えられるため、このactionを
+実行した後はセーブを拒否します。receiverが残す状態がない、または後続のactionで作り直すと作者が判断できる場合は、
+`saveSafe: true`を指定するとそのactionの後でもセーブできます。復元はmessageを送り直さず、receiverの作用も
+戻しません。`saveSafe`はScratchへ渡さず、セーブの判定にだけ使います。ブロックでは「命令の追加設定 JSON」に
+`{"arguments": {"saveSafe": true}}`として保持します。
+
+```yaml
+- broadcastMessageAndWait:
+    message: playCostumeAnimation
+    saveSafe: true
 ```
 
 同じmessageを待つsessionが複数あっても、各actionは自身の送信で返されたthread identityだけを所有します。

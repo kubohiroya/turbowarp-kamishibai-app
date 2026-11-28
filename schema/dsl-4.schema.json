@@ -2205,7 +2205,11 @@
           "required": ["message"],
           "properties": {
             "stableId": {"$ref": "#/$defs/stableId"},
-            "message": {"type": "string", "minLength": 1}
+            "message": {"type": "string", "minLength": 1},
+            "saveSafe": {
+              "type": "boolean",
+              "description": "Declares that the scripts this message starts leave no state a save point must restore, so a save may hold this action. Restore never sends the message again."
+            }
           }
         }
       ]
