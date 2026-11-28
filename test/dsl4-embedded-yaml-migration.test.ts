@@ -618,3 +618,38 @@ test('file migration onto a current runtime moves the declarations into the one 
     await rm(directory, {recursive: true, force: true});
   }
 });
+
+test('file migration gives the editable block source the authoring runtime that registers block previews', async () => {
+  const {mkdtemp, writeFile, readFile, rm} = await import('node:fs/promises'),
+    {tmpdir} = await import('node:os'),
+    path = await import('node:path');
+  const {serializeSb3, readSb3} = await import('../src/builder/sb3.js'),
+    {migrateDsl4EmbeddedYamlFile} = await import('../src/builder/dsl4-embedded-yaml-migrate.js'),
+    {readDsl4NarrativeRuntimeExtensionSource} =
+      await import('../src/builder/dsl4-playback-runtime-source.js');
+  const directory = await mkdtemp(path.join(tmpdir(), 'app-yaml-authoring-runtime-test-'));
+  try {
+    const input = path.join(directory, 'old.sb3'),
+      output = path.join(directory, 'new.sb3');
+    await writeFile(input, serializeSb3({'project.json': new Uint8Array()}, await fixture()));
+    for (const narrativeControlEnabled of [false, true]) {
+      const target = path.join(directory, `${narrativeControlEnabled}-${path.basename(output)}`);
+      await migrateDsl4EmbeddedYamlFile({
+        input,
+        output: target,
+        sourceFrontend: frontend,
+        narrativeControlEnabled,
+      });
+      const project = readSb3(await readFile(target)).project as Obj;
+      const runtime = Buffer.from(
+        String(project.extensionURLs.kubohiroyakamishibai4).split(',')[1]!,
+        'base64',
+      ).toString('utf8');
+      // The Editor shows scene and action previews only for a runtime that registers them.
+      assert.equal(runtime, await readDsl4NarrativeRuntimeExtensionSource('authoring'));
+      assert(runtime.includes('registerPreview'));
+    }
+  } finally {
+    await rm(directory, {recursive: true, force: true});
+  }
+});
