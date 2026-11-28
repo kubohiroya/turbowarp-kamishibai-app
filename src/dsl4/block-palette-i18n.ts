@@ -268,7 +268,9 @@ const yamlPartOpcodes = [
  * declares, then what its scenes do.
  *
  * The runtime defines the Block Script declarations itself, so a scene and the actions inside it
- * share one palette. Each opcode belongs to exactly one group.
+ * share one palette. Each opcode belongs to exactly one group. The palette keeps to eight groups:
+ * neighbouring kinds of block share one, and a merged group keeps the ID of its first member so a
+ * saved palette setting still names it.
  */
 export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.freeze([
   {
@@ -289,11 +291,14 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
       'embeddedYaml',
       'embeddedYamlConfig',
       'embeddedYamlInclude',
+      'actionOptions',
+      'customAction',
+      ...yamlPartOpcodes,
     ],
   },
   {
     id: 'definitions',
-    name: {en: 'Assets and\nactors', ja: '素材と\n登場人物'},
+    name: {en: 'Assets and\nsettings', ja: '素材と\n設定'},
     color1: '#3f8fd2',
     badge: {
       color: '#3f8fd2',
@@ -301,59 +306,42 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
     },
     color2: '#3579b2',
     color3: '#2b6392',
-    opcodes: ['asset', 'actor', 'control', 'textStyle', 'variable'],
-  },
-  {
-    id: 'settings',
-    name: {en: 'Story\nsettings', ja: '作品の\n設定'},
-    color1: '#5a6b80',
-    badge: {color: '#5a6b80', glyph: 'M4 7h16M4 17h16M9 4v6M15 14v6'},
-    color2: '#4c5b6d',
-    color3: '#3f4b5a',
-    opcodes: ['cover', 'loading', 'recognition', 'viewport'],
+    opcodes: [
+      'asset',
+      'actor',
+      'control',
+      'textStyle',
+      'variable',
+      'cover',
+      'loading',
+      'recognition',
+      'viewport',
+    ],
   },
   {
     id: 'stage',
-    name: {en: 'Stage', ja: '舞台'},
+    name: {en: 'Stage\nand sound', ja: '舞台と音'},
     color1: '#4c8fe0',
     badge: {color: '#4c8fe0', glyph: 'M2 20 9 10l5 6 3-3 5 7Z', filled: true},
     color2: '#4079be',
     color3: '#35649c',
-    opcodes: ['stage', 'transition', 'presentationEffect'],
-  },
-  {
-    id: 'sound',
-    name: {en: 'Sound', ja: '音'},
-    color1: '#bf5fc4',
-    badge: {
-      color: '#bf5fc4',
-      glyph: 'M9 18V5l11-2v13M9 18a3 3 0 1 1-6 0a3 3 0 1 1 6 0M20 16a3 3 0 1 1-6 0a3 3 0 1 1 6 0',
-    },
-    color2: '#a250a6',
-    color3: '#854289',
-    opcodes: ['bgm', 'stopBgm', 'setBgmVolume', 'sound'],
-  },
-  {
-    id: 'media',
-    name: {en: 'Audio and\nvideo', ja: '音声・\n動画'},
-    color1: '#8a63d2',
-    badge: {color: '#8a63d2', glyph: 'M3 6h18v12H3ZM3 10h18M8 6v4M13 6v4'},
-    color2: '#7554b2',
-    color3: '#604593',
-    opcodes: ['audio', 'audioControl', 'video', 'videoControl'],
-  },
-  {
-    id: 'speech',
-    name: {en: 'Speech\nand text', ja: 'セリフと\n文字'},
-    color1: '#36a874',
-    badge: {color: '#36a874', glyph: 'M3 4h18v12H11l-6 5v-5H3Z'},
-    color2: '#2d8e62',
-    color3: '#257551',
-    opcodes: ['say', 'think', 'setText', 'sayText', 'thinkText'],
+    opcodes: [
+      'stage',
+      'transition',
+      'presentationEffect',
+      'bgm',
+      'stopBgm',
+      'setBgmVolume',
+      'sound',
+      'audio',
+      'audioControl',
+      'video',
+      'videoControl',
+    ],
   },
   {
     id: 'actor',
-    name: {en: 'Show\nactors', ja: '登場人物の\n表示'},
+    name: {en: 'Actors\nand speech', ja: '登場人物と\nセリフ'},
     color1: '#2a9d96',
     badge: {
       color: '#2a9d96',
@@ -370,6 +358,11 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
       'setSkin',
       'setLayer',
       'loop',
+      'say',
+      'think',
+      'setText',
+      'sayText',
+      'thinkText',
     ],
   },
   {
@@ -387,30 +380,12 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
       'narrativeIf',
       'narrativeRepeat',
       'narrativeForEach',
-    ],
-  },
-  {
-    id: 'values',
-    name: {en: 'Conditions\nand values', ja: '条件と値'},
-    ...narrativeColors,
-    badge: {color: '#98683d', glyph: 'M5 9h14M5 15h14'},
-    opcodes: [
       'narrativeReference',
       'narrativeVariable',
       'narrativeCompare',
       'narrativeLogic',
       'narrativeLogicList',
       'narrativeNot',
-    ],
-  },
-  {
-    id: 'input',
-    name: {en: 'Move by\ninput', ja: '入力で\n移動'},
-    color1: '#e0753a',
-    badge: {color: '#e0753a', glyph: 'M5 3l13 9-6 1.5 3.5 7-3 1.5-3.5-7L5 18Z', filled: true},
-    color2: '#be6331',
-    color3: '#9c5128',
-    opcodes: [
       'keyInputToChangeScene',
       'touchInputToChangeScene',
       'poseInputToChangeScene',
@@ -431,7 +406,7 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
   },
   {
     id: 'variables',
-    name: {en: 'Story\nvariables', ja: '台本の\n変数'},
+    name: {en: 'Variables\nand status', ja: '変数と\n状態'},
     color1: '#ec8a2e',
     badge: {color: '#ec8a2e', glyph: 'M6 6l12 12M18 6 6 18'},
     color2: '#c87527',
@@ -443,16 +418,6 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
       'storyVariableReporter',
       'storyVariableExists',
       'storyVariableType',
-    ],
-  },
-  {
-    id: 'status',
-    name: {en: 'Story\nstatus', ja: '進行の\n状態'},
-    color1: '#4ea3c4',
-    badge: {color: '#4ea3c4', glyph: 'M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18M12 11v6M12 7.5v.01'},
-    color2: '#428aa6',
-    color3: '#367289',
-    opcodes: [
       'storyStatusReporter',
       'currentSceneIdReporter',
       'currentActionNumberReporter',
@@ -465,15 +430,6 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
       'canNavigateToPreviousAction',
       'canNavigateToNextAction',
     ],
-  },
-  {
-    id: 'details',
-    name: {en: 'Details', ja: '詳しい\n指定'},
-    color1: '#6b7280',
-    badge: {color: '#6b7280', glyph: 'M5 12h.01M12 12h.01M19 12h.01'},
-    color2: '#5a606c',
-    color3: '#4a4f59',
-    opcodes: ['actionOptions', 'customAction'],
   },
   {
     id: 'debug',
@@ -498,18 +454,6 @@ export const dsl4RuntimePaletteGroups: readonly Dsl4PaletteGroup[] = Object.free
       'openOfficialWebsite',
       'toggleTitleLanguage',
     ],
-  },
-  {
-    id: 'document',
-    name: {en: 'YAML\nparts', ja: 'YAMLの\n部品'},
-    color1: '#6b7280',
-    badge: {
-      color: '#6b7280',
-      glyph: 'M9 4C6 4 6 6 6 8s-2 4-2 4 2 0 2 4 0 4 3 4M15 4c3 0 3 2 3 4s2 4 2 4-2 0-2 4 0 4-3 4',
-    },
-    color2: '#5a606c',
-    color3: '#4a4f59',
-    opcodes: yamlPartOpcodes,
   },
 ]);
 

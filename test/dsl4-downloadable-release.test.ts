@@ -1341,7 +1341,8 @@ test('shows every palette group of the bundle on the Stage when the Editor first
     await loadProjectQuietly(vm, result.archive);
     const info = requireRecord(await extensionInfo(vm), 'the bundle info');
     const declared = (info.groups as {id: string}[]).map(({id}) => `${bundleExtensionId}/${id}`);
-    assert.ok(declared.length > 20);
+    // The runtime itself, its eight groups and the seven other members.
+    assert.equal(declared.length, 16);
     assert.deepEqual(shown.slice(10), declared);
   } finally {
     vm.quit();
