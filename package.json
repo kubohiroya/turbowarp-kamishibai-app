@@ -121,8 +121,7 @@
           "dist/extensions/kubohiroyakamishibaiauthoring4/bundle.js",
           "dist/extensions/kubohiroyakamishibaiauthoring4/bundle-sections.js",
           "dist/extensions/kubohiroyakamishibaiauthoring4/runtime.js",
-          "dist/extensions/kubohiroyakamishibaiauthoring4/runtime-sections.js",
-          "dist/extensions/kubohiroyakamishibaiauthoring4/embedded-yaml.js"
+          "dist/extensions/kubohiroyakamishibaiauthoring4/runtime-sections.js"
         ],
         "resourceDeclaration": {
           "schemaVersion": 1,
