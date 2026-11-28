@@ -29,7 +29,7 @@
   ],
   "expected": {
     "visitedScenes": ["opening", "middle", "ending"],
-    "rewoundScenes": ["middle", "opening", "middle"],
+    "rewoundScenes": ["ending", "middle", "opening", "middle"],
     "rebuiltFutureScenes": ["opening", "middle", "ending"],
     "scoreBeforeRewind": 4,
     "scoreAfterFutureRebuild": 6

@@ -807,6 +807,12 @@ controls:
 一つ選び、指定省略、unknown profile、台本内のprofile欠落をbuild errorにします。runtime途中でprofileを
 切り替えません。
 
+`history.previousAction`は、実行中のactionがあればそのactionの開始前へ戻します。巻き戻しで
+actionの開始位置に止まっている場合や実行中のactionが無い場合は、一つ前に完了したactionの開始前へ
+戻します。`history.previousScene`は、sceneの途中にいれば現在のsceneの冒頭へ戻し、巻き戻しで
+sceneの冒頭に止まっている場合は一つ前のscene訪問の冒頭へ戻します。最初のscene訪問の冒頭では
+何もしません。
+
 巻き戻しはscene遷移の実行履歴を使います。台本の実行位置を表すruntime stateは移動先に合わせて
 変更しますが、作品変数など、それ以外のruntime stateは巻き戻しません。
 

@@ -396,6 +396,26 @@ export function createDsl4NavigationSession({
     });
   }
 
+  /** Describe the runtime position a history command starts from, or null without one. */
+  function historyCurrentPosition(state: Readonly<HistoryState>) {
+    const runtime = controller.getState();
+    if (typeof runtime.sceneId !== 'string' || !Number.isInteger(runtime.actionIndex)) return null;
+    const actionIndex = Number(runtime.actionIndex);
+    if (actionIndex < 0) return null;
+    const actionPath = typeof runtime.actionPath === 'string' ? runtime.actionPath : null;
+    const lastEntry = state.actionEntries.at(-1);
+    const committed =
+      lastEntry !== undefined &&
+      lastEntry.visitId === state.currentVisitId &&
+      lastEntry.actionPath === actionPath;
+    return {
+      sceneId: runtime.sceneId,
+      actionIndex,
+      actionPath,
+      inProgress: runtime.status === 'running' && actionPath !== null && !committed,
+    };
+  }
+
   function dispatchCommand(command: string) {
     if (disposed) return commandFailure('K4-NAVIGATION-DISPOSED', 'Navigation session is disposed');
     if (persistence.isBusy()) return commandFailure('K4-SAVE-BUSY', 'A checkpoint is pending');
@@ -455,7 +475,10 @@ export function createDsl4NavigationSession({
         'History navigation is disabled for the selected profile',
       );
     }
-    const result = historyReducer.reduce(historyState, {type: command});
+    const result = historyReducer.reduce(historyState, {
+      type: command,
+      current: historyCurrentPosition(historyState),
+    });
     if (!result.ok) {
       const failure = historyFailure(result);
       return commandFailure(failure.code, failure.message);
