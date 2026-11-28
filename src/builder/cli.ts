@@ -1,4 +1,5 @@
 import {migrateDsl4EmbeddedYamlFile} from './dsl4-embedded-yaml-migrate.js';
+import {migrateDsl4BlockPaletteFile} from './dsl4-block-palette-migrate.js';
 import {dsl4StandardProductionFeatureFlags} from '../dsl4/feature-flags.js';
 import {readDsl4NarrativeRuntimeExtensionSource} from './dsl4-playback-runtime-source.js';
 import {lstat, readFile, writeFile} from 'node:fs/promises';
@@ -170,6 +171,12 @@ export function usage() {
 
   turbowarp-kamishibai migrate-embedded-yaml --input OLD.sb3 --output NEW.sb3 \\
     [--entry-file story.k4.yml] [--report REPORT.json] [--document-map PATHS.json]
+
+  turbowarp-kamishibai migrate-block-palette --input OLD.sb3 --output NEW.sb3 \\
+    [--report REPORT.json] [--restore]
+    Moves Block Script declarations from the retired kubohiroyakamishibaiauthoring4 extension
+    onto the runtime's own opcodes, so a scene and its actions share one palette. A runtime that
+    predates the merge is replaced. --restore puts them back for an older runtime.
 
   turbowarp-kamishibai save-sb3-format --input IN.sb3 --output OUT.sb3 \\
     [--extensions remote-non-cacheable|remote-cacheable|embedded-file|embedded-data] [--use-project-format] \\
@@ -1504,6 +1511,20 @@ function parseAuditDsl4DefinitionsArguments(rest: string[]) {
   };
 }
 
+function parseMigrateBlockPaletteArguments(arguments_: string[]) {
+  const {flags, values} = parseCliFlagAndValueOptions(arguments_, {
+    flagOptions: new Set(['--restore']),
+    valueOptions: new Set(['--input', '--output', '--report']),
+  });
+  requireCliValueOptions(values, ['--input', '--output']);
+  return {
+    input: path.resolve(values.get('--input')!),
+    output: path.resolve(values.get('--output')!),
+    ...(values.has('--report') ? {report: path.resolve(values.get('--report')!)} : {}),
+    direction: flags.has('--restore') ? ('restore' as const) : ('unify' as const),
+  };
+}
+
 function parseMigrateEmbeddedYamlArguments(arguments_: string[]) {
   const {values} = parseCliFlagAndValueOptions(arguments_, {
     flagOptions: new Set(),
@@ -1594,6 +1615,7 @@ function parseSaveSb3FormatArguments(arguments_: string[]) {
 
 function parseCliArgumentsBase(arguments_: string[]):
   | {action: 'migrate-embedded-yaml'; options: ReturnType<typeof parseMigrateEmbeddedYamlArguments>}
+  | {action: 'migrate-block-palette'; options: ReturnType<typeof parseMigrateBlockPaletteArguments>}
   | {action: 'save-sb3-format'; options: ReturnType<typeof parseSaveSb3FormatArguments>}
   | {action: 'help'}
   | {action: 'version'}
@@ -1617,6 +1639,8 @@ function parseCliArgumentsBase(arguments_: string[]):
   const [command, ...rest] = arguments_;
   if (command === 'migrate-embedded-yaml')
     return {action: 'migrate-embedded-yaml', options: parseMigrateEmbeddedYamlArguments(rest)};
+  if (command === 'migrate-block-palette')
+    return {action: 'migrate-block-palette', options: parseMigrateBlockPaletteArguments(rest)};
   if (command === 'save-sb3-format')
     return {action: 'save-sb3-format', options: parseSaveSb3FormatArguments(rest)};
   if (command === 'build-sb3') {
@@ -1706,6 +1730,7 @@ export async function runCli(
     runAssetVendor?: typeof vendorDsl4AssetDistribution;
     runBlockDslExport?: typeof exportDsl4BlockSourcesToYaml;
     runEmbeddedYamlMigration?: typeof migrateDsl4EmbeddedYamlFile;
+    runBlockPaletteMigration?: typeof migrateDsl4BlockPaletteFile;
     fetch?: typeof fetch;
   } = {},
 ) {
@@ -1755,6 +1780,15 @@ export async function runCli(
     return result;
   }
   const schema = JSON.parse(await readFile(dsl4SchemaUrl, 'utf8'));
+  if (parsed.action === 'migrate-block-palette') {
+    const result = await (dependencies.runBlockPaletteMigration ?? migrateDsl4BlockPaletteFile)(
+      parsed.options,
+    );
+    stdout.write(
+      `${result.report.direction === 'restore' ? 'Restored' : 'Unified'} ${result.outputPath} (${result.report.rewrittenBlocks} blocks${result.report.runtimeRefreshed ? ', runtime replaced' : ''})\n`,
+    );
+    return result;
+  }
   if (parsed.action === 'migrate-embedded-yaml') {
     const {documentMap, ...options} = parsed.options;
     const mapping =

@@ -347,3 +347,7 @@ export {
   migrateDsl4EmbeddedYamlFile,
   type MigrateEmbeddedYamlFileOptions,
 } from './dsl4-embedded-yaml-migrate.js';
+export {
+  migrateDsl4BlockPaletteFile,
+  type MigrateBlockPaletteFileOptions,
+} from './dsl4-block-palette-migrate.js';

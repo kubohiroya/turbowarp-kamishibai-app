@@ -393,3 +393,10 @@ export {
   extractEmbeddedYamlDocumentSources,
   type EmbeddedYamlMigrationReport,
 } from './embedded-yaml-migration.js';
+export {
+  unifyDsl4BlockPaletteProject,
+  restoreDsl4BlockPaletteProject,
+  dsl4ProjectOpcodeForm,
+  Dsl4BlockPaletteMigrationError,
+  type Dsl4BlockPaletteMigrationReport,
+} from './block-palette-migration.js';

@@ -1,6 +1,6 @@
 # DSL 4.0 ブロックパレットの統合（草案）
 
-状態: 段階1を実装中。2026-11-28。実装で決めたことは §10 に記録する。
+状態: 段階1を 4.0.25（#1213）で実装済み。段階2を実装中。2026-11-28。実装で決めたことは §10・§11 に記録する。
 
 ## 1. 結論（提案）
 
@@ -143,3 +143,27 @@ playback の bundle からは tree-shake する。
 - **グループ**: §5 の並びで `dsl4RuntimePaletteGroups` を作り直した。組込 YAML の4つの文書ハットは「台本の骨組み」に、
   低水準の YAML ブロックは最後の「YAMLの部品」に置いた。グループ ID が変わったものは、Plus の表示・非表示の設定が
   初期状態に戻る。
+
+## 11. 段階2の実装記録（移行 CLI）
+
+```sh
+turbowarp-kamishibai migrate-block-palette --input OLD.sb3 --output NEW.sb3 [--report REPORT.json]
+turbowarp-kamishibai migrate-block-palette --input NEW.sb3 --output OLD.sb3 --restore
+```
+
+- **変換**: 旧台本拡張の opcode で書かれた台本ブロックと「この部分を使う」のメニュー shadow を、作品の runtime の
+  opcode（runtime 単体または Standard bundle）へ書き換え、`extensions`・`extensionURLs`・`extensionStorage`・
+  Plus manifest から旧台本拡張を外す。既に runtime の opcode になっているブロックはそのまま残す。変換は
+  [block-palette-migration.ts](../../src/dsl4/block-palette-migration.ts) の `unifyDsl4BlockPaletteProject`。
+- **検証**: 変換の前後でブロックから読んだ台本（全ソースファイル）が一致すること、アーカイブの素材のバイト列と
+  各 target のブロック以外のデータが変わらないことを確かめ、どれかが違えば何も書き出さない。
+- **runtime の差し替え**: 作品の runtime が `unified-declarations-v1` を持たない場合は、現行の runtime に差し替える。
+  旧 runtime が narrative 対応なら narrative authoring runtime、そうでなければ playback runtime を使う。Plus manifest
+  が旧 runtime を固定している作品は、manifest を無効にしないよう変換を断り、先に標準形式で保存するよう案内する。
+- **逆変換**: `--restore` は台本ブロックを旧台本拡張の opcode に戻し、作品の使い方（「この部分を使う」・narrative の
+  有無）に合う旧台本拡張を同梱する。runtime は変えない。
+- **出力**: 入力は変えない。出力とレポートが既にあれば断り、両方をまとめて置く（`migrate-embedded-yaml` と共通の
+  [dsl4-migration-output.ts](../../src/builder/dsl4-migration-output.ts)）。
+- **`migrate-embedded-yaml` との関係**: 組込 YAML への移行で差し替える runtime が統合後の版なら、同じ変換で旧台本
+  拡張を外す。統合前の runtime（開発用の差し替えなど）の場合は、従来どおり旧台本拡張を作品の形式に合う変種へ
+  作り直す。
