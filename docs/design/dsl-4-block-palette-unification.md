@@ -214,3 +214,12 @@ turbowarp-kamishibai migrate-block-palette --input NEW.sb3 --output OLD.sb3 --re
   そのまま使われる。書き換えられない独自エディター（`register`、行の表）とプレビュー（`registerPreview`）は、従来
   どおり両方の綴りで登録する。登録は1件ずつ独立させ、1件が断られてもほかを取り消さない。
 - **テスト**: bundle がメンバーに課す確認を模した登録口で、全フォームが受け付けられることを確かめる。
+
+## 15. 最初に表示するグループ（4.0.30）
+
+- TurboWarp Plus Editor は、表示の設定が保存されていないスプライトやステージでは、Scratch の標準のグループと、そこで既に使われているブロックのグループだけを表示する。配布用 SB3 のステージには紙芝居の命令がほとんどないため、§5 で並べ直したグループの大半が新しい作品では隠れていた。
+- 配布用 SB3 に Editor の画面状態のエントリ `tw-plus/workspace.json` を入れ、その `blockPalette` にステージで表示する
+  グループとして、標準の10グループと bundle の全グループ（runtime 本体、runtime の各グループ
+  `kubohiroyakamishibairuntime4-<id>`、同梱の拡張）を書く。Scratch と TurboWarp はこのエントリを無視する。
+  sb3-toolchain のステージのコメントによるパレット設定（`block-palette.json`）は Editor が読み込みに使わないため採らない。
+- `author-block-dsl` などで作る作品は土台の SB3 からこの設定を引き継ぐ。利用者が Editor で表示を変えると、その設定が作品に保存される。
