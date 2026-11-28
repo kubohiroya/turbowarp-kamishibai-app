@@ -3,7 +3,7 @@
   "issue": 266,
   "standardArtifact": {
     "series": "4.0",
-    "version": "4.0.31",
+    "version": "4.0.33",
     "extensionId": "kubohiroyakamishibai4",
     "runtimeComponentId": "kubohiroyakamishibairuntime4",
     "integration": "static-extension-bundle",
@@ -308,7 +308,7 @@
     "immutableStates": ["frozen", "published"],
     "npmDistTag": "latest",
     "githubPrerelease": false,
-    "recommendedStableVersion": "4.0.31"
+    "recommendedStableVersion": "4.0.33"
   },
   "rollbackOrder": [
     "disable-default-off-feature-surface",
