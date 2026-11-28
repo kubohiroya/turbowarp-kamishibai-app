@@ -99,7 +99,7 @@ const externalExtensionMembers = Object.freeze(
       id: 'kubohiroyabubble',
       name: 'Bubble',
       package: '@kubohiroya/turbowarp-bubble',
-      version: '0.22.0',
+      version: '0.22.2',
       artifact: 'dist/turbowarp-bubble.js',
       sourcePath: path.join(
         path.dirname(
