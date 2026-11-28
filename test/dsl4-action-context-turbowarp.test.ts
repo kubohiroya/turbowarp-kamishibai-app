@@ -270,6 +270,18 @@ test('maps Scratch inputs and thread util to the adapter without casting typed o
   assert.equal(requireDefined(blocksOf(info)[0], 'block 0').isEdgeActivated, false);
   assert.equal(requireDefined(blocksOf(info)[1], 'block 1').disableMonitor, true);
   assert.equal(requireDefined(blocksOf(info)[3], 'block 3').disableMonitor, undefined);
+  // The Plus Editor draws a reference arrow from this block to the scene block it names.
+  assert.deepEqual(
+    blocksOf(info)
+      .filter((block) => block.scriptRelations !== undefined)
+      .map(({opcode, scriptRelations}) => [opcode, scriptRelations]),
+    [
+      [
+        'gotoFromCurrentAction',
+        {references: [{channel: 'kubohiroya.kamishibai4.scene', argument: 'SCENE'}]},
+      ],
+    ],
+  );
   assert.equal(extensionOf(surface).whenCustomAction(), true);
   assert.equal(extensionOf(surface).currentActionName({}, util), 'wave');
   assert.equal(extensionOf(surface).currentActionTarget({}, util), 'Hero');

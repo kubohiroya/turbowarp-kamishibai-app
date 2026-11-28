@@ -207,3 +207,23 @@ describe('Japanese texts', () => {
     ]);
   });
 });
+
+describe('script relation declarations', () => {
+  test('moving to a scene references the scene block with the same SCENE name', () => {
+    const scene = {channel: 'kubohiroya.kamishibai4.scene', argument: 'SCENE'};
+    const declared = (blocks: readonly unknown[]) =>
+      (blocks as {opcode: string; scriptRelations?: unknown}[])
+        .filter((block) => block.scriptRelations !== undefined)
+        .map(({opcode, scriptRelations}) => [opcode, scriptRelations]);
+    expect(declared(runtimeBlocks())).toEqual([['goto', {references: [scene]}]]);
+    const info = createDsl4BlockAuthoringInfo({
+      sourceSections: true,
+      narrativeControlEnabled: true,
+    });
+    expect(declared(info.blocks)).toEqual([['scene', {targets: [scene]}]]);
+    // The authored extension is serialized source; the declaration must survive into its getInfo().
+    expect(createDsl4BlockAuthoringExtensionSource()).toContain(
+      '"scriptRelations":{"targets":[{"channel":"kubohiroya.kamishibai4.scene","argument":"SCENE"}]}',
+    );
+  });
+});

@@ -1806,6 +1806,9 @@ test('registers the standard DSL 4.0 runtime blocks as visible VM primitives', a
     assert.deepEqual(relationsOf('embeddedYamlRoot'), {references: documentRelation});
     assert.deepEqual(relationsOf('embeddedYamlInclude'), {references: documentRelation});
     assert.equal(relationsOf('embeddedYamlConfig'), undefined);
+    assert.deepEqual(relationsOf('goto'), {
+      references: [{channel: 'kubohiroya.kamishibai4.scene', argument: 'SCENE'}],
+    });
     const navigateSource = vm.runtime.getOpcodeFunction(
       `${bundleExtensionId}_${runtimeExtensionId}__embeddedYaml`,
     );

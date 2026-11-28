@@ -48,7 +48,7 @@ Use 3.2.3 when you need the stable path for an event or an existing 3.1/3.2 stor
 
 ### Use 4.0 for YAML projects
 
-The 4.0.24 candidate declares the references from the embedded YAML root and include blocks to their embedded YAML hats, so the TurboWarp Plus Editor can draw them as reference arrows. It retains the simplified Stage scripts from 4.0.24, the project-format SB3 saving from 4.0.22, and the dialogue and caption expressions, actor animation and scoped presentation effects from 4.0.21.
+The 4.0.24 candidate declares the references from the embedded YAML root and include blocks to their embedded YAML hats, and from "go to scene" to the scene blocks, so the TurboWarp Plus Editor can draw them as reference arrows. It retains the simplified Stage scripts from 4.0.24, the project-format SB3 saving from 4.0.22, and the dialogue and caption expressions, actor animation and scoped presentation effects from 4.0.21.
 
 ```yaml
 kamishibai: '4.0'
