@@ -275,7 +275,7 @@ scenes:
       },
     });
     assert.equal(extension!.getInfo().id, dsl4BlockAuthoringExtensionId);
-    assert.equal(recorded.length, 12);
+    assert.equal(recorded.length, 13);
     assert.equal(recorded.filter(({argument}) => argument === 'VALUE').length, 8);
     const sceneEditor = recorded.find(({argument}) => argument === 'PROPERTIES')!;
     assert.deepEqual(sceneEditor.opcodes, [`${dsl4BlockAuthoringExtensionId}_scene`]);
@@ -300,7 +300,10 @@ scenes:
     assert.equal(steps[0]!.extensionId, owner);
     assert.deepEqual(steps[0]!.opcodes, [requireRecord(pose, 'the pose block').opcode]);
     const speech = recorded.filter(({argument}) => argument === 'SPEC');
-    assert.equal(speech.length, 2);
+    assert.equal(speech.length, 3);
+    const animateOpcode =
+      form === 'runtime' ? `${owner}_animate` : `${owner}_kubohiroyakamishibairuntime4__animate`;
+    assert.ok(speech.some((editor) => (editor.opcodes as string[]).includes(animateOpcode)));
     for (const command of ['say', 'think']) {
       const opcode =
         form === 'runtime'
@@ -315,7 +318,7 @@ scenes:
     }
     extension!.dispose();
     extension!.dispose();
-    assert.equal(removed, 12);
+    assert.equal(removed, 13);
 
     for (const blockEditors of [
       undefined,
